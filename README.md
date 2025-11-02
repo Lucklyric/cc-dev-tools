@@ -1,359 +1,186 @@
-# Codex Integration Plugin for Claude Code
+# cc-skill-codex
 
-**Version**: 1.0.0
-**Plugin Type**: Skill
-**License**: Apache 2.0
-**Codex CLI Version**: 0.48.0
+A Claude Code **plugin** that provides a skill for seamless OpenAI Codex CLI integration with GPT-5 high-reasoning capabilities.
 
-Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Supports GPT-5 and GPT-5-Codex with intelligent model selection, session continuation, and safe defaults.
+## What is this?
+
+**cc-skill-codex** is a Claude Code **plugin** that contains the **codex skill**. When you install this plugin, you get access to the skill that enables Codex CLI integration.
+
+- **Marketplace name**: `cc-skill-codex-marketplace`
+- **Plugin name**: `cc-skill-codex`
+- **Full plugin identifier**: `cc-skill-codex@cc-skill-codex-marketplace`
+- **Skill name**: `codex`
+- **Installation**: Via Claude Code marketplace (installs the plugin, which includes the skill)
+
+## Repository Structure
+
+```
+cc-skill-codex/                  # Plugin root
+├── .claude-plugin/              # Plugin metadata
+│   ├── plugin.json             # Plugin configuration
+│   └── marketplace.json        # Marketplace configuration
+├── README.md                    # This file - installation and usage guide
+├── LICENSE                      # Apache 2.0 license
+└── skills/                      # Skills provided by this plugin
+    └── codex/                  # The "codex" skill
+        ├── SKILL.md            # Main skill definition (loaded by Claude Code)
+        ├── examples/           # Usage examples (for users)
+        │   ├── basic-usage.md
+        │   ├── session-continuation.md
+        │   └── advanced-config.md
+        └── resources/          # Reference documentation (for users)
+            ├── codex-help.md        # Codex CLI v0.48.0 help reference
+            ├── codex-config.md      # Configuration options
+            └── claude-skill-doc.md  # Skill development guide
+```
+
+**How it works**:
+1. You add the **marketplace** (`cc-skill-codex-marketplace`) from GitHub
+2. You install the **plugin** (`cc-skill-codex`) from the marketplace
+3. The plugin provides the **skill** (`codex`)
+4. Claude Code loads `skills/codex/SKILL.md` when the skill is invoked
+5. All other files are documentation for users
 
 ---
 
-## ⚠️ CRITICAL: Always Use `codex exec`
+## Installation in Claude Code
 
-**This skill requires `codex exec` for ALL commands in Claude Code.**
+### Prerequisites
 
-❌ **NEVER**: `codex -m ...` or `codex resume ...` (interactive - will fail)
-✅ **ALWAYS**: `codex exec -m ...` or `codex exec resume ...` (non-interactive - works)
-
-**Why?** Claude Code runs in a non-terminal environment. Plain `codex` commands fail with "stdout is not a terminal" error. Always use `codex exec` instead.
-
----
-
-## Prerequisites
-
-Before using this plugin, ensure:
-
-1. **Codex CLI installed** and available in PATH
+1. **Codex CLI** installed and authenticated:
    ```bash
-   codex --version
-   ```
-
-2. **Authenticated with Codex**
-   ```bash
+   codex --version  # v0.48.0+
    codex login
    ```
 
-3. **Claude Code v1.0+** installed
+2. **Claude Code** v1.0+
 
-## Installation
+### Install Plugin from GitHub
 
-### Option 1: Plugin Installation (Recommended)
-
-Install directly via Claude Code's plugin system:
+**Step 1**: Add this repository as a dev marketplace:
 
 ```bash
-# Clone the plugin repository
-git clone https://github.com/Lucklyric/cc-skill-codex.git
-
-# Add as local plugin in Claude Code
-/plugin add ./cc-skill-codex
-
-# Enable the plugin
-/plugin enable codex
+/marketplace add https://github.com/Lucklyric/cc-skill-codex
 ```
 
-**Restart Claude Code** to activate the skill.
-
-### Option 2: Manual Installation
-
-For manual installation without the plugin system:
+**Step 2**: Install the plugin from the marketplace:
 
 ```bash
-# Clone the repository
-git clone https://github.com/Lucklyric/cc-skill-codex.git
-
-# Copy skill directory to Claude Code skills folder
-mkdir -p ~/.claude/skills
-cp -r cc-skill-codex/skills/codex ~/.claude/skills/
-
-# Restart Claude Code
+/plugin install cc-skill-codex@cc-skill-codex-marketplace
 ```
 
-## Verify Installation
+This installs the **cc-skill-codex plugin**, which includes the **codex skill**.
 
-After restarting Claude Code:
+**Step 3**: Restart Claude Code to activate the plugin and skill.
 
-```bash
-# Check if skill is loaded
-/help
+### Verify Installation
 
-# Look for "Codex Integration" in the skills section
+Test that the skill is working:
+```
+> Use Codex to design a binary search tree in Rust
 ```
 
-Or simply try using it:
-> "Use Codex to help me design a binary search tree"
-
-## Basic Usage
-
-### Example 1: Simple Coding Help (General Reasoning)
-
-**User**: "Help me design a queue data structure in Python"
-
-**What Happens**:
-1. Claude detects the coding task
-2. Skill is invoked autonomously
-3. Codex CLI is called with gpt-5 (general high-reasoning):
-   ```bash
-   codex exec -m gpt-5 -s read-only \
-     -c model_reasoning_effort=high \
-     "Help me design a queue data structure in Python"
-   ```
-4. Codex responds with high-reasoning architectural guidance
-5. Session is auto-saved for potential continuation
+The skill will automatically invoke Codex CLI with GPT-5 high-reasoning mode.
 
 ---
 
-### Example 1b: Code Editing Task
+## Step-by-Step Tutorial
 
-**User**: "Edit my Python file to implement the queue with thread-safety"
-
-**What Happens**:
-1. Skill detects code editing request
-2. Uses gpt-5-codex (optimized for coding):
-   ```bash
-   codex exec -m gpt-5-codex -s workspace-write \
-     -c model_reasoning_effort=high \
-     "Edit my Python file to implement the queue with thread-safety"
-   ```
-3. Codex performs code editing with specialized model
-
----
-
-### Example 2: Continue a Session
-
-**User**: "Now add thread-safety to that queue"
-
-**What Happens**:
-1. Claude detects continuation context
-2. Skill resumes previous session:
-   ```bash
-   codex exec resume --last
-   ```
-3. Codex continues from previous context and adds thread-safety
-
----
-
-### Example 3: Explicit Codex Request
-
-**User**: "Use Codex to design a REST API for a blog system"
-
-**What Happens**:
-1. Explicit "Codex" mention triggers skill
-2. Codex invoked with coding-optimized settings
-3. High-reasoning analysis provides comprehensive API design
-
----
-
-## Advanced Configuration
-
-### Custom Model Selection
-
-**User**: "Use GPT-5-Codex to edit this specific file"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5-codex -s workspace-write \
-  -c model_reasoning_effort=high \
-  "Edit file.py to refactor the main function"
-```
-
-**Note**: Skill defaults to `gpt-5` for general tasks, `gpt-5-codex` for code editing
-
----
-
-### Workspace Write Permission
-
-**User**: "Have Codex refactor this codebase (allow file writing)"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5-codex -s workspace-write \
-  -c model_reasoning_effort=high \
-  "Refactor this codebase for better maintainability"
-```
-
-⚠️ **Warning**: `workspace-write` allows Codex to modify files. Use with caution.
-
----
-
-### Enable Web Search
-
-**User**: "Research latest Python async patterns and implement them (enable web search)"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5-codex -s read-only \
-  -c model_reasoning_effort=high \
-  --search \
-  "Research latest Python async patterns and implement them"
-```
-
----
-
-## Session Management
-
-### Resume Last Session
-
-```
-User: "Continue where we left off"
-```
-
-Skill automatically uses: `codex exec resume --last`
-
-### Choose from Multiple Sessions
-
-If you want to resume a specific session from history:
+### Step 1: Install Prerequisites
 
 ```bash
-# Run manually (outside skill)
-codex exec resume --last
-```
+# Check if Codex CLI is installed
+codex --version
 
-This opens an interactive picker.
+# If not installed, install it from OpenAI
+# (Follow OpenAI's installation instructions)
 
----
-
-## Troubleshooting
-
-### Error: Command not found
-
-**Symptom**: `codex: command not found`
-
-**Fix**:
-```bash
-# Install Codex CLI
-# [Installation instructions from Codex documentation]
-```
-
----
-
-### Error: Not authenticated
-
-**Symptom**: "Run 'codex login' to authenticate"
-
-**Fix**:
-```bash
+# Authenticate with your OpenAI account
 codex login
 ```
 
-Follow the authentication flow.
+### Step 2: Add the Marketplace
+
+In your Claude Code session, add the GitHub repository as a marketplace:
+
+```bash
+/marketplace add https://github.com/Lucklyric/cc-skill-codex
+```
+
+This registers the marketplace so Claude Code knows where to find the plugin.
+
+### Step 3: Install the Plugin
+
+Install the plugin from the marketplace you just added:
+
+```bash
+/plugin install cc-skill-codex@cc-skill-codex-marketplace
+```
+
+This installs the **cc-skill-codex plugin** and makes the **codex skill** available.
+
+**Note**: The full identifier is `cc-skill-codex@cc-skill-codex-marketplace` where:
+- `cc-skill-codex` = plugin name
+- `cc-skill-codex-marketplace` = marketplace name
+
+Then restart Claude Code.
+
+### Step 4: Test Basic Usage
+
+**Simple request** (uses GPT-5 for general reasoning):
+```
+> Help me design a priority queue in Python
+```
+
+Claude will:
+1. Detect this is a coding task
+2. Invoke the skill automatically
+3. Execute: `codex exec -m gpt-5 -s read-only -c model_reasoning_effort=high "Help me design..."`
+4. Return Codex's high-reasoning response
+
+### Step 5: Try Code Editing
+
+**Code editing request** (uses GPT-5-Codex):
+```
+> Edit my queue.py file to add thread-safety
+```
+
+Claude will:
+1. Detect this is a code editing task
+2. Use GPT-5-Codex model
+3. Execute: `codex exec -m gpt-5-codex -s workspace-write -c model_reasoning_effort=high "Edit my queue.py..."`
+
+### Step 6: Continue a Session
+
+**Follow-up request**:
+```
+> Continue with that - add unit tests
+```
+
+Claude will:
+1. Detect continuation context
+2. Execute: `codex exec resume --last`
+3. Continue from previous session
+
+### Step 7: Explicit Codex Request
+
+**Direct invocation**:
+```
+> Use Codex to review this code for security issues
+```
+
+Mentioning "Codex" explicitly triggers the skill.
 
 ---
 
-### Skill Not Discovered
+## Quick Tips
 
-**Symptom**: Claude doesn't invoke the skill automatically
-
-**Check**:
-1. Skill file location:
-   ```bash
-   ls ~/.claude/skills/codex/SKILL.md
-   ```
-
-2. YAML frontmatter is valid
-
-3. Restart Claude Code
+- **Trigger keywords**: "codex", "use codex", "complex coding", "high reasoning"
+- **Model selection**: GPT-5 (default) for design, GPT-5-Codex for code editing
+- **Session continuity**: Use "continue", "resume", "add to that" for session continuation
+- **All commands use**: `codex exec` (non-interactive mode) in Claude Code environment
 
 ---
 
-### Session Not Resuming
-
-**Symptom**: "No previous sessions found"
-
-**Cause**: Codex CLI history is empty
-
-**Fix**: Start a new session first, then resume
-
----
-
-## Best Practices
-
-### 1. Use Descriptive Requests
-
-**Good**: "Help me implement a thread-safe queue with priority support in Python"
-**Vague**: "Code help"
-
-### 2. Indicate Continuation Clearly
-
-**Good**: "Continue with that queue implementation - add unit tests"
-**Unclear**: "Add tests" (might start new session)
-
-### 3. Specify Permissions When Needed
-
-**Good**: "Refactor this code (allow file writing)"
-**Risky**: Assuming permissions without specifying
-
-### 4. Leverage High Reasoning
-
-The skill defaults to high reasoning effort - perfect for:
-- Complex algorithms
-- Architecture design
-- Performance optimization
-- Security reviews
-
----
-
-## What's Next?
-
-After basic usage:
-
-1. **Explore Session History**:
-   ```bash
-   codex resume  # Interactive picker
-   ```
-
-2. **Customize Configuration**: Create a Codex profile in `~/.codex/config.toml`
-
-3. **Combine with Other Skills**: Use alongside other Claude Code skills for comprehensive workflows
-
----
-
-## Quick Reference
-
-| Command | Purpose |
-|---------|---------|
-| `codex exec -m gpt-5 ...` | New session (general reasoning, default) |
-| `codex exec -m gpt-5-codex ...` | New session (code editing, specialized) |
-| `codex exec resume --last` | Continue most recent session |
-| `codex exec resume <session-id>` | Resume specific session by UUID |
-| `-s read-only` | Safe mode (default) |
-| `-s workspace-write` | Allow file modifications |
-| `-c model_reasoning_effort=high` | High reasoning (default) |
-| `--search` | Enable web search |
-
----
-
-## Troubleshooting
-
-### First Steps for Issues
-
-If you encounter any problems with Codex CLI or the skill:
-
-1. **Check Codex CLI built-in help**:
-   ```bash
-   codex --help
-   codex exec --help
-   codex exec resume --help
-   ```
-
-2. **Consult official Codex documentation**:
-   - GitHub Docs: [https://github.com/openai/codex/tree/main/docs](https://github.com/openai/codex/tree/main/docs)
-   - Check for latest updates and configuration options
-
-3. **Verify skill resources**:
-   - See `skills/codex/resources/codex-help.md` for CLI command reference
-   - See `skills/codex/resources/codex-config.md` for configuration options
-
-4. **Common issues**:
-   - "stdout is not a terminal" → Use `codex exec` instead of `codex`
-   - "codex: command not found" → Install Codex CLI and add to PATH
-   - "Not authenticated" → Run `codex login`
-
----
-
-## Support
-
-- **Skill Issues**: [GitHub Issues](https://github.com/Lucklyric/cc-skill-codex/issues)
-- **Codex CLI Official Docs**: [github.com/openai/codex/tree/main/docs](https://github.com/openai/codex/tree/main/docs)
-- **Claude Code Docs**: [claude.com/claude-code](https://claude.com/claude-code)
+**License**: Apache 2.0
+**Version**: 1.1.0
