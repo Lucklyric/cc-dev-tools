@@ -1,6 +1,6 @@
 ---
 name: codex
-description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Use when user asks to use Codex, work with Codex, mentions Codex in any context, requests complex implementation challenges, advanced reasoning, GPT-5 capabilities, or needs high-reasoning model assistance. Always trigger when user says "codex", "use codex", "work with codex", "ask codex", or any codex-related request. Supports session continuation for iterative development.
+description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, GPT-5 capabilities, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
 # cc-skill-codex: Codex CLI Integration for Claude Code
@@ -242,7 +242,7 @@ Example: codex exec -m gpt-5 "your prompt here"
 **First Steps for Any Issues:**
 1. Check Codex CLI built-in help: `codex --help`, `codex exec --help`, `codex exec resume --help`
 2. Consult official documentation: [https://github.com/openai/codex/tree/main/docs](https://github.com/openai/codex/tree/main/docs)
-3. Verify skill resources in `resources/` directory
+3. Verify skill resources in `references/` directory
 
 **Skill not being invoked?**
 - Check that request matches trigger keywords (Codex, complex coding, high reasoning, etc.)
@@ -438,7 +438,6 @@ gpt-5-codex now supports verbosity override via `-c model_verbosity=<level>` for
 ## Additional Resources
 
 For more details, see:
-- `resources/codex-help.md` - Codex CLI command reference
-- `resources/codex-config.md` - Full configuration options
-- `resources/claude-skill-doc.md` - Skill development guide
+- `references/codex-help.md` - Codex CLI command reference
+- `references/codex-config.md` - Full configuration options
 - `README.md` - Installation and quick start guide
