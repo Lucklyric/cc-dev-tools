@@ -89,11 +89,11 @@ codex exec -m gpt-5 -s read-only \
 ```bash
 codex exec -m gpt-5-codex -s workspace-write \
   -c model_reasoning_effort=high \
-  --search \
+  --enable web_search_request \
   "Research latest Python async patterns and implement them"
 ```
 
-**Feature**: `--search` flag enables web search for up-to-date information.
+**Feature**: `--enable web_search_request` flag enables web search for up-to-date information.
 
 ---
 
@@ -105,7 +105,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 ```bash
 codex exec -m gpt-5 -s read-only \
   -c model_reasoning_effort=high \
-  --search \
+  --enable web_search_request \
   "Find latest JWT security best practices and review this auth code"
 ```
 
@@ -205,11 +205,10 @@ codex exec -m gpt-5 -s read-only \
 ```bash
 codex exec -m gpt-5-codex -s workspace-write \
   -c model_reasoning_effort=high \
-  -a on-request \
   "Implement the build script"
 ```
 
-**Safety**: `-a on-request` requires approval before executing shell commands.
+**Note**: The `-a` flag is not available in `codex exec` (non-interactive mode). Use workspace sandbox modes for safety.
 
 ---
 
@@ -224,17 +223,15 @@ codex exec -m gpt-5-codex -s workspace-write \
 codex exec -m gpt-5-codex -s workspace-write \
   -c model_reasoning_effort=high \
   -c model_verbosity=high \
-  -a on-request \
-  --search \
+  --enable web_search_request \
   "Find latest security practices, review my auth module in detail, and fix issues"
 ```
 
 **Features**:
-- Web search enabled (`--search`)
+- Web search enabled (`--enable web_search_request`)
 - High reasoning (`model_reasoning_effort=high`)
 - Detailed output (`model_verbosity=high`)
 - File writing allowed (`workspace-write`)
-- Requires approval for commands (`-a on-request`)
 
 ---
 
@@ -354,7 +351,7 @@ codex exec -p review "Analyze this code"
 
 For best results researching current practices:
 ```bash
-codex exec -m gpt-5 --search \
+codex exec -m gpt-5 --enable web_search_request \
   -c model_reasoning_effort=high \
   "Research latest distributed systems patterns"
 ```
@@ -374,7 +371,7 @@ Use `-a on-request` when:
 
 **Phase 1 - Research** (GPT-5 + web search):
 ```bash
-codex exec -m gpt-5 --search \
+codex exec -m gpt-5 --enable web_search_request \
   -c model_reasoning_effort=high \
   "Research latest authentication patterns"
 ```

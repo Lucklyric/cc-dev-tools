@@ -29,7 +29,7 @@ cc-skill-codex/                  # Plugin root
         │   ├── session-continuation.md
         │   └── advanced-config.md
         └── resources/          # Reference documentation (for users)
-            ├── codex-help.md        # Codex CLI v0.48.0 help reference
+            ├── codex-help.md        # Codex CLI v0.53.0 help reference
             ├── codex-config.md      # Configuration options
             └── claude-skill-doc.md  # Skill development guide
 ```
@@ -49,7 +49,7 @@ cc-skill-codex/                  # Plugin root
 
 1. **Codex CLI** installed and authenticated:
    ```bash
-   codex --version  # v0.48.0+
+   codex --version  # v0.53.0+
    codex login
    ```
 
@@ -183,4 +183,4 @@ Mentioning "Codex" explicitly triggers the skill.
 ---
 
 **License**: Apache 2.0
-**Version**: 1.1.0
+**Version**: 1.2.0

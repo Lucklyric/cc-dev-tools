@@ -103,22 +103,26 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.48.0
+**Codex CLI Version**: 0.53.0
 
 | Flag | Values | Description |
 |------|--------|-------------|
 | `-m, --model` | `gpt-5`, `gpt-5-codex` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
-| `-c, --config` | `key=value` | Config overrides (reasoning_effort, verbosity, etc.) |
+| `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=high`) |
 | `-C, --cd` | directory path | Working directory |
 | `-p, --profile` | profile name | Use config profile |
-| `-a, --ask-for-approval` | `untrusted`, `on-failure`, `on-request`, `never` | Approval behavior |
-| `--search` | flag | Enable web search |
-| `--full-auto` | flag | Convenience for `-a on-failure --sandbox workspace-write` |
+| `--enable` | feature name | Enable a feature (e.g., `web_search_request`) |
+| `--disable` | feature name | Disable a feature |
+| `-i, --image` | file path(s) | Attach image(s) to initial prompt |
+| `--full-auto` | flag | Convenience for workspace-write sandbox with on-failure approval |
 | `--oss` | flag | Use local open source model provider |
-| `--json` | flag | Output events as JSONL (exec mode) |
-| `-o, --output-last-message` | file path | Save last message to file (exec mode) |
-| `--add-dir` | directory path | Additional writable directories |
+| `--skip-git-repo-check` | flag | Allow running outside Git repository |
+| `--output-schema` | file path | JSON Schema file for response shape |
+| `--color` | `always`, `never`, `auto` | Color settings for output |
+| `--json` | flag | Print events as JSONL |
+| `-o, --output-last-message` | file path | Save last message to file |
+| `--dangerously-bypass-approvals-and-sandbox` | flag | Skip confirmations (DANGEROUS) |
 
 ### Configuration Parameters
 
@@ -127,6 +131,13 @@ Pass these as `-c key=value`:
 - `model_reasoning_effort`: `minimal`, `low`, `medium`, `high` (default: `high`)
 - `model_verbosity`: `low`, `medium`, `high` (default: `medium`)
 - `model_reasoning_summary`: `auto`, `concise`, `detailed`, `none` (default: `auto`)
+- `sandbox_workspace_write.writable_roots`: JSON array of additional writable directories (e.g., `["/path1","/path2"]`)
+
+**Note**: To specify additional writable directories beyond the workspace, use:
+```bash
+-c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]'
+```
+This replaces the removed `--add-dir` flag from earlier versions.
 
 ## Session Continuation
 
@@ -306,11 +317,60 @@ codex exec resume --last
 ```bash
 codex exec -m gpt-5-codex -s workspace-write \
   -c model_reasoning_effort=high \
-  --search \
+  --enable web_search_request \
   "Research and implement async patterns"
 ```
 
 **Result**: Codex uses web search capability for latest information, then implements with high reasoning.
+
+---
+
+## New in v0.53.0
+
+### Feature Flags (`--enable` / `--disable`)
+Enable or disable specific Codex features:
+```bash
+codex exec --enable web_search_request "Research latest patterns"
+codex exec --disable some_feature "Run without feature"
+```
+
+### Image Attachment (`-i, --image`)
+Attach images to prompts for visual analysis:
+```bash
+codex exec -i screenshot.png "Analyze this UI design"
+codex exec -i diagram1.png -i diagram2.png "Compare these architectures"
+```
+
+### Non-Git Environments (`--skip-git-repo-check`)
+Run Codex outside Git repositories:
+```bash
+codex exec --skip-git-repo-check "Help with this script"
+```
+
+### Structured Output (`--output-schema`)
+Define JSON schema for model responses:
+```bash
+codex exec --output-schema schema.json "Generate structured data"
+```
+
+### Output Coloring (`--color`)
+Control colored output (always, never, auto):
+```bash
+codex exec --color never "Run in CI/CD pipeline"
+```
+
+### Web Search Migration
+**Deprecated**: `--search` flag (not available in `codex exec`)
+**New**: Use `--enable web_search_request` instead
+```bash
+# Old (invalid for codex exec)
+codex --search "research topic"
+
+# New (correct)
+codex exec --enable web_search_request "research topic"
+```
+
+---
 
 ## When to Use GPT-5 vs GPT-5-Codex
 
@@ -363,6 +423,17 @@ The skill defaults to high reasoning effort - perfect for:
 - Architecture design
 - Performance optimization
 - Security reviews
+
+## Platform & Capabilities (v0.53.0)
+
+### Windows Sandbox Support
+Windows sandbox is now available in alpha (experimental). Use with caution in production environments.
+
+### Interactive Mode Features
+The `/exit` slash-command alias is available in interactive `codex` mode (not applicable to `codex exec` non-interactive mode used by this skill).
+
+### Model Verbosity Override
+gpt-5-codex now supports verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
 
 ## Additional Resources
 

@@ -51,7 +51,7 @@ chatgpt_base_url	string	Base URL for ChatGPT auth flow.
 experimental_instructions_file	string (path)	Replace built‑in instructions (experimental).
 experimental_use_exec_command_tool	boolean	Use experimental exec command tool.
 projects.<path>.trust_level	string	Mark project/worktree as trusted (only "trusted" is recognized).
-tools.web_search	boolean	Enable web search tool (alias: web_search_request) (default: false).
+tools.web_search_request	boolean	Enable web search tool (default: false). Deprecated alias: tools.web_search
 forced_login_method	chatgpt | api	Only allow Codex to be used with ChatGPT or API keys.
 forced_chatgpt_workspace_id	string (uuid)	Only allow Codex to be used with the specified ChatGPT workspace.
 tools.view_image	boolean	Enable the view_image tool so Codex can attach local image files from the workspace (default: false).
