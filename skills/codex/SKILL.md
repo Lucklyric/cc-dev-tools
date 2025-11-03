@@ -56,6 +56,7 @@ When a user makes a request that falls into one of the above categories, determi
 ```bash
 codex exec -m gpt-5 -s read-only \
   -c model_reasoning_effort=high \
+  --enable web_search_request \
   "<user's prompt>"
 ```
 
@@ -64,6 +65,7 @@ codex exec -m gpt-5 -s read-only \
 ```bash
 codex exec -m gpt-5-codex -s workspace-write \
   -c model_reasoning_effort=high \
+  --enable web_search_request \
   "<user's prompt>"
 ```
 
@@ -100,6 +102,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 | Sandbox (code editing) | `workspace-write` | `-s workspace-write` | Allows file modifications |
 | Reasoning Effort | `high` | `-c model_reasoning_effort=high` | Maximum reasoning capability |
 | Verbosity | `medium` | `-c model_verbosity=medium` | Balanced output detail |
+| Web Search | `enabled` | `--enable web_search_request` | Access to up-to-date information |
 
 ### CLI Flags Reference
 
@@ -434,6 +437,15 @@ The `/exit` slash-command alias is available in interactive `codex` mode (not ap
 
 ### Model Verbosity Override
 gpt-5-codex now supports verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
+
+## Pattern References
+
+For command construction examples and workflow patterns, Claude can reference:
+- `references/command-patterns.md` - Common codex exec usage patterns
+- `references/session-workflows.md` - Session continuation and resume workflows
+- `references/advanced-patterns.md` - Complex configuration and flag combinations
+
+These files provide detailed examples for constructing valid codex exec commands for various scenarios.
 
 ## Additional Resources
 
