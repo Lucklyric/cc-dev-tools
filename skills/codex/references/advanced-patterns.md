@@ -17,11 +17,11 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 ### Example 1: Force GPT-5 for Code Task
 
-**User Request**: "Use GPT-5 (not Codex) to review this code for architecture issues"
+**User Request**: "Use GPT-5.1 (not Codex) to review this code for architecture issues"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Review this code for architecture issues"
 ```
@@ -32,16 +32,16 @@ codex exec -m gpt-5 -s read-only \
 
 ### Example 2: Explicit GPT-5-Codex for Implementation
 
-**User Request**: "Use GPT-5-Codex to implement the authentication module"
+**User Request**: "Use GPT-5.1-Codex to implement the authentication module"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   "Implement the authentication module"
 ```
 
-**Why**: Implementation requires file writing and code generation (gpt-5-codex specialty).
+**Why**: Implementation requires file writing and code generation (gpt-5.1-codex specialty).
 
 ---
 
@@ -53,7 +53,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   "Refactor this codebase for better maintainability"
 ```
@@ -70,7 +70,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Review this code for security vulnerabilities"
 ```
@@ -87,7 +87,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   --search \
   "Research latest Python async patterns and implement them"
@@ -103,7 +103,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   --search \
   "Find latest JWT security best practices and review this auth code"
@@ -119,7 +119,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Design an optimal algorithm for distributed consensus"
 ```
@@ -134,7 +134,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=low \
   "Quick syntax check on this code"
 ```
@@ -151,7 +151,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   -c model_verbosity=high \
   "Explain this algorithm in detail"
@@ -167,7 +167,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   -c model_verbosity=low \
   "Review this code"
@@ -185,7 +185,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   -C ./backend \
   "Review the API code"
@@ -203,7 +203,7 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   -a on-request \
   "Implement the build script"
@@ -221,7 +221,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   -c model_verbosity=high \
   -a on-request \
@@ -238,9 +238,9 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 ---
 
-## Decision Tree: When to Use GPT-5 vs GPT-5-Codex
+## Decision Tree: When to Use GPT-5.1 vs GPT-5.1-Codex
 
-### Use GPT-5 For:
+### Use GPT-5.1 For:
 
 ```
 ┌─────────────────────────────────────┐
@@ -264,7 +264,7 @@ codex exec -m gpt-5-codex -s workspace-write \
 └─────────────────────────────────────┘
 ```
 
-### Use GPT-5-Codex For:
+### Use GPT-5.1-Codex For:
 
 ```
 ┌─────────────────────────────────────┐
@@ -312,13 +312,13 @@ You can create reusable configuration profiles in `~/.codex/config.toml`:
 
 ```toml
 [profiles.review]
-model = "gpt-5"
+model = "gpt-5.1"
 sandbox = "read-only"
 model_reasoning_effort = "high"
 model_verbosity = "medium"
 
 [profiles.implement]
-model = "gpt-5-codex"
+model = "gpt-5.1-codex"
 sandbox = "workspace-write"
 model_reasoning_effort = "high"
 approval_policy = "on-request"
@@ -341,8 +341,8 @@ codex -p review "Analyze this code"
 
 ### 1. Match Model to Task Type
 
-- **Thinking/Design** → GPT-5
-- **Doing/Coding** → GPT-5-Codex
+- **Thinking/Design** → GPT-5.1
+- **Doing/Coding** → GPT-5.1-Codex
 
 ### 2. Use Safe Defaults, Override Intentionally
 
@@ -354,7 +354,7 @@ codex -p review "Analyze this code"
 
 For best results researching current practices:
 ```bash
-codex exec -m gpt-5 --search \
+codex exec -m gpt-5.1--search \
   -c model_reasoning_effort=high \
   "Research latest distributed systems patterns"
 ```
@@ -372,22 +372,22 @@ Use `-a on-request` when:
 
 ### Pattern 1: Research → Design → Implement
 
-**Phase 1 - Research** (GPT-5 + web search):
+**Phase 1 - Research** (GPT-5.1 + web search):
 ```bash
-codex exec -m gpt-5 --search \
+codex exec -m gpt-5.1--search \
   -c model_reasoning_effort=high \
   "Research latest authentication patterns"
 ```
 
-**Phase 2 - Design** (GPT-5 + high reasoning):
+**Phase 2 - Design** (GPT-5.1 + high reasoning):
 ```bash
 codex exec resume --last
 # "Design the authentication system based on research"
 ```
 
-**Phase 3 - Implement** (GPT-5-Codex + workspace-write):
+**Phase 3 - Implement** (GPT-5.1-Codex + workspace-write):
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   "Implement the authentication system we designed"
 ```
@@ -396,19 +396,19 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 ### Pattern 2: Review → Fix → Verify
 
-**Review** (GPT-5 + read-only):
+**Review** (GPT-5.1 + read-only):
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   "Review this code for security issues"
 ```
 
-**Fix** (GPT-5-Codex + workspace-write):
+**Fix** (GPT-5.1-Codex + workspace-write):
 ```bash
 codex exec resume --last
 # "Fix the security issues identified"
 ```
 
-**Verify** (GPT-5 + read-only):
+**Verify** (GPT-5.1 + read-only):
 ```bash
 codex exec resume --last
 # "Verify the fixes are correct"

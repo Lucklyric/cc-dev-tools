@@ -1,6 +1,6 @@
 ---
 name: codex
-description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, GPT-5 capabilities, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
+description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, GPT-5.1 capabilities, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
 # cc-skill-codex: Codex CLI Integration for Claude Code
@@ -15,8 +15,8 @@ description: Invoke Codex CLI for complex coding tasks requiring high reasoning 
 ✅ **ALWAYS USE**: `codex exec` (non-interactive mode)
 
 **Examples:**
-- ✅ `codex exec -m gpt-5 "prompt"` (CORRECT)
-- ❌ `codex -m gpt-5 "prompt"` (WRONG - will fail)
+- ✅ `codex exec -m gpt-5.1 "prompt"` (CORRECT)
+- ❌ `codex -m gpt-5.1 "prompt"` (WRONG - will fail)
 - ✅ `codex exec resume --last` (CORRECT)
 - ❌ `codex resume --last` (WRONG - will fail)
 
@@ -30,7 +30,7 @@ This skill should be invoked when:
 - User explicitly mentions "Codex" or requests Codex assistance
 - User needs help with complex coding tasks, algorithms, or architecture
 - User requests "high reasoning" or "advanced implementation" help
-- User mentions "GPT-5" capabilities or complex problem-solving
+- User mentions "GPT-5.1" capabilities or complex problem-solving
 - User wants to continue a previous Codex conversation
 
 ## How It Works
@@ -40,11 +40,11 @@ This skill should be invoked when:
 When a user makes a request that falls into one of the above categories, determine the task type:
 
 **General Tasks** (architecture, design, reviews, explanations):
-- Use model: `gpt-5` (high-reasoning general model)
+- Use model: `gpt-5.1` (high-reasoning general model)
 - Example requests: "Design a queue data structure", "Review this architecture", "Explain this algorithm"
 
 **Code Editing Tasks** (file modifications, implementation):
-- Use model: `gpt-5-codex` (optimized for code editing)
+- Use model: `gpt-5.1-codex` (optimized for code editing)
 - Example requests: "Edit this file to add feature X", "Implement the function", "Refactor this code"
 
 ### Bash CLI Command Structure
@@ -54,7 +54,7 @@ When a user makes a request that falls into one of the above categories, determi
 #### For General Reasoning Tasks (Default)
 
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   --enable web_search_request \
   "<user's prompt>"
@@ -63,7 +63,7 @@ codex exec -m gpt-5 -s read-only \
 #### For Code Editing Tasks
 
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   --enable web_search_request \
   "<user's prompt>"
@@ -76,14 +76,14 @@ codex exec -m gpt-5-codex -s workspace-write \
 
 ### Model Selection Logic
 
-**Use `gpt-5` (default) when:**
+**Use `gpt-5.1` (default) when:**
 - Designing architecture or data structures
 - Reviewing code for quality, security, or performance
 - Explaining concepts or algorithms
 - Planning implementation strategies
 - General problem-solving and reasoning
 
-**Use `gpt-5-codex` when:**
+**Use `gpt-5.1-codex` when:**
 - Editing or modifying existing code files
 - Implementing specific functions or features
 - Refactoring code
@@ -96,8 +96,8 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model | `gpt-5` | `-m gpt-5` | General reasoning tasks |
-| Model (code editing) | `gpt-5-codex` | `-m gpt-5-codex` | Code editing tasks |
+| Model | `gpt-5.1` | `-m gpt-5.1` | General reasoning tasks |
+| Model (code editing) | `gpt-5.1-codex` | `-m gpt-5.1-codex` | Code editing tasks |
 | Sandbox | `read-only` | `-s read-only` | Safe default (general tasks) |
 | Sandbox (code editing) | `workspace-write` | `-s workspace-write` | Allows file modifications |
 | Reasoning Effort | `high` | `-c model_reasoning_effort=high` | Maximum reasoning capability |
@@ -106,11 +106,11 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.53.0
+**Codex CLI Version**: 0.58
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5`, `gpt-5-codex` | Model selection |
+| `-m, --model` | `gpt-5.1`, `gpt-5.1-codex` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=high`) |
 | `-C, --cd` | directory path | Working directory |
@@ -141,6 +141,52 @@ Pass these as `-c key=value`:
 -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]'
 ```
 This replaces the removed `--add-dir` flag from earlier versions.
+
+### Model Selection Guide
+
+**Default Models (Codex CLI v0.58+)**
+
+This skill defaults to the GPT-5.1 model family:
+- `gpt-5.1` - General reasoning, architecture, reviews (default)
+- `gpt-5.1-codex` - Code editing and implementation
+
+**Backward Compatibility**
+
+You can override to use older models when needed:
+
+```bash
+# Use older gpt-5 model explicitly
+codex exec -m gpt-5 -s read-only "Design a data structure"
+
+# Use older gpt-5-codex model explicitly
+codex exec -m gpt-5-codex -s workspace-write "Implement feature X"
+```
+
+**When to Override**
+
+- **Testing compatibility**: Verify behavior matches older model versions
+- **Specific model requirements**: Project requires specific model version
+- **Model comparison**: Compare outputs between model versions
+
+**Model Override Examples**
+
+Override via `-m` flag:
+```bash
+# Override to gpt-5 for general task
+codex exec -m gpt-5 "Explain algorithm complexity"
+
+# Override to gpt-5-codex for code task
+codex exec -m gpt-5-codex -s workspace-write "Refactor authentication"
+
+# Override to gpt-4 if available
+codex exec -m gpt-4 "Review this code"
+```
+
+**Default Behavior**
+
+Without explicit `-m` override:
+- General tasks → `gpt-5.1`
+- Code editing tasks → `gpt-5.1-codex`
 
 ## Session Continuation
 
@@ -235,9 +281,9 @@ After authentication, try your request again.
 ```
 Error: Invalid model specified
 
-To fix: Use 'gpt-5' for general reasoning or 'gpt-5-codex' for code editing
+To fix: Use 'gpt-5.1' for general reasoning or 'gpt-5.1-codex' for code editing
 
-Example: codex exec -m gpt-5 "your prompt here"
+Example: codex exec -m gpt-5.1"your prompt here"
 ```
 
 ### Troubleshooting
@@ -275,7 +321,7 @@ Example: codex exec -m gpt-5 "your prompt here"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Help me design a binary search tree architecture in Rust"
 ```
@@ -290,12 +336,12 @@ codex exec -m gpt-5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   "Edit this file to implement the BST insert method"
 ```
 
-**Result**: Codex uses gpt-5-codex (optimized for coding) with workspace-write permissions to modify files.
+**Result**: Codex uses gpt-5.1-codex (optimized for coding) with workspace-write permissions to modify files.
 
 ---
 
@@ -318,7 +364,7 @@ codex exec resume --last
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   --enable web_search_request \
   "Research and implement async patterns"
@@ -375,9 +421,9 @@ codex exec --enable web_search_request "research topic"
 
 ---
 
-## When to Use GPT-5 vs GPT-5-Codex
+## When to Use GPT-5.1 vs GPT-5.1-Codex
 
-### Use GPT-5 (General High-Reasoning) For:
+### Use GPT-5.1 (General High-Reasoning) For:
 - Architecture and system design
 - Code reviews and quality analysis
 - Security audits and vulnerability assessment
@@ -386,7 +432,7 @@ codex exec --enable web_search_request "research topic"
 - Explaining complex concepts
 - Planning and strategy
 
-### Use GPT-5-Codex (Code-Specialized) For:
+### Use GPT-5.1-Codex (Code-Specialized) For:
 - Editing existing code files
 - Implementing specific features
 - Refactoring and code transformations
@@ -394,7 +440,7 @@ codex exec --enable web_search_request "research topic"
 - Code generation tasks
 - Debugging and fixes requiring file changes
 
-**Default**: When in doubt, use `gpt-5` for general tasks. Switch to `gpt-5-codex` only when specifically editing code.
+**Default**: When in doubt, use `gpt-5.1` for general tasks. Switch to `gpt-5.1-codex` only when specifically editing code.
 
 ## Best Practices
 
@@ -436,7 +482,7 @@ Windows sandbox is now available in alpha (experimental). Use with caution in pr
 The `/exit` slash-command alias is available in interactive `codex` mode (not applicable to `codex exec` non-interactive mode used by this skill).
 
 ### Model Verbosity Override
-gpt-5-codex now supports verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
+gpt-5.1-codex now supports verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
 
 ## Pattern References
 

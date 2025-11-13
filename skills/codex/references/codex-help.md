@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.53.0
+**Version**: 0.58.0
 
 ## Main Command: `codex --help`
 
@@ -18,7 +18,7 @@ Commands:
   logout      Remove stored authentication credentials
   mcp         [experimental] Run Codex as an MCP server and manage MCP servers
   mcp-server  [experimental] Run the Codex MCP server (stdio transport)
-  app-server  [experimental] Run the app server
+  app-server  [experimental] Run the app server or related tooling
   completion  Generate shell completion scripts
   sandbox     Run commands within a Codex-provided sandbox [aliases: debug]
   apply       Apply the latest diff produced by Codex agent as a `git apply` to your local working
@@ -37,8 +37,8 @@ Options:
   -c, --config <key=value>
           Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
           Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
-          as JSON. If it fails to parse as JSON, the raw string is used as a literal.
-          
+          as TOML. If it fails to parse as TOML, the raw string is used as a literal.
+
           Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
           shell_environment_policy.inherit=all`
 
@@ -63,7 +63,7 @@ Options:
 
   -s, --sandbox <SANDBOX_MODE>
           Select the sandbox policy to use when executing model-generated shell commands
-          
+
           [possible values: read-only, workspace-write, danger-full-access]
 
   -a, --ask-for-approval <APPROVAL_POLICY>
@@ -81,7 +81,7 @@ Options:
             the model
 
       --full-auto
-          Convenience alias for low-friction sandboxed automatic execution (-a on-failure, --sandbox
+          Convenience alias for low-friction sandboxed automatic execution (-a on-request, --sandbox
           workspace-write)
 
       --dangerously-bypass-approvals-and-sandbox
@@ -125,8 +125,8 @@ Options:
   -c, --config <key=value>
           Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
           Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
-          as JSON. If it fails to parse as JSON, the raw string is used as a literal.
-          
+          as TOML. If it fails to parse as TOML, the raw string is used as a literal.
+
           Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
           shell_environment_policy.inherit=all`
 
@@ -143,18 +143,18 @@ Options:
           Model the agent should use
 
       --oss
-          
+
 
   -s, --sandbox <SANDBOX_MODE>
           Select the sandbox policy to use when executing model-generated shell commands
-          
+
           [possible values: read-only, workspace-write, danger-full-access]
 
   -p, --profile <CONFIG_PROFILE>
           Configuration profile from config.toml to specify default options
 
       --full-auto
-          Convenience alias for low-friction sandboxed automatic execution (-a on-failure, --sandbox
+          Convenience alias for low-friction sandboxed automatic execution (-a on-request, --sandbox
           workspace-write)
 
       --dangerously-bypass-approvals-and-sandbox
@@ -172,7 +172,7 @@ Options:
 
       --color <COLOR>
           Specifies color settings for use in the output
-          
+
           [default: auto]
           [possible values: always, never, auto]
 
@@ -208,8 +208,8 @@ Options:
   -c, --config <key=value>
           Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
           Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
-          as JSON. If it fails to parse as JSON, the raw string is used as a literal.
-          
+          as TOML. If it fails to parse as TOML, the raw string is used as a literal.
+
           Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
           shell_environment_policy.inherit=all`
 

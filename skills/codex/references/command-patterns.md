@@ -22,10 +22,10 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 1. **Claude detects** the coding task (queue design)
 2. **Skill is invoked** autonomously
-3. **Codex CLI is called** with gpt-5 (general high-reasoning model):
+3. **Codex CLI is called** with gpt-5.1 (general high-reasoning model):
 
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Help me design a queue data structure in Python"
 ```
@@ -52,10 +52,10 @@ Codex provides:
 ### What Happens
 
 1. **Skill detects** code editing request
-2. **Uses gpt-5-codex** (optimized for coding):
+2. **Uses gpt-5.1-codex** (optimized for coding):
 
 ```bash
-codex exec -m gpt-5-codex -s workspace-write \
+codex exec -m gpt-5.1-codex -s workspace-write \
   -c model_reasoning_effort=high \
   "Edit my Python file to implement the queue with thread-safety"
 ```
@@ -85,7 +85,7 @@ Codex:
 2. **Codex invoked** with coding-optimized settings:
 
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Design a REST API for a blog system"
 ```
@@ -112,7 +112,7 @@ Codex delivers:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5 -s read-only \
+codex exec -m gpt-5.1 -s read-only \
   -c model_reasoning_effort=high \
   "Help me implement a binary search tree with balancing"
 ```
@@ -133,11 +133,11 @@ Codex provides:
 
 | Task Type | Model | Sandbox | Example |
 |-----------|-------|---------|---------|
-| General reasoning | `gpt-5` | `read-only` | "Design a queue" |
-| Architecture design | `gpt-5` | `read-only` | "Design REST API" |
-| Code review | `gpt-5` | `read-only` | "Review this code" |
-| Code editing | `gpt-5-codex` | `workspace-write` | "Edit file to add X" |
-| Implementation | `gpt-5-codex` | `workspace-write` | "Implement function Y" |
+| General reasoning | `gpt-5.1` | `read-only` | "Design a queue" |
+| Architecture design | `gpt-5.1` | `read-only` | "Design REST API" |
+| Code review | `gpt-5.1` | `read-only` | "Review this code" |
+| Code editing | `gpt-5.1-codex` | `workspace-write` | "Edit file to add X" |
+| Implementation | `gpt-5.1-codex` | `workspace-write` | "Implement function Y" |
 
 ---
 
