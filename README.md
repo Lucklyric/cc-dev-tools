@@ -1,45 +1,85 @@
-# cc-skill-codex
+# cc-dev-tools
 
-A Claude Code **plugin** that provides a skill for seamless OpenAI Codex CLI integration with GPT-5 high-reasoning capabilities.
+Claude Code marketplace containing development tools and AI integrations for advanced workflows.
+
+## Overview
+
+This marketplace provides Claude Code plugins for enhanced development capabilities:
+
+- **Codex**: High-reasoning AI assistant for complex coding tasks, architecture, and reviews
+- *(More plugins coming soon)*
+
+## Plugins
+
+### Codex
+
+High-reasoning AI assistant through Codex CLI integration.
+
+- **Path**: `plugins/codex/`
+- **Version**: 1.3.0
+- **Documentation**: [plugins/codex/skills/codex/SKILL.md](plugins/codex/skills/codex/SKILL.md)
+
+## Migration from cc-skill-codex
+
+**Repository Renamed**: This repository was renamed from `cc-skill-codex` to `cc-dev-tools` on 2025-11-18.
+
+**For existing clones**, update your remote URL:
+```bash
+git remote set-url origin git@github.com:Lucklyric/cc-dev-tools.git
+```
+
+GitHub automatically redirects the old URL, so existing clones will continue to work.
+
+---
+
+## About the Codex Plugin
+
+A Claude Code **plugin** that provides a skill for seamless Codex CLI integration with high-reasoning capabilities.
 
 ## What is this?
 
-**cc-skill-codex** is a Claude Code **plugin** that contains the **codex skill**. When you install this plugin, you get access to the skill that enables Codex CLI integration.
+**cc-dev-tools** is a Claude Code **marketplace** that contains development tool plugins. Currently includes:
 
-- **Marketplace name**: `cc-skill-codex-marketplace`
-- **Plugin name**: `cc-skill-codex`
-- **Full plugin identifier**: `cc-skill-codex@cc-skill-codex-marketplace`
+- **codex plugin**: Provides the `codex` skill for seamless Codex CLI integration
+
+**Identifiers**:
+- **Marketplace name**: `cc-dev-tools`
+- **Plugin name**: `codex`
+- **Full plugin identifier**: `codex@cc-dev-tools`
 - **Skill name**: `codex`
 - **Installation**: Via Claude Code marketplace (installs the plugin, which includes the skill)
 
 ## Repository Structure
 
 ```
-cc-skill-codex/                  # Plugin root
-├── .claude-plugin/              # Plugin metadata
-│   ├── plugin.json             # Plugin configuration
-│   └── marketplace.json        # Marketplace configuration
-├── README.md                    # This file - installation and usage guide
-├── LICENSE                      # Apache 2.0 license
-└── skills/                      # Skills provided by this plugin
-    └── codex/                  # The "codex" skill
-        ├── SKILL.md            # Main skill definition (loaded by Claude Code)
-        ├── examples/           # Usage examples (for users)
-        │   ├── basic-usage.md
-        │   ├── session-continuation.md
-        │   └── advanced-config.md
-        └── resources/          # Reference documentation (for users)
-            ├── codex-help.md        # Codex CLI v0.58 help reference
-            ├── codex-config.md      # Configuration options
-            └── claude-skill-doc.md  # Skill development guide
+cc-dev-tools/                          # Marketplace root
+├── .claude-plugin/
+│   └── marketplace.json               # Marketplace metadata
+├── README.md                          # This file - installation and usage guide
+├── LICENSE                            # Apache 2.0 license
+└── plugins/                           # Plugins directory
+    └── codex/                         # The "codex" plugin
+        ├── .claude-plugin/
+        │   └── plugin.json            # Plugin manifest
+        └── skills/                    # Skills provided by this plugin
+            └── codex/                 # The "codex" skill
+                ├── SKILL.md           # Skill definition (loaded by Claude Code)
+                └── references/        # Reference documentation
+                    ├── advanced-patterns.md
+                    ├── codex-config.md
+                    ├── codex-help.md
+                    ├── command-patterns.md
+                    └── session-workflows.md
 ```
 
 **How it works**:
-1. You add the **marketplace** (`cc-skill-codex-marketplace`) from GitHub
-2. You install the **plugin** (`cc-skill-codex`) from the marketplace
+1. You add the **marketplace** (`cc-dev-tools`) from GitHub
+2. You install the **plugin** (`codex`) from the marketplace
 3. The plugin provides the **skill** (`codex`)
-4. Claude Code loads `skills/codex/SKILL.md` when the skill is invoked
+4. Claude Code loads `plugins/codex/skills/codex/SKILL.md` when the skill is invoked
 5. All other files are documentation for users
+
+**Three-tier hierarchy**: Marketplace → Plugin → Skill
 
 ---
 
@@ -60,16 +100,16 @@ cc-skill-codex/                  # Plugin root
 **Step 1**: Add this repository as a dev marketplace:
 
 ```bash
-/marketplace add https://github.com/Lucklyric/cc-skill-codex
+/marketplace add https://github.com/Lucklyric/cc-dev-tools
 ```
 
 **Step 2**: Install the plugin from the marketplace:
 
 ```bash
-/plugin install cc-skill-codex@cc-skill-codex-marketplace
+/plugin install codex@cc-dev-tools
 ```
 
-This installs the **cc-skill-codex plugin**, which includes the **codex skill**.
+This installs the **codex plugin**, which includes the **codex skill**.
 
 **Step 3**: Restart Claude Code to activate the plugin and skill.
 
@@ -80,7 +120,7 @@ Test that the skill is working:
 > Use Codex to design a binary search tree in Rust
 ```
 
-The skill will automatically invoke Codex CLI with GPT-5 high-reasoning mode.
+The skill will automatically invoke Codex CLI with high-reasoning mode.
 
 ---
 
@@ -104,7 +144,7 @@ codex login
 In your Claude Code session, add the GitHub repository as a marketplace:
 
 ```bash
-/marketplace add https://github.com/Lucklyric/cc-skill-codex
+/marketplace add https://github.com/Lucklyric/cc-dev-tools
 ```
 
 This registers the marketplace so Claude Code knows where to find the plugin.
@@ -114,20 +154,20 @@ This registers the marketplace so Claude Code knows where to find the plugin.
 Install the plugin from the marketplace you just added:
 
 ```bash
-/plugin install cc-skill-codex@cc-skill-codex-marketplace
+/plugin install codex@cc-dev-tools
 ```
 
-This installs the **cc-skill-codex plugin** and makes the **codex skill** available.
+This installs the **codex plugin** and makes the **codex skill** available.
 
-**Note**: The full identifier is `cc-skill-codex@cc-skill-codex-marketplace` where:
-- `cc-skill-codex` = plugin name
-- `cc-skill-codex-marketplace` = marketplace name
+**Note**: The full identifier is `codex@cc-dev-tools` where:
+- `codex` = plugin name
+- `cc-dev-tools` = marketplace name
 
 Then restart Claude Code.
 
 ### Step 4: Test Basic Usage
 
-**Simple request** (uses GPT-5 for general reasoning):
+**Simple request** (uses default model for general reasoning):
 ```
 > Help me design a priority queue in Python
 ```
@@ -135,20 +175,20 @@ Then restart Claude Code.
 Claude will:
 1. Detect this is a coding task
 2. Invoke the skill automatically
-3. Execute: `codex exec -m gpt-5 -s read-only -c model_reasoning_effort=high "Help me design..."`
+3. Execute: `codex exec -m gpt-5.1 -s read-only -c model_reasoning_effort=high "Help me design..."`
 4. Return Codex's high-reasoning response
 
 ### Step 5: Try Code Editing
 
-**Code editing request** (uses GPT-5-Codex):
+**Code editing request** (uses code-optimized model):
 ```
 > Edit my queue.py file to add thread-safety
 ```
 
 Claude will:
 1. Detect this is a code editing task
-2. Use GPT-5-Codex model
-3. Execute: `codex exec -m gpt-5-codex -s workspace-write -c model_reasoning_effort=high "Edit my queue.py..."`
+2. Use code-optimized model
+3. Execute: `codex exec -m gpt-5.1-codex -s workspace-write -c model_reasoning_effort=high "Edit my queue.py..."`
 
 ### Step 6: Continue a Session
 
@@ -176,7 +216,7 @@ Mentioning "Codex" explicitly triggers the skill.
 ## Quick Tips
 
 - **Trigger keywords**: "codex", "use codex", "complex coding", "high reasoning"
-- **Model selection**: GPT-5 (default) for design, GPT-5-Codex for code editing
+- **Model selection**: Intelligent model selection based on task type (general vs code editing)
 - **Session continuity**: Use "continue", "resume", "add to that" for session continuation
 - **All commands use**: `codex exec` (non-interactive mode) in Claude Code environment
 

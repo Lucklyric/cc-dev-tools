@@ -1,0 +1,12 @@
+{
+  "name": "codex",
+  "description": "Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Supports intelligent model selection, session continuation, and safe defaults.",
+  "version": "1.3.0",
+  "author": {
+    "name": "0xasun"
+  },
+  "repository": "https://github.com/Lucklyric/cc-dev-tools",
+  "homepage": "https://github.com/Lucklyric/cc-dev-tools/tree/main/plugins/codex",
+  "keywords": ["codex", "ai", "mcp", "reasoning", "development"],
+  "license": "Apache-2.0"
+}
