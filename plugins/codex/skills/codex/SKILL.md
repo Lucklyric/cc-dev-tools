@@ -1,5 +1,6 @@
 ---
 name: codex
+version: 1.3.0
 description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -7,18 +8,18 @@ description: Invoke Codex CLI for complex coding tasks requiring high reasoning 
 
 ---
 
-## ⚠️ CRITICAL: Always Use `codex exec`
+## CRITICAL: Always Use `codex exec`
 
 **MUST USE**: `codex exec` for ALL Codex CLI invocations in Claude Code.
 
-❌ **NEVER USE**: `codex` (interactive mode) - will fail with "stdout is not a terminal"
-✅ **ALWAYS USE**: `codex exec` (non-interactive mode)
+**NEVER USE**: `codex` (interactive mode) - will fail with "stdout is not a terminal"
+**ALWAYS USE**: `codex exec` (non-interactive mode)
 
 **Examples:**
-- ✅ `codex exec -m gpt-5.1 "prompt"` (CORRECT)
-- ❌ `codex -m gpt-5.1 "prompt"` (WRONG - will fail)
-- ✅ `codex exec resume --last` (CORRECT)
-- ❌ `codex resume --last` (WRONG - will fail)
+- `codex exec -m gpt-5.1 "prompt"` (CORRECT)
+- `codex -m gpt-5.1 "prompt"` (WRONG - will fail)
+- `codex exec resume --last` (CORRECT)
+- `codex resume --last` (WRONG - will fail)
 
 **Why?** Claude Code's bash environment is non-terminal/non-interactive. Only `codex exec` works in this environment.
 
@@ -283,7 +284,7 @@ Error: Invalid model specified
 
 To fix: Use 'gpt-5.1' for general reasoning or 'gpt-5.1-codex' for code editing
 
-Example: codex exec -m gpt-5.1"your prompt here"
+Example: codex exec -m gpt-5.1 "your prompt here"
 ```
 
 ### Troubleshooting
