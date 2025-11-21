@@ -13,12 +13,13 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 High-reasoning AI assistant through Codex CLI (GPT-5.1) integration.
 
 - **Path**: [`plugins/codex/`](plugins/codex/)
-- **Version**: 1.3.0
-- **Models**: GPT-5.1, GPT-5.1-Codex
+- **Version**: 1.4.0
+- **Models**: GPT-5.1, GPT-5.1-Codex-Max, GPT-5.1-Codex
 - **Documentation**: [Codex Plugin README](plugins/codex/README.md)
 - **Skill Reference**: [SKILL.md](plugins/codex/skills/codex/SKILL.md)
 
 **Features**:
+- Maximum capability code editing with GPT-5.1-Codex-Max (27-42% faster)
 - High-reasoning capabilities for complex coding tasks
 - Intelligent model selection (general vs code editing)
 - Session continuation support
@@ -47,7 +48,7 @@ Google Gemini AI integration through Gemini CLI.
 
 **For Codex Plugin:**
 ```bash
-codex --version  # v0.58+
+codex --version  # v0.59.0+ (required for gpt-5.1-codex-max)
 codex login
 ```
 
@@ -133,17 +134,6 @@ GitHub automatically redirects the old URL, so existing clones will continue to 
 3. The plugin provides a **skill** that Claude Code loads automatically
 4. When triggered, the skill executes commands via the respective CLI
 
-## Plugin Comparison
-
-| Feature | Codex Plugin | Gemini Plugin |
-|---------|--------------|---------------|
-| Provider | OpenAI (via Codex) | Google |
-| Models | GPT-5.1, GPT-5.1-Codex | Gemini 3 Pro, 2.5 Pro/Flash |
-| Best For | High-reasoning, complex code | Research, creative tasks |
-| Free Tier | API key required | OAuth (60 req/min, 1000/day) |
-| Session Resume | `codex exec resume --last` | `gemini -r latest` |
-| Web Search | No | Yes (via extensions) |
-
 ## Contributing
 
 Contributions welcome! This marketplace follows Claude Code's official plugin structure.
@@ -156,7 +146,7 @@ Apache 2.0
 
 **Marketplace**: 1.1.0
 **Plugins**:
-- Codex: 1.3.0
+- Codex: 1.4.0
 - Gemini: 1.0.0
 
 ## Links

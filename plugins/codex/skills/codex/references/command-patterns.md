@@ -52,15 +52,15 @@ Codex provides:
 ### What Happens
 
 1. **Skill detects** code editing request
-2. **Uses gpt-5.1-codex** (optimized for coding):
+2. **Uses gpt-5.1-codex-max** (maximum capability for coding - 27-42% faster):
 
 ```bash
-codex exec -m gpt-5.1-codex -s workspace-write \
+codex exec -m gpt-5.1-codex-max -s workspace-write \
   -c model_reasoning_effort=high \
   "Edit my Python file to implement the queue with thread-safety"
 ```
 
-3. **Codex performs code editing** with specialized model
+3. **Codex performs code editing** with maximum capability model
 4. **Files are modified** (workspace-write sandbox)
 
 ### Expected Output
@@ -129,6 +129,33 @@ Codex provides:
 
 ---
 
+## Example 5: Maximum Reasoning with xhigh
+
+### User Request
+"Refactor the authentication system with comprehensive security improvements"
+
+### What Happens
+
+```bash
+codex exec -m gpt-5.1-codex-max -s workspace-write \
+  -c model_reasoning_effort=xhigh \
+  "Refactor the authentication system with comprehensive security improvements"
+```
+
+### Expected Output
+
+Codex provides:
+- Deep architectural analysis of current system
+- Comprehensive security vulnerability assessment
+- Multi-layered refactoring strategy
+- Implementation of security best practices
+- Detailed reasoning about trade-offs
+- Long-horizon planning for complex changes
+
+**When to use xhigh**: Complex architectural refactoring, security-critical changes, long-horizon tasks where quality is more important than speed.
+
+---
+
 ## Model Selection Summary
 
 | Task Type | Model | Sandbox | Example |
@@ -136,8 +163,12 @@ Codex provides:
 | General reasoning | `gpt-5.1` | `read-only` | "Design a queue" |
 | Architecture design | `gpt-5.1` | `read-only` | "Design REST API" |
 | Code review | `gpt-5.1` | `read-only` | "Review this code" |
-| Code editing | `gpt-5.1-codex` | `workspace-write` | "Edit file to add X" |
-| Implementation | `gpt-5.1-codex` | `workspace-write` | "Implement function Y" |
+| Code editing (standard) | `gpt-5.1-codex-max` | `workspace-write` | "Edit file to add X" |
+| Code editing (maximum reasoning) | `gpt-5.1-codex-max` + `xhigh` | `workspace-write` | "Complex refactoring" |
+| Implementation | `gpt-5.1-codex-max` | `workspace-write` | "Implement function Y" |
+| Backward compatibility | `gpt-5.1-codex` | `workspace-write` | "Use standard model" |
+
+**Note**: `gpt-5.1-codex-max` is 27-42% faster than `gpt-5.1-codex` and uses ~30% fewer thinking tokens. It supports a new `xhigh` reasoning effort level for maximum capability.
 
 ---
 
