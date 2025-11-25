@@ -84,6 +84,25 @@ This plugin is part of the cc-dev-tools marketplace. To install:
 
 3. Restart Claude Code
 
+## Agent
+
+The Gemini plugin provides `gemini-agent` for explicit task delegation via the Task tool.
+
+### Agent Usage
+
+```
+User: "Use Gemini to research quantum computing concepts"
+```
+
+Claude will autonomously invoke the gemini-agent when you mention "Gemini" or need research/reasoning help.
+
+### Explicit Invocation
+
+When using the Task tool:
+- `subagent_type`: `gemini-agent`
+- The agent delegates all work to the gemini skill
+- Model configuration is inherited from parent context
+
 ## Usage
 
 ### Basic Invocation
@@ -253,7 +272,7 @@ Apache-2.0
 
 ## Version
 
-1.0.0
+1.1.0
 
 ## Author
 

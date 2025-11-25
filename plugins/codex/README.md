@@ -49,6 +49,25 @@ This plugin is part of the cc-dev-tools marketplace. To install:
 
 3. Restart Claude Code
 
+## Agent
+
+The Codex plugin provides `codex-agent` for explicit task delegation via the Task tool.
+
+### Agent Usage
+
+```
+User: "Use Codex to design a REST API for authentication"
+```
+
+Claude will autonomously invoke the codex-agent when you mention "Codex" or request high-reasoning coding help.
+
+### Explicit Invocation
+
+When using the Task tool:
+- `subagent_type`: `codex-agent`
+- The agent delegates all work to the codex skill
+- Model configuration is inherited from parent context
+
 ## Usage
 
 ### Basic Invocation
@@ -245,4 +264,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-1.3.0
+1.5.0
