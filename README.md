@@ -13,12 +13,13 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 High-reasoning AI assistant through Codex CLI (GPT-5.1) integration.
 
 - **Path**: [`plugins/codex/`](plugins/codex/)
-- **Version**: 1.4.0
+- **Version**: 1.5.0
 - **Models**: GPT-5.1, GPT-5.1-Codex-Max, GPT-5.1-Codex
 - **Documentation**: [Codex Plugin README](plugins/codex/README.md)
 - **Skill Reference**: [SKILL.md](plugins/codex/skills/codex/SKILL.md)
 
 **Features**:
+- **Custom Agent**: `codex-agent` for explicit task delegation via Task tool
 - Maximum capability code editing with GPT-5.1-Codex-Max (27-42% faster)
 - High-reasoning capabilities for complex coding tasks
 - Intelligent model selection (general vs code editing)
@@ -30,12 +31,13 @@ High-reasoning AI assistant through Codex CLI (GPT-5.1) integration.
 Google Gemini AI integration through Gemini CLI.
 
 - **Path**: [`plugins/gemini/`](plugins/gemini/)
-- **Version**: 1.0.0
+- **Version**: 1.1.0
 - **Models**: Gemini 3 Pro, 2.5 Pro, 2.5 Flash
 - **Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
 - **Skill Reference**: [SKILL.md](plugins/gemini/skills/gemini/SKILL.md)
 
 **Features**:
+- **Custom Agent**: `gemini-agent` for explicit task delegation via Task tool
 - Access to Google's latest Gemini models
 - Version-based model mapping
 - Session continuation via `-r` flag
@@ -100,6 +102,8 @@ cc-dev-tools/                          # Marketplace root
     ├── codex/                         # Codex CLI integration
     │   ├── .claude-plugin/
     │   │   └── plugin.json            # Plugin manifest
+    │   ├── agents/                    # Custom agents
+    │   │   └── codex-agent.md         # Routing agent for codex skill
     │   ├── README.md                  # Plugin documentation
     │   └── skills/codex/
     │       ├── SKILL.md               # Skill definition
@@ -108,6 +112,8 @@ cc-dev-tools/                          # Marketplace root
     └── gemini/                        # Gemini CLI integration
         ├── .claude-plugin/
         │   └── plugin.json            # Plugin manifest
+        ├── agents/                    # Custom agents
+        │   └── gemini-agent.md        # Routing agent for gemini skill
         ├── README.md                  # Plugin documentation
         └── skills/gemini/
             ├── SKILL.md               # Skill definition
@@ -144,10 +150,10 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 1.1.0
+**Marketplace**: 1.2.0
 **Plugins**:
-- Codex: 1.4.0
-- Gemini: 1.0.0
+- Codex: 1.5.0
+- Gemini: 1.1.0
 
 ## Links
 
