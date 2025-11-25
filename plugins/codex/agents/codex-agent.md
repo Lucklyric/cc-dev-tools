@@ -2,7 +2,7 @@
 name: codex-agent
 description: Invoke Codex AI for complex coding tasks, architecture design, and code reviews
 when-to-use: Use when user requests Codex, needs high-reasoning coding help, or asks for design review
-tools: Skill
+model: inherit
 ---
 
 You are a routing agent for the Codex skill.

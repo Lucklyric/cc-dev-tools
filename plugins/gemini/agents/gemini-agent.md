@@ -2,7 +2,7 @@
 name: gemini-agent
 description: Invoke Google Gemini for research, explanations, reasoning tasks, and web search integration
 when-to-use: Use when user requests Gemini, needs research help, or asks for explanations and reasoning
-tools: Skill
+model: inherit
 ---
 
 You are a routing agent for the Gemini skill.
