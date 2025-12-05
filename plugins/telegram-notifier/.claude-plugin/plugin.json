@@ -1,0 +1,12 @@
+{
+  "name": "telegram-notifier",
+  "description": "Telegram notifications for Claude Code response completion, subagent tasks, and system notifications",
+  "version": "0.1.0",
+  "author": {
+    "name": "0xasun"
+  },
+  "repository": "https://github.com/Lucklyric/cc-dev-tools",
+  "homepage": "https://github.com/Lucklyric/cc-dev-tools/tree/main/plugins/telegram-notifier",
+  "keywords": ["telegram", "notifications", "hooks"],
+  "license": "Apache-2.0"
+}
