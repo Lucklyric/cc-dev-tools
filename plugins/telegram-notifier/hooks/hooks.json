@@ -1,0 +1,38 @@
+{
+  "description": "Telegram notifications for Claude Code events",
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ -n \"$CC_TELEGRAM_BOT_TOKEN\" && -n \"$CC_TELEGRAM_CHAT_ID\" ]]; then MESSAGE=\"${CC_TELEGRAM_STOP_MSG:-Claude Code response completed at $(date '+%Y-%m-%d %H:%M:%S')}\"; if [[ \"${CC_TELEGRAM_DRY_RUN:-false}\" == \"true\" ]]; then echo \"[DRY RUN] $MESSAGE\"; else curl -s -X POST \"https://api.telegram.org/bot$CC_TELEGRAM_BOT_TOKEN/sendMessage\" -d \"chat_id=$CC_TELEGRAM_CHAT_ID\" -d \"text=$MESSAGE\" -d \"parse_mode=HTML\" >/dev/null 2>&1 || echo \"Failed to send Telegram notification\"; fi; else echo \"Telegram notification skipped: Set CC_TELEGRAM_BOT_TOKEN and CC_TELEGRAM_CHAT_ID\"; fi"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ -n \"$CC_TELEGRAM_BOT_TOKEN\" && -n \"$CC_TELEGRAM_CHAT_ID\" ]]; then MESSAGE=\"${CC_TELEGRAM_SUBAGENT_MSG:-Claude Code subagent completed at $(date '+%Y-%m-%d %H:%M:%S')}\"; if [[ \"${CC_TELEGRAM_DRY_RUN:-false}\" == \"true\" ]]; then echo \"[DRY RUN] $MESSAGE\"; else curl -s -X POST \"https://api.telegram.org/bot$CC_TELEGRAM_BOT_TOKEN/sendMessage\" -d \"chat_id=$CC_TELEGRAM_CHAT_ID\" -d \"text=$MESSAGE\" -d \"parse_mode=HTML\" >/dev/null 2>&1 || echo \"Failed to send Telegram notification\"; fi; else echo \"Telegram notification skipped: Set CC_TELEGRAM_BOT_TOKEN and CC_TELEGRAM_CHAT_ID\"; fi"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [[ -n \"$CC_TELEGRAM_BOT_TOKEN\" && -n \"$CC_TELEGRAM_CHAT_ID\" ]]; then MESSAGE=\"${CC_TELEGRAM_NOTIFY_MSG:-Claude Code notification}\"; if [[ \"${CC_TELEGRAM_DRY_RUN:-false}\" == \"true\" ]]; then echo \"[DRY RUN] $MESSAGE\"; else curl -s -X POST \"https://api.telegram.org/bot$CC_TELEGRAM_BOT_TOKEN/sendMessage\" -d \"chat_id=$CC_TELEGRAM_CHAT_ID\" -d \"text=$MESSAGE\" -d \"parse_mode=HTML\" >/dev/null 2>&1 || echo \"Failed to send Telegram notification\"; fi; else echo \"Telegram notification skipped: Set CC_TELEGRAM_BOT_TOKEN and CC_TELEGRAM_CHAT_ID\"; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
