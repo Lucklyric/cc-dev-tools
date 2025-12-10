@@ -1,7 +1,7 @@
 {
   "name": "codex",
   "description": "Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Supports intelligent model selection, session continuation, and safe defaults.",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "author": {
     "name": "0xasun"
   },

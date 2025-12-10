@@ -8,6 +8,21 @@ description: Invoke Google Gemini CLI for complex reasoning tasks, research, and
 
 ---
 
+## DEFAULT MODEL: Gemini 3 Pro
+
+**The default model for ALL Gemini invocations is `gemini-3-pro-preview`.**
+
+- Always use `gemini-3-pro-preview` unless user explicitly requests another model
+- This is the highest reasoning model available
+- Fallback to `gemini-2.5-flash` ONLY on 404/access errors
+
+```bash
+# Default invocation - ALWAYS use gemini-3-pro-preview
+gemini -m gemini-3-pro-preview "your prompt here"
+```
+
+---
+
 ## CRITICAL: Positional Prompts Preferred
 
 **PREFERRED**: Use positional prompts for Gemini CLI invocations (future-proof).

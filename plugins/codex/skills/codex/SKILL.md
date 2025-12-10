@@ -8,6 +8,23 @@ description: Invoke Codex CLI for complex coding tasks requiring high reasoning 
 
 ---
 
+## DEFAULT MODEL: GPT-5.1-Codex-Max with xhigh Reasoning
+
+**The default model for ALL Codex invocations is `gpt-5.1-codex-max` with `xhigh` reasoning effort.**
+
+- Always use `gpt-5.1-codex-max` with `-c model_reasoning_effort=xhigh` unless user explicitly requests otherwise
+- This provides maximum reasoning capability (27-42% faster, 30% fewer thinking tokens)
+- Use `workspace-write` sandbox for code editing, `read-only` for analysis only
+
+```bash
+# Default invocation - ALWAYS use gpt-5.1-codex-max with xhigh
+codex exec -m gpt-5.1-codex-max -s workspace-write \
+  -c model_reasoning_effort=xhigh \
+  "your prompt here"
+```
+
+---
+
 ## CRITICAL: Always Use `codex exec`
 
 **MUST USE**: `codex exec` for ALL Codex CLI invocations in Claude Code.
@@ -52,20 +69,20 @@ When a user makes a request that falls into one of the above categories, determi
 
 **IMPORTANT**: Always use `codex exec` for non-interactive execution. Claude Code's bash environment is non-terminal, so the interactive `codex` command will fail with "stdout is not a terminal" error.
 
-#### For General Reasoning Tasks (Default)
+#### For Code Editing Tasks (Default)
 
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.1-codex-max -s workspace-write \
+  -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "<user's prompt>"
 ```
 
-#### For Code Editing Tasks
+#### For Read-Only Analysis Tasks
 
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.1-codex-max -s read-only \
+  -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "<user's prompt>"
 ```
@@ -100,11 +117,10 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model | `gpt-5.1` | `-m gpt-5.1` | General reasoning tasks |
-| Model (code editing) | `gpt-5.1-codex-max` | `-m gpt-5.1-codex-max` | Code editing tasks (27-42% faster) |
-| Sandbox | `read-only` | `-s read-only` | Safe default (general tasks) |
-| Sandbox (code editing) | `workspace-write` | `-s workspace-write` | Allows file modifications |
-| Reasoning Effort | `high` | `-c model_reasoning_effort=high` | Maximum reasoning capability |
+| Model | `gpt-5.1-codex-max` | `-m gpt-5.1-codex-max` | Default for ALL tasks (27-42% faster) |
+| Sandbox | `workspace-write` | `-s workspace-write` | Allows file modifications (default) |
+| Sandbox (analysis) | `read-only` | `-s read-only` | For read-only analysis tasks |
+| Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
 | Verbosity | `medium` | `-c model_verbosity=medium` | Balanced output detail |
 | Web Search | `enabled` | `--enable web_search_request` | Access to up-to-date information |
 
@@ -330,18 +346,18 @@ Example: codex exec -m gpt-5.1-codex-max -s workspace-write "code editing task"
 
 ## Examples
 
-### Example 1: General Reasoning Task (Architecture Design)
+### Example 1: Architecture Design Task
 
 **User Request**: "Help me design a binary search tree architecture in Rust"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.1-codex-max -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Help me design a binary search tree architecture in Rust"
 ```
 
-**Result**: Codex provides high-reasoning architectural guidance using gpt-5. Session automatically saved for continuation.
+**Result**: Codex provides maximum reasoning architectural guidance using gpt-5.1-codex-max with xhigh reasoning. Session automatically saved for continuation.
 
 ---
 
@@ -352,11 +368,11 @@ codex exec -m gpt-5.1 -s read-only \
 **Skill Executes**:
 ```bash
 codex exec -m gpt-5.1-codex-max -s workspace-write \
-  -c model_reasoning_effort=high \
+  -c model_reasoning_effort=xhigh \
   "Edit this file to implement the BST insert method"
 ```
 
-**Result**: Codex uses gpt-5.1-codex-max (maximum capability for coding - 27-42% faster) with workspace-write permissions to modify files.
+**Result**: Codex uses gpt-5.1-codex-max with xhigh reasoning and workspace-write permissions to modify files.
 
 ---
 
@@ -373,23 +389,23 @@ codex exec resume --last
 
 ---
 
-### Example 4: Custom Configuration
+### Example 4: With Web Search
 
 **User Request**: "Use Codex with web search to research and implement async patterns"
 
 **Skill Executes**:
 ```bash
 codex exec -m gpt-5.1-codex-max -s workspace-write \
-  -c model_reasoning_effort=high \
+  -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "Research and implement async patterns"
 ```
 
-**Result**: Codex uses web search capability for latest information, then implements with high reasoning and maximum code editing capability.
+**Result**: Codex uses web search capability for latest information, then implements with xhigh reasoning and maximum code editing capability.
 
 ---
 
-### Example 5: Maximum Reasoning with xhigh
+### Example 5: Complex Architectural Refactoring
 
 **User Request**: "Perform complex architectural refactoring of authentication system"
 
@@ -400,7 +416,7 @@ codex exec -m gpt-5.1-codex-max -s workspace-write \
   "Perform complex architectural refactoring of authentication system"
 ```
 
-**Result**: Codex uses extra-high reasoning effort (xhigh) for maximum capability on complex long-horizon tasks. Ideal for architectural refactoring where quality is more important than speed.
+**Result**: Codex uses xhigh reasoning effort (default) for maximum capability on complex long-horizon tasks. Ideal for architectural refactoring where quality is critical.
 
 ---
 
