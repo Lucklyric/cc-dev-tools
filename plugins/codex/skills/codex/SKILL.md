@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 1.4.0
+version: 2.0.0
 description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -8,17 +8,17 @@ description: Invoke Codex CLI for complex coding tasks requiring high reasoning 
 
 ---
 
-## DEFAULT MODEL: GPT-5.1-Codex-Max with xhigh Reasoning
+## DEFAULT MODEL: GPT-5.2 with xhigh Reasoning
 
-**The default model for ALL Codex invocations is `gpt-5.1-codex-max` with `xhigh` reasoning effort.**
+**The default model for ALL Codex invocations is `gpt-5.2` with `xhigh` reasoning effort.**
 
-- Always use `gpt-5.1-codex-max` with `-c model_reasoning_effort=xhigh` unless user explicitly requests otherwise
-- This provides maximum reasoning capability (27-42% faster, 30% fewer thinking tokens)
+- Always use `gpt-5.2` with `-c model_reasoning_effort=xhigh` unless user explicitly requests otherwise
+- GPT-5.2 is the latest model with full support for all reasoning levels (low, medium, high, xhigh)
 - Use `workspace-write` sandbox for code editing, `read-only` for analysis only
 
 ```bash
-# Default invocation - ALWAYS use gpt-5.1-codex-max with xhigh
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+# Default invocation - ALWAYS use gpt-5.2 with xhigh
+codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "your prompt here"
 ```
@@ -33,12 +33,44 @@ codex exec -m gpt-5.1-codex-max -s workspace-write \
 **ALWAYS USE**: `codex exec` (non-interactive mode)
 
 **Examples:**
-- `codex exec -m gpt-5.1 "prompt"` (CORRECT)
-- `codex -m gpt-5.1 "prompt"` (WRONG - will fail)
+- `codex exec -m gpt-5.2 "prompt"` (CORRECT)
+- `codex -m gpt-5.2 "prompt"` (WRONG - will fail)
 - `codex exec resume --last` (CORRECT)
 - `codex resume --last` (WRONG - will fail)
 
 **Why?** Claude Code's bash environment is non-terminal/non-interactive. Only `codex exec` works in this environment.
+
+---
+
+## IMPORTANT: Interactive vs Exec Mode Flags
+
+**Some Codex CLI flags are ONLY available in interactive mode, NOT in `codex exec`.**
+
+| Flag | Interactive `codex` | `codex exec` | Alternative for exec |
+|------|---------------------|--------------|---------------------|
+| `--search` | ✅ Available | ❌ NOT available | `--enable web_search_request` |
+| `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `--full-auto` or `-c approval_policy=...` |
+| `--add-dir` | ✅ Available | ✅ Available | N/A |
+| `--full-auto` | ✅ Available | ✅ Available | N/A |
+
+**For web search in exec mode**:
+```bash
+# CORRECT - works in codex exec
+codex exec --enable web_search_request "research topic"
+
+# WRONG - --search only works in interactive mode
+codex --search "research topic"
+```
+
+**For approval control in exec mode**:
+```bash
+# CORRECT - works in codex exec
+codex exec --full-auto "task"
+codex exec -c approval_policy=on-request "task"
+
+# WRONG - -a only works in interactive mode
+codex -a on-request "task"
+```
 
 ---
 
@@ -62,7 +94,7 @@ When a user makes a request that falls into one of the above categories, determi
 - Example requests: "Design a queue data structure", "Review this architecture", "Explain this algorithm"
 
 **Code Editing Tasks** (file modifications, implementation):
-- Use model: `gpt-5.1-codex-max` (maximum capability for code editing - 27-42% faster)
+- Use model: `gpt-5.2` (latest model with maximum capability)
 - Example requests: "Edit this file to add feature X", "Implement the function", "Refactor this code"
 
 ### Bash CLI Command Structure
@@ -72,7 +104,7 @@ When a user makes a request that falls into one of the above categories, determi
 #### For Code Editing Tasks (Default)
 
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "<user's prompt>"
@@ -81,7 +113,7 @@ codex exec -m gpt-5.1-codex-max -s workspace-write \
 #### For Read-Only Analysis Tasks
 
 ```bash
-codex exec -m gpt-5.1-codex-max -s read-only \
+codex exec -m gpt-5.2 -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "<user's prompt>"
@@ -101,15 +133,16 @@ codex exec -m gpt-5.1-codex-max -s read-only \
 - Planning implementation strategies
 - General problem-solving and reasoning
 
-**Use `gpt-5.1-codex-max` when:**
+**Use `gpt-5.2` when:**
 - Editing or modifying existing code files
 - Implementing specific functions or features
 - Refactoring code
 - Writing new code with file I/O
 - Any task requiring `workspace-write` sandbox
 - Complex code editing requiring maximum reasoning capability
+- Tasks requiring the latest model capabilities
 
-**Note**: For backward compatibility, `gpt-5.1-codex` (standard model) is still available and works identically. Use `gpt-5.1-codex-max` as the default for better performance (27-42% faster, 30% fewer thinking tokens).
+**Note**: `gpt-5.1-codex-max` and `gpt-5.1-codex` are still available for backward compatibility. Use `gpt-5.2` as the default for latest capabilities.
 
 ### Default Configuration
 
@@ -117,7 +150,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model | `gpt-5.1-codex-max` | `-m gpt-5.1-codex-max` | Default for ALL tasks (27-42% faster) |
+| Model | `gpt-5.2` | `-m gpt-5.2` | Default for ALL tasks (latest model) |
 | Sandbox | `workspace-write` | `-s workspace-write` | Allows file modifications (default) |
 | Sandbox (analysis) | `read-only` | `-s read-only` | For read-only analysis tasks |
 | Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
@@ -126,11 +159,11 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.59.0+ (requires 0.59.0+ for gpt-5.1-codex-max support)
+**Codex CLI Version**: 0.71.0+ (requires 0.71.0+ for latest features)
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.1-codex-max` | Model selection |
+| `-m, --model` | `gpt-5.2`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.1-codex-max` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=high`) |
 | `-C, --cd` | directory path | Working directory |
@@ -138,8 +171,10 @@ All Codex invocations use these defaults unless user specifies otherwise:
 | `--enable` | feature name | Enable a feature (e.g., `web_search_request`) |
 | `--disable` | feature name | Disable a feature |
 | `-i, --image` | file path(s) | Attach image(s) to initial prompt |
-| `--full-auto` | flag | Convenience for workspace-write sandbox with on-failure approval |
+| `--add-dir` | directory path | Additional writable directory (repeatable) |
+| `--full-auto` | flag | Convenience for workspace-write sandbox with on-request approval |
 | `--oss` | flag | Use local open source model provider |
+| `--local-provider` | `lmstudio`, `ollama` | Specify local provider (with --oss) |
 | `--skip-git-repo-check` | flag | Allow running outside Git repository |
 | `--output-schema` | file path | JSON Schema file for response shape |
 | `--color` | `always`, `never`, `auto` | Color settings for output |
@@ -151,33 +186,47 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 Pass these as `-c key=value`:
 
-- `model_reasoning_effort`: `minimal`, `low`, `medium`, `high`, `xhigh` (default: `high`)
-  - **`xhigh`**: Extra-high reasoning for maximum capability (gpt-5.1-codex-max only)
+- `model_reasoning_effort`: `minimal`, `low`, `medium`, `high`, `xhigh`
+  - **CLI default**: `high` - The Codex CLI defaults to high reasoning
+  - **Skill default**: `xhigh` - This skill explicitly uses xhigh for maximum capability
+  - **`xhigh`**: Extra-high reasoning for maximum capability (supported by gpt-5.2 and gpt-5.1-codex-max)
   - Use `xhigh` for complex architectural refactoring, long-horizon tasks, or when quality is more important than speed
 - `model_verbosity`: `low`, `medium`, `high` (default: `medium`)
 - `model_reasoning_summary`: `auto`, `concise`, `detailed`, `none` (default: `auto`)
 - `sandbox_workspace_write.writable_roots`: JSON array of additional writable directories (e.g., `["/path1","/path2"]`)
+- `approval_policy`: `untrusted`, `on-failure`, `on-request`, `never` (approval behavior)
 
-**Note**: To specify additional writable directories beyond the workspace, use:
+**Additional Writable Directories**:
+
+Use `--add-dir` flag (preferred) or config:
 ```bash
--c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]'
+# Preferred - simpler syntax (v0.71.0+)
+codex exec --add-dir /path1 --add-dir /path2 "task"
+
+# Alternative - config approach
+codex exec -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]' "task"
 ```
-This replaces the removed `--add-dir` flag from earlier versions.
 
 ### Model Selection Guide
 
-**Default Models (Codex CLI v0.59.0+)**
+**Default Models (Codex CLI v0.71.0+)**
 
-This skill defaults to the GPT-5.1 model family:
+This skill supports the following models:
+- `gpt-5.2` - Latest model with all reasoning levels (NEW in 0.71.0)
 - `gpt-5.1` - General reasoning, architecture, reviews (default)
-- `gpt-5.1-codex-max` - Code editing and implementation (default for code tasks)
+- `gpt-5.1-codex-max` - Code editing (legacy, use gpt-5.2 instead)
 - `gpt-5.1-codex` - Standard code editing (available for backward compatibility)
+
+**GPT-5.2 Model (NEW)**:
+- Supports all reasoning effort levels: `low`, `medium`, `high`, `xhigh`
+- Use for cutting-edge tasks requiring latest model capabilities
+- Example: `codex exec -m gpt-5.2 -c model_reasoning_effort=xhigh "complex task"`
 
 **Performance Characteristics**:
 - `gpt-5.1-codex-max` is 27-42% faster than `gpt-5.1-codex`
 - Uses ~30% fewer thinking tokens at the same reasoning effort level
 - Supports new `xhigh` reasoning effort for maximum capability
-- Requires Codex CLI 0.59.0+ and ChatGPT Plus/Pro/Business/Edu/Enterprise subscription
+- Requires Codex CLI 0.71.0+ and ChatGPT Plus/Pro/Business/Edu/Enterprise subscription
 
 **Backward Compatibility**
 
@@ -214,9 +263,9 @@ codex exec -m gpt-4 "Review this code"
 **Default Behavior**
 
 Without explicit `-m` override:
-- General tasks → `gpt-5.1`
-- Code editing tasks → `gpt-5.1-codex-max` (recommended for best performance)
-- Backward compatibility → `gpt-5.1-codex` still works if explicitly specified
+- All tasks → `gpt-5.2` (latest model, recommended default)
+- General reasoning → `gpt-5.1` (if explicitly requested)
+- Backward compatibility → `gpt-5.1-codex-max` and `gpt-5.1-codex` still work if explicitly specified
 
 ## Session Continuation
 
@@ -311,10 +360,10 @@ After authentication, try your request again.
 ```
 Error: Invalid model specified
 
-To fix: Use 'gpt-5.1' for general reasoning or 'gpt-5.1-codex-max' for code editing (gpt-5.1-codex also available for backward compatibility)
+To fix: Use 'gpt-5.2' for all tasks (recommended) or 'gpt-5.1' for general reasoning
 
-Example: codex exec -m gpt-5.1 "your prompt here"
-Example: codex exec -m gpt-5.1-codex-max -s workspace-write "code editing task"
+Example: codex exec -m gpt-5.2 "your prompt here"
+Example: codex exec -m gpt-5.2 -s workspace-write "code editing task"
 ```
 
 ### Troubleshooting
@@ -352,12 +401,12 @@ Example: codex exec -m gpt-5.1-codex-max -s workspace-write "code editing task"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1-codex-max -s read-only \
+codex exec -m gpt-5.2 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Help me design a binary search tree architecture in Rust"
 ```
 
-**Result**: Codex provides maximum reasoning architectural guidance using gpt-5.1-codex-max with xhigh reasoning. Session automatically saved for continuation.
+**Result**: Codex provides maximum reasoning architectural guidance using gpt-5.2 with xhigh reasoning. Session automatically saved for continuation.
 
 ---
 
@@ -367,12 +416,12 @@ codex exec -m gpt-5.1-codex-max -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit this file to implement the BST insert method"
 ```
 
-**Result**: Codex uses gpt-5.1-codex-max with xhigh reasoning and workspace-write permissions to modify files.
+**Result**: Codex uses gpt-5.2 with xhigh reasoning and workspace-write permissions to modify files.
 
 ---
 
@@ -395,13 +444,13 @@ codex exec resume --last
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "Research and implement async patterns"
 ```
 
-**Result**: Codex uses web search capability for latest information, then implements with xhigh reasoning and maximum code editing capability.
+**Result**: Codex uses web search capability for latest information, then implements with gpt-5.2 xhigh reasoning.
 
 ---
 
@@ -411,16 +460,47 @@ codex exec -m gpt-5.1-codex-max -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Perform complex architectural refactoring of authentication system"
 ```
 
-**Result**: Codex uses xhigh reasoning effort (default) for maximum capability on complex long-horizon tasks. Ideal for architectural refactoring where quality is critical.
+**Result**: Codex uses gpt-5.2 with xhigh reasoning effort for maximum capability on complex long-horizon tasks. Ideal for architectural refactoring where quality is critical.
 
 ---
 
-## New in v0.53.0
+## Code Review Subcommand (v0.71.0+)
+
+The `codex review` subcommand provides non-interactive code review capabilities:
+
+```bash
+# Review uncommitted changes (staged, unstaged, untracked)
+codex review --uncommitted
+
+# Review changes against a base branch
+codex review --base main
+
+# Review a specific commit
+codex review --commit abc123
+
+# Review with custom instructions
+codex review --uncommitted "Focus on security vulnerabilities"
+
+# Non-interactive via exec
+codex exec review --uncommitted
+```
+
+**Review Options**:
+| Flag | Description |
+|------|-------------|
+| `--uncommitted` | Review staged, unstaged, and untracked changes |
+| `--base <BRANCH>` | Review changes against the given base branch |
+| `--commit <SHA>` | Review the changes introduced by a commit |
+| `--title <TITLE>` | Optional commit title for review summary |
+
+---
+
+## CLI Features Reference
 
 ### Feature Flags (`--enable` / `--disable`)
 Enable or disable specific Codex features:
@@ -434,6 +514,19 @@ Attach images to prompts for visual analysis:
 ```bash
 codex exec -i screenshot.png "Analyze this UI design"
 codex exec -i diagram1.png -i diagram2.png "Compare these architectures"
+```
+
+### Additional Directories (`--add-dir`) (v0.71.0+)
+Add writable directories beyond the primary workspace:
+```bash
+codex exec --add-dir /shared/libs --add-dir /config "task"
+```
+
+### Full Auto Mode (`--full-auto`)
+Convenience flag for low-friction execution:
+```bash
+codex exec --full-auto "task"
+# Equivalent to: -s workspace-write with on-request approval
 ```
 
 ### Non-Git Environments (`--skip-git-repo-check`)
@@ -454,15 +547,77 @@ Control colored output (always, never, auto):
 codex exec --color never "Run in CI/CD pipeline"
 ```
 
-### Web Search Migration
-**Deprecated**: `--search` flag (not available in `codex exec`)
-**New**: Use `--enable web_search_request` instead
+### Web Search in Exec Mode
+**Note**: `--search` flag is interactive-only. Use `--enable` for exec mode:
 ```bash
-# Old (invalid for codex exec)
-codex --search "research topic"
-
-# New (correct)
+# CORRECT for codex exec
 codex exec --enable web_search_request "research topic"
+
+# WRONG - --search only works in interactive mode
+codex --search "research topic"
+```
+
+### Feature Flags (`codex features list`) (v0.71.0+)
+Inspect and manage Codex feature flags:
+```bash
+# List all feature flags with their states
+codex features list
+```
+
+**Current Feature Flags** (as of v0.71.0):
+
+**Stable Features**:
+| Feature | Default | Description |
+|---------|---------|-------------|
+| `web_search_request` | false | Enable web search capability |
+| `parallel` | true | Parallel execution |
+| `shell_tool` | true | Shell command execution |
+| `undo` | true | Undo functionality |
+| `view_image_tool` | true | Image viewing capability |
+| `warnings` | true | Display warnings |
+
+**Experimental/Beta Features**:
+| Feature | Stage | Default | Description |
+|---------|-------|---------|-------------|
+| `exec_policy` | experimental | true | Execution policy control |
+| `remote_compaction` | experimental | true | Remote compaction |
+| `unified_exec` | experimental | false | Unified execution mode |
+| `rmcp_client` | experimental | false | RMCP client support |
+| `apply_patch_freeform` | beta | false | Freeform patch application |
+| `skills` | experimental | false | Skills support |
+| `shell_snapshot` | experimental | false | Shell state snapshots |
+| `remote_models` | experimental | false | Remote model support |
+
+Enable/disable features with `--enable` and `--disable`:
+```bash
+codex exec --enable web_search_request "research task"
+codex exec --disable parallel "run sequentially"
+```
+
+### JSONL Output (`--json`) (v0.71.0+)
+Stream events as JSONL for programmatic processing:
+```bash
+codex exec --json "task" > events.jsonl
+```
+
+### Save Last Message (`-o/--output-last-message`) (v0.71.0+)
+Write the final agent message to a file:
+```bash
+codex exec -o result.txt "generate summary"
+```
+
+---
+
+## When to Use GPT-5.2 vs GPT-5.1
+
+### Use GPT-5.2 (Latest Model) For:
+- Cutting-edge tasks requiring latest capabilities
+- Complex reasoning with all effort levels (low to xhigh)
+- When you want the newest model improvements
+- Tasks where latest training data matters
+
+```bash
+codex exec -m gpt-5.2 -c model_reasoning_effort=xhigh "complex task"
 ```
 
 ---
@@ -492,7 +647,7 @@ codex exec --enable web_search_request "research topic"
 - When you need to replicate behavior from earlier versions
 - Explicit requirement to use the standard (non-max) model
 
-**Default**: When in doubt, use `gpt-5.1` for general tasks. Use `gpt-5.1-codex-max` when specifically editing code for best performance and quality.
+**Default**: Use `gpt-5.2` for all tasks (latest model with best capabilities). Use `gpt-5.1` if you specifically need the older general model, or `gpt-5.1-codex-max` for backward compatibility.
 
 ## Best Practices
 
@@ -525,16 +680,23 @@ The skill defaults to high reasoning effort - perfect for:
 - Performance optimization
 - Security reviews
 
-## Platform & Capabilities (v0.53.0)
+## Platform & Capabilities (v0.71.0)
 
 ### Windows Sandbox Support
-Windows sandbox is now available in alpha (experimental). Use with caution in production environments.
+Windows sandbox is available for filesystem and network access control.
 
 ### Interactive Mode Features
 The `/exit` slash-command alias is available in interactive `codex` mode (not applicable to `codex exec` non-interactive mode used by this skill).
 
 ### Model Verbosity Override
-All code editing models (gpt-5.1-codex-max, gpt-5.1-codex) support verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
+All models (gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex) support verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
+
+### Local/OSS Model Support
+Use `--oss` with `--local-provider` to use local LLM providers:
+```bash
+codex exec --oss --local-provider ollama "task"
+codex exec --oss --local-provider lmstudio "task"
+```
 
 ## Pattern References
 

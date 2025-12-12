@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.0.0
+version: 1.1.0
 description: Invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. This skill should be invoked when users explicitly mention "Gemini", request Google's AI models, need advanced reasoning capabilities, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -23,18 +23,20 @@ gemini -m gemini-3-pro-preview "your prompt here"
 
 ---
 
-## CRITICAL: Positional Prompts Preferred
+## CRITICAL: Positional Prompts Required
 
-**PREFERRED**: Use positional prompts for Gemini CLI invocations (future-proof).
+**REQUIRED**: Use positional prompts for Gemini CLI invocations.
 
-**DEPRECATED**: `-p` flag still works but will be removed in future versions.
+**DEPRECATED**: `-p/--prompt` flag is officially deprecated and will be removed in a future version.
 
 **Examples:**
-- `gemini -m gemini-3-pro-preview "prompt"` (PREFERRED - positional)
-- `gemini -m gemini-3-pro-preview -p "prompt"` (DEPRECATED - will be removed)
+- `gemini -m gemini-3-pro-preview "prompt"` (CORRECT - positional)
+- `gemini -m gemini-3-pro-preview -p "prompt"` (DEPRECATED - avoid using)
 - `gemini -r latest` (CORRECT - session resume)
 
-**Why?** Gemini CLI v0.16.0 deprecated the `-p` flag in favor of positional prompts. While `-p` still works, it will be removed in a future version. Use positional prompts for forward compatibility.
+**Warning from CLI help**: "[deprecated: Use the positional prompt instead. This flag will be removed in a future version.]"
+
+**Why?** As of Gemini CLI v0.20.0, the `-p` flag is explicitly marked deprecated. Use positional prompts for forward compatibility.
 
 ---
 
@@ -337,6 +339,51 @@ gemini -m gemini-3-pro-preview "Design system architecture"
 
 **Note**: This plugin does not implement custom extensions or MCP servers. Users can configure extensions and MCP servers through the Gemini CLI's standard configuration in `~/.gemini/settings.json`. Extensions are enabled by default when appropriate for the task.
 
+### Additional Directories (`--include-directories`) (v0.20.0+)
+
+Include additional directories in workspace context:
+
+```bash
+# Single directory
+gemini -m gemini-3-pro-preview --include-directories /shared/libs "task"
+
+# Multiple directories (comma-separated)
+gemini -m gemini-3-pro-preview --include-directories /path1,/path2 "task"
+
+# Multiple directories (repeated flag)
+gemini -m gemini-3-pro-preview --include-directories /path1 --include-directories /path2 "task"
+```
+
+**Note**: Disabled in restrictive sandbox profiles.
+
+### Accessibility (`--screen-reader`) (v0.20.0+)
+
+Enable screen reader mode for accessibility:
+
+```bash
+gemini -m gemini-3-pro-preview --screen-reader "task"
+```
+
+### Interactive with Prompt (`-i/--prompt-interactive`) (v0.20.0+)
+
+Execute a prompt and continue in interactive mode:
+
+```bash
+gemini -m gemini-3-pro-preview -i "initial prompt here"
+```
+
+**Note**: Limited applicability for Claude Code skills which use non-interactive mode.
+
+### Experimental ACP Mode (`--experimental-acp`)
+
+Start agent in Agent Control Protocol mode for programmatic interaction:
+
+```bash
+gemini --experimental-acp "task"
+```
+
+**Note**: Experimental feature. Works with `GEMINI_API_KEY` environment variable.
+
 ---
 
 ## Reference Documentation
@@ -401,13 +448,16 @@ For detailed information, see the references directory:
 
 ## Version Compatibility
 
-- **Minimum Gemini CLI**: v0.16.0
-- **Recommended**: v0.16.x stable (latest)
-- **Preview/Nightly**: Not required but available
+- **Minimum Gemini CLI**: v0.20.0
+- **Recommended**: v0.20.x stable (latest)
+- **Preview/Nightly**: Weekly previews available (Tuesdays UTC 2359)
 
-**Breaking Changes in v0.16.0:**
-- `-p` flag deprecated (use positional prompts)
-- Checkpointing moved to settings.json
+**Changes in v0.20.0:**
+- `-p/--prompt` flag officially deprecated (use positional prompts)
+- New `--include-directories` flag for workspace expansion
+- New `-i/--prompt-interactive` flag for interactive continuation
+- New `--screen-reader` accessibility flag
+- New `--experimental-acp` Agent Control Protocol mode
 - Session management via `-r` flag standard
 
 ---
