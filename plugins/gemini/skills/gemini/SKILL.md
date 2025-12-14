@@ -1,7 +1,7 @@
 ---
 name: gemini
-version: 1.1.0
-description: Invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. This skill should be invoked when users explicitly mention "Gemini", request Google's AI models, need advanced reasoning capabilities, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
+version: 1.1.1
+description: Invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
 # Gemini: Google AI Assistant for Claude Code
@@ -59,6 +59,19 @@ When `previewFeatures: true` in `~/.gemini/settings.json`, the CLI routes ALL re
 **Plugin Behavior**: This skill automatically falls back to `gemini-2.5-flash` when encountering 404 errors. Flash always works with OAuth free tier.
 
 ---
+
+## Trigger Examples
+
+This skill activates when users say phrases like:
+- "Use gemini to research this topic"
+- "Ask gemini about this design pattern"
+- "Run gemini on this analysis"
+- "Call gemini for help with this problem"
+- "I need Google AI for this task"
+- "Get Gemini's reasoning on this"
+- "Continue with gemini" or "Resume the gemini session"
+- "Gemini, help me with..." or simply "Gemini"
+- "Use Gemini 3" or "Use Gemini 2.5"
 
 ## When to Use This Skill
 

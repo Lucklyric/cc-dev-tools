@@ -1,7 +1,7 @@
 ---
 name: codex
-version: 2.0.0
-description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. This skill should be invoked when users explicitly mention "Codex", request complex implementation challenges, advanced reasoning, or need high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
+version: 2.0.1
+description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
 # Codex: High-Reasoning AI Assistant for Claude Code
@@ -73,6 +73,18 @@ codex -a on-request "task"
 ```
 
 ---
+
+## Trigger Examples
+
+This skill activates when users say phrases like:
+- "Use codex to analyze this architecture"
+- "Ask codex about this design decision"
+- "Run codex on this problem"
+- "Call codex for help with this implementation"
+- "I need GPT-5 reasoning for this task"
+- "Get OpenAI's high-reasoning model on this"
+- "Continue with codex" or "Resume the codex session"
+- "Codex, help me with..." or simply "Codex"
 
 ## When to Use This Skill
 
