@@ -10,8 +10,8 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 | Plugin | Description | Type |
 |--------|-------------|------|
-| [Codex](#codex-plugin) | OpenAI GPT-5.1 integration for high-reasoning coding tasks | Skill + Agent |
-| [Gemini](#gemini-plugin) | Google Gemini AI integration for research and reasoning | Skill + Agent |
+| [Codex](#codex-plugin) | OpenAI GPT-5.1 integration for high-reasoning coding tasks | Skill |
+| [Gemini](#gemini-plugin) | Google Gemini AI integration for research and reasoning | Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
 
 ---
@@ -25,7 +25,6 @@ High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.1) integration.
 - **Intelligent Model Selection**: Automatic selection between general (GPT-5.1) and code editing (GPT-5.1-Codex-Max) models
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only for general tasks, workspace-write for code editing
-- **Custom Agent**: `codex-agent` for explicit task delegation via Task tool
 
 **Quick Start:**
 ```bash
@@ -41,7 +40,7 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 1.5.0 |
+| Version | 2.0.1 |
 | Models | GPT-5.1, GPT-5.1-Codex-Max, GPT-5.1-Codex |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
@@ -57,7 +56,6 @@ Google Gemini AI integration through Gemini CLI for research, reasoning, and web
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest`
 - **Web Search Integration**: Built-in web search for research and documentation lookup
-- **Custom Agent**: `gemini-agent` for explicit task delegation via Task tool
 
 **Quick Start:**
 ```bash
@@ -73,7 +71,7 @@ gemini login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
-| Version | 1.1.0 |
+| Version | 1.4.1 |
 | Models | Gemini 3 Pro, 2.5 Pro, 2.5 Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
@@ -152,8 +150,6 @@ cc-dev-tools/                          # Marketplace root
     ├── codex/                         # Codex CLI integration
     │   ├── .claude-plugin/
     │   │   └── plugin.json
-    │   ├── agents/
-    │   │   └── codex-agent.md
     │   ├── README.md
     │   └── skills/codex/
     │       ├── SKILL.md
@@ -162,8 +158,6 @@ cc-dev-tools/                          # Marketplace root
     ├── gemini/                        # Gemini CLI integration
     │   ├── .claude-plugin/
     │   │   └── plugin.json
-    │   ├── agents/
-    │   │   └── gemini-agent.md
     │   ├── README.md
     │   └── skills/gemini/
     │       ├── SKILL.md
@@ -179,13 +173,12 @@ cc-dev-tools/                          # Marketplace root
 
 ## How It Works
 
-**Three-tier hierarchy**: Marketplace → Plugin → Components (Skills/Agents/Hooks)
+**Three-tier hierarchy**: Marketplace → Plugin → Components (Skills/Hooks)
 
 1. You add the **marketplace** (`cc-dev-tools`) from GitHub
 2. You install a **plugin** (e.g., `codex`, `gemini`, or `telegram-notifier`)
 3. The plugin provides **components**:
    - **Skills**: Invoked by Claude when triggered (codex, gemini)
-   - **Agents**: Task tool delegation (codex-agent, gemini-agent)
    - **Hooks**: Event-driven automation (telegram-notifier)
 
 ## Migration from cc-skill-codex
@@ -209,12 +202,12 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 1.4.0
+**Marketplace**: 2.0.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 1.5.0 |
-| Gemini | 1.1.0 |
+| Codex | 2.0.1 |
+| Gemini | 1.4.1 |
 | Telegram Notifier | 0.1.0 |
 
 ## Links
