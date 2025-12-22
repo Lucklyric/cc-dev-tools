@@ -8,7 +8,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Features
 
-- **Automatic Model Selection**: Defaults to Gemini 3 Pro for complex reasoning with intelligent fallback to 2.5 models
+- **Unified Model Selection**: Defaults to Gemini 3 Pro for ALL tasks (coding and reasoning)
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest` or `-r <index>`
 - **Safe Defaults**: Auto-edit approval mode and disabled sandbox for trusted environments
@@ -17,7 +17,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Prerequisites
 
-1. **Gemini CLI** (v0.16.0 or later)
+1. **Gemini CLI** (v0.21.1 or later for Gemini 3 Pro)
    ```bash
    npm install -g @google/gemini-cli@latest
    ```
@@ -59,14 +59,15 @@ Edit `~/.gemini/settings.json`:
 
 The plugin automatically falls back to `gemini-2.5-flash` when other models are unavailable. Flash always works with free tier OAuth.
 
-### Automatic Fallback Strategy
+### Unified Fallback Strategy
 
-This plugin implements a two-step fallback:
+This plugin implements a three-step fallback chain for ALL tasks:
 
-1. **Try Gemini 3 Pro** (`gemini-3-pro-preview`) - Will fail on free tier
-2. **Fallback to Gemini 2.5 Flash** (`gemini-2.5-flash`) - Always works
+1. **Try Gemini 3 Pro** (`gemini-3-pro-preview`) - Primary for all tasks
+2. **Fallback to Gemini 2.5 Pro** (`gemini-2.5-pro`) - If 3 Pro unavailable
+3. **Fallback to Gemini 2.5 Flash** (`gemini-2.5-flash`) - Always works
 
-If you see 404 errors, the plugin will automatically retry with Flash. To prevent this issue, disable preview features as shown above.
+If you see 404 errors, the plugin will automatically retry with the next fallback. To prevent this issue, disable preview features as shown above.
 
 ## Installation
 
@@ -96,24 +97,20 @@ User: "Gemini, design a microservices architecture for e-commerce"
 
 ### Model Selection
 
-**Default (Gemini 3 Pro)**:
+**Default (Gemini 3 Pro for ALL tasks)**:
 ```bash
 gemini -m gemini-3-pro-preview "Design a distributed cache"
 ```
 
-**General Reasoning (Gemini 2.5 Pro)**:
+**Code Editing (Also uses Gemini 3 Pro)**:
 ```bash
-gemini -m gemini-2.5-pro "Review this API design"
-```
-
-**Code Editing (Gemini 2.5 Flash)**:
-```bash
-gemini -m gemini-2.5-flash "Refactor this function"
+gemini -m gemini-3-pro-preview "Refactor this function"
 ```
 
 **Version-Based Requests**:
 - "use 3" → `gemini-3-pro-preview`
-- "use 2.5" → `gemini-2.5-pro` (general) or `gemini-2.5-flash` (code)
+- "use 2.5" → `gemini-2.5-pro`
+- "use flash" → `gemini-2.5-flash`
 
 ### Session Management
 
@@ -181,9 +178,11 @@ gemini -m gemini-2.5-pro --output-format json "List design patterns"
 
 | Model | Use Case | Context | Speed | Access |
 |-------|----------|---------|-------|--------|
-| Gemini 3 Pro | Complex reasoning, architecture | 1M tokens | Medium | Preview |
-| Gemini 2.5 Pro | General reasoning, reviews | 1M tokens | Fast | Free |
-| Gemini 2.5 Flash | Code editing, refactoring | Unknown | Fastest | Free |
+| Gemini 3 Pro | ALL tasks (default) | 1M tokens | Medium | Preview |
+| Gemini 2.5 Pro | Fallback for all tasks | 1M tokens | Fast | Free |
+| Gemini 2.5 Flash | Last resort fallback | Unknown | Fastest | Free |
+
+**Note**: Gemini 3 Pro is used for ALL tasks by default. Fallback to older models only when primary is unavailable.
 
 ## Troubleshooting
 
@@ -219,8 +218,8 @@ gemini --list-sessions  # Check available sessions
 
 ## Version Compatibility
 
-- **Minimum**: Gemini CLI v0.16.0
-- **Recommended**: v0.16.x stable (latest)
+- **Minimum**: Gemini CLI v0.21.1 (for Gemini 3 Pro support)
+- **Recommended**: Latest stable version
 - **Breaking Changes**: `-p` flag deprecated (use positional prompts)
 
 ## When to Use Gemini vs Codex vs Claude
@@ -253,7 +252,7 @@ Apache-2.0
 
 ## Version
 
-1.4.1
+1.2.0
 
 ## Author
 

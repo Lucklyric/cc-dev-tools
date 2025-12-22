@@ -1,17 +1,18 @@
 # Gemini Model Selection Guide
 
 **Purpose**: Guide for selecting the right Gemini model for your task
-**Version**: v0.16.0+
-**Last Updated**: 2025-11-18
+**Version**: v0.21.1+
+**Last Updated**: 2025-12-21
 
 ## Quick Reference
 
 | Task Type | Recommended Model | Reason |
 |-----------|------------------|---------|
-| Complex reasoning, architecture design | `gemini-3-pro-preview` | Latest capabilities, best for hard problems |
-| General reasoning, code review | `gemini-2.5-pro` | Stable, reliable, 1M context |
-| Code editing, refactoring | `gemini-2.5-flash` | Faster, optimized for code |
-| When Gemini 3 quota exhausted | `gemini-2.5-pro` → `gemini-2.5-flash` | Graceful degradation |
+| ALL tasks (default) | `gemini-3-pro-preview` | Highest capability, best for all problems |
+| Fallback (if 3 Pro unavailable) | `gemini-2.5-pro` | Stable, reliable, 1M context |
+| Last resort fallback | `gemini-2.5-flash` | Always available on free tier |
+
+**Note**: Use `gemini-3-pro-preview` for ALL tasks by default. Fallback to older models only when primary is unavailable.
 
 ## Version-Based Model Mapping
 
@@ -19,14 +20,14 @@
 
 When users mention a version number (e.g., "use Gemini 3"), map to the latest model in that family for future-proofing.
 
-### Current Mappings (as of Nov 2025)
+### Current Mappings (as of Dec 2025)
 
 | User Request | Maps To | Actual Model ID | Status | Notes |
 |--------------|---------|-----------------|--------|-------|
 | "Gemini 3" or "use 3" | Latest 3.x Pro | `gemini-3-pro-preview` | Preview | Requires preview access |
-| "Gemini 2.5" (general) | 2.5 Pro | `gemini-2.5-pro` | Stable | 1M tokens context |
-| "Gemini 2.5" (code editing) | 2.5 Flash | `gemini-2.5-flash` | Stable | Optimized for speed |
-| No version specified | Latest Pro | `gemini-3-pro-preview` | Preview | **DEFAULT** |
+| "Gemini 2.5" or "use 2.5" | 2.5 Pro | `gemini-2.5-pro` | Stable | 1M tokens context |
+| "use flash" | 2.5 Flash | `gemini-2.5-flash` | Stable | Fast, always available |
+| No version specified | Latest Pro (ALL tasks) | `gemini-3-pro-preview` | Preview | **DEFAULT** |
 
 ### Future-Proofing Strategy
 
@@ -36,9 +37,10 @@ User says "3" → Plugin maps to latest_3x_pro
                  Future:    gemini-3-pro (when stable)
                            gemini-3.1-pro (when released)
 
-User says "2.5" → Plugin maps based on task:
-                  General:  gemini-2.5-pro
-                  Code:     gemini-2.5-flash
+User says "2.5" → Plugin maps to gemini-2.5-pro
+                  (No longer task-differentiated)
+
+No version specified → gemini-3-pro-preview for ALL tasks
 ```
 
 **Maintenance**: Update mapping table when new models release
@@ -91,45 +93,39 @@ gemini -m gemini-2.5-flash "Refactor this function for better performance"
 
 ## Task-Based Selection
 
-### By Task Complexity
+### Single Model for All Tasks
+
+**Use `gemini-3-pro-preview` for ALL task types:**
 
 ```
-High Complexity (System Design, Architecture)
+ALL Tasks (Any Complexity)
     ↓
-    gemini-3-pro-preview
+    gemini-3-pro-preview (primary)
     ↓ (if unavailable)
-    gemini-2.5-pro
-
-Medium Complexity (Code Review, Analysis)
-    ↓
-    gemini-2.5-pro
-
-Low Complexity (Code Editing, Refactoring)
-    ↓
-    gemini-2.5-flash
+    gemini-2.5-pro (fallback 1)
+    ↓ (if unavailable)
+    gemini-2.5-flash (fallback 2)
 ```
 
-### By Task Type
+### By Task Type (All Use Same Model)
 
 **Research & Design**
-- Primary: `gemini-3-pro-preview`
-- Fallback: `gemini-2.5-pro`
+- Model: `gemini-3-pro-preview`
 - Example: "Design a microservices architecture"
 
 **Code Review & Analysis**
-- Primary: `gemini-2.5-pro`
-- Fallback: `gemini-2.5-flash`
+- Model: `gemini-3-pro-preview`
 - Example: "Review this pull request for bugs"
 
 **Code Generation & Editing**
-- Primary: `gemini-2.5-flash`
-- Fallback: `gemini-2.5-pro`
+- Model: `gemini-3-pro-preview`
 - Example: "Refactor this code for readability"
 
 **General Questions**
-- Primary: `gemini-3-pro-preview`
-- Fallback: `gemini-2.5-pro`
+- Model: `gemini-3-pro-preview`
 - Example: "Explain the CAP theorem"
+
+**Rationale**: Gemini 3 Pro provides highest capability for all task types. No task differentiation needed.
 
 ## Selection Decision Tree
 
@@ -146,41 +142,38 @@ START: User makes request
   │   YES ──> Map to latest in family ──> END│
   │   NO ───> Continue                        │
   │                                           │
-  ├─> Classify task type:                    │
-  │   - Complex reasoning? ──> gemini-3-pro-preview
-  │   - Code editing? ──> gemini-2.5-flash    │
-  │   - General? ──> gemini-2.5-pro           │
+  ├─> Use gemini-3-pro-preview (ALL tasks)   │
   │                                           │
   └─> Apply fallback if primary unavailable  │
       (quota exhausted, access denied)        │
+      gemini-3-pro-preview → gemini-2.5-pro  │
+                          → gemini-2.5-flash │
       └──────────────────────────────────────┘
 ```
 
 ## Fallback Strategy
 
-### When Gemini 3 Pro Unavailable
+### Unified Fallback Chain
 
 **Reason**: Quota exhausted, access denied, or service issue
 
-**Fallback Logic**:
+**Fallback Logic** (same for ALL task types):
 ```
 gemini-3-pro-preview unavailable
   │
-  ├─> Task type: General reasoning
-  │   └─> Use: gemini-2.5-pro
-  │
-  └─> Task type: Code editing
-      └─> Use: gemini-2.5-flash
+  └─> gemini-2.5-pro
+      │
+      └─> gemini-2.5-flash (always available)
 ```
 
 **Implementation Pattern**:
 ```bash
-# Try Gemini 3 Pro first
-gemini -m gemini-3-pro-preview "Design system" 2>&1
+# Try Gemini 3 Pro first (all tasks)
+gemini -m gemini-3-pro-preview "Your task" 2>&1
 
 # If fails with quota/access error, retry with fallback
 if [ $? -ne 0 ]; then
-    gemini -m gemini-2.5-pro "Design system"
+    gemini -m gemini-2.5-pro "Your task"
 fi
 ```
 
@@ -254,13 +247,13 @@ No special access required.
 
 ## Best Practices
 
-1. **Default to Latest Pro**: Start with `gemini-3-pro-preview` when available
-2. **Implement Graceful Fallback**: Always have 2.5 fallback logic
-3. **Match Model to Task**: Don't use Gemini 3 for simple edits
-4. **Monitor Quotas**: Track rate limits and switch models proactively
+1. **Default to Gemini 3 Pro for ALL tasks**: Use `gemini-3-pro-preview` regardless of task type
+2. **Implement Graceful Fallback**: Use chain: gemini-3-pro-preview → gemini-2.5-pro → gemini-2.5-flash
+3. **No Task Differentiation Needed**: Gemini 3 Pro handles coding and reasoning equally well
+4. **Monitor Quotas**: Track rate limits and use fallback chain when needed
 5. **Update Mapping Table**: Review quarterly for new model releases
 6. **Test Access**: Verify Gemini 3 Pro access before defaulting to it
-7. **Use Explicit Model Selection**: Specify `-m` rather than relying on CLI defaults
+7. **Use Explicit Model Selection**: Specify `-m gemini-3-pro-preview` rather than relying on CLI defaults
 
 ## Updating This Guide
 
@@ -279,31 +272,31 @@ When new models are released:
 ### Scenario 1: System Architecture Design
 
 **Task**: "Design a scalable payment processing system"
-**Selection**: `gemini-3-pro-preview` (complex reasoning)
-**Fallback**: `gemini-2.5-pro` (if quota exhausted)
+**Selection**: `gemini-3-pro-preview` (default for all tasks)
+**Fallback**: `gemini-2.5-pro` → `gemini-2.5-flash`
 
 ```bash
 gemini -m gemini-3-pro-preview "Design a scalable payment processing system"
 ```
 
-### Scenario 2: Quick Code Fix
+### Scenario 2: Code Fix
 
 **Task**: "Fix the syntax error in this JavaScript"
-**Selection**: `gemini-2.5-flash` (simple, fast)
-**Fallback**: `gemini-2.5-pro` (if Flash unavailable)
+**Selection**: `gemini-3-pro-preview` (default for all tasks)
+**Fallback**: `gemini-2.5-pro` → `gemini-2.5-flash`
 
 ```bash
-gemini -m gemini-2.5-flash "Fix the syntax error in this code"
+gemini -m gemini-3-pro-preview "Fix the syntax error in this code"
 ```
 
 ### Scenario 3: Pull Request Review
 
 **Task**: "Review this pull request for best practices"
-**Selection**: `gemini-2.5-pro` (balanced, thorough)
-**Fallback**: `gemini-2.5-flash` (if quota tight)
+**Selection**: `gemini-3-pro-preview` (default for all tasks)
+**Fallback**: `gemini-2.5-pro` → `gemini-2.5-flash`
 
 ```bash
-gemini -m gemini-2.5-pro "Review this pull request"
+gemini -m gemini-3-pro-preview "Review this pull request"
 ```
 
 ## See Also

@@ -20,17 +20,17 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 ### What Happens
 
-1. **Claude detects** the coding task (queue design)
+1. **Claude detects** the reasoning task (queue design)
 2. **Skill is invoked** autonomously
-3. **Codex CLI is called** with gpt-5.1 (general high-reasoning model):
+3. **Codex CLI is called** with gpt-5.2 (high-reasoning general model):
 
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Help me design a queue data structure in Python"
 ```
 
-4. **Codex responds** with high-reasoning architectural guidance on queue design
+4. **Codex responds** with xhigh-reasoning architectural guidance on queue design
 5. **Session is auto-saved** for potential continuation
 
 ### Expected Output
@@ -52,15 +52,15 @@ Codex provides:
 ### What Happens
 
 1. **Skill detects** code editing request
-2. **Uses gpt-5.1-codex-max** (maximum capability for coding - 27-42% faster):
+2. **Uses gpt-5.2-codex** (optimized for agentic coding - 56.4% SWE-Bench Pro):
 
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2-codex -s workspace-write \
+  -c model_reasoning_effort=xhigh \
   "Edit my Python file to implement the queue with thread-safety"
 ```
 
-3. **Codex performs code editing** with maximum capability model
+3. **Codex performs code editing** with xhigh reasoning capability
 4. **Files are modified** (workspace-write sandbox)
 
 ### Expected Output
@@ -82,15 +82,15 @@ Codex:
 ### What Happens
 
 1. **Explicit "Codex" mention** triggers skill
-2. **Codex invoked** with coding-optimized settings:
+2. **Codex invoked** with general reasoning settings:
 
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Design a REST API for a blog system"
 ```
 
-3. **High-reasoning analysis** provides comprehensive API design
+3. **xhigh-reasoning analysis** provides comprehensive API design
 
 ### Expected Output
 
@@ -112,8 +112,8 @@ Codex delivers:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Help me implement a binary search tree with balancing"
 ```
 
@@ -129,7 +129,7 @@ Codex provides:
 
 ---
 
-## Example 5: Maximum Reasoning with xhigh
+## Example 5: Complex Refactoring with xhigh
 
 ### User Request
 "Refactor the authentication system with comprehensive security improvements"
@@ -137,7 +137,7 @@ Codex provides:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5.1-codex-max -s workspace-write \
+codex exec -m gpt-5.2-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Refactor the authentication system with comprehensive security improvements"
 ```
@@ -150,25 +150,28 @@ Codex provides:
 - Multi-layered refactoring strategy
 - Implementation of security best practices
 - Detailed reasoning about trade-offs
-- Long-horizon planning for complex changes
+- Long-horizon planning for complex changes (native context compaction)
 
-**When to use xhigh**: Complex architectural refactoring, security-critical changes, long-horizon tasks where quality is more important than speed.
+**Note**: xhigh is the default reasoning effort for all Codex invocations. gpt-5.2-codex has native context compaction ideal for long-horizon refactoring tasks.
 
 ---
 
 ## Model Selection Summary
 
-| Task Type | Model | Sandbox | Example |
-|-----------|-------|---------|---------|
-| General reasoning | `gpt-5.1` | `read-only` | "Design a queue" |
-| Architecture design | `gpt-5.1` | `read-only` | "Design REST API" |
-| Code review | `gpt-5.1` | `read-only` | "Review this code" |
-| Code editing (standard) | `gpt-5.1-codex-max` | `workspace-write` | "Edit file to add X" |
-| Code editing (maximum reasoning) | `gpt-5.1-codex-max` + `xhigh` | `workspace-write` | "Complex refactoring" |
-| Implementation | `gpt-5.1-codex-max` | `workspace-write` | "Implement function Y" |
-| Backward compatibility | `gpt-5.1-codex` | `workspace-write` | "Use standard model" |
+| Task Type | Model | Sandbox | Reasoning | Example |
+|-----------|-------|---------|-----------|---------|
+| General reasoning | `gpt-5.2` | `read-only` | xhigh | "Design a queue" |
+| Architecture design | `gpt-5.2` | `read-only` | xhigh | "Design REST API" |
+| Code review | `gpt-5.2` | `read-only` | xhigh | "Review this code" |
+| Code editing | `gpt-5.2-codex` | `workspace-write` | xhigh | "Edit file to add X" |
+| Complex refactoring | `gpt-5.2-codex` | `workspace-write` | xhigh | "Refactor auth system" |
+| Implementation | `gpt-5.2-codex` | `workspace-write` | xhigh | "Implement function Y" |
 
-**Note**: `gpt-5.1-codex-max` is 27-42% faster than `gpt-5.1-codex` and uses ~30% fewer thinking tokens. It supports a new `xhigh` reasoning effort level for maximum capability.
+**Note**: `gpt-5.2-codex` is optimized for agentic coding (56.4% SWE-Bench Pro) with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
+
+### Fallback Chain
+- **Coding**: `gpt-5.2-codex` → `gpt-5.2` → `gpt-5.1-codex-max`
+- **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
 

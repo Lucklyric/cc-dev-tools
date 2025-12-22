@@ -10,25 +10,25 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 | Plugin | Description | Type |
 |--------|-------------|------|
-| [Codex](#codex-plugin) | OpenAI GPT-5.1 integration for high-reasoning coding tasks | Skill |
-| [Gemini](#gemini-plugin) | Google Gemini AI integration for research and reasoning | Skill |
+| [Codex](#codex-plugin) | OpenAI GPT-5.2 integration for high-reasoning coding tasks | Skill |
+| [Gemini](#gemini-plugin) | Google Gemini 3 Pro AI integration for research and reasoning | Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
 
 ---
 
 ### Codex Plugin
 
-High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.1) integration.
+High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
 
 **Core Features:**
-- **High-Reasoning Capabilities**: GPT-5.1 with configurable reasoning effort for complex tasks
-- **Intelligent Model Selection**: Automatic selection between general (GPT-5.1) and code editing (GPT-5.1-Codex-Max) models
+- **High-Reasoning Capabilities**: GPT-5.2 with xhigh reasoning effort (extra-high) for complex tasks
+- **Intelligent Model Selection**: Automatic selection between coding (GPT-5.2-Codex) and general reasoning (GPT-5.2) models
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
-- **Safe Sandbox Defaults**: Read-only for general tasks, workspace-write for code editing
+- **Safe Sandbox Defaults**: Read-only for reasoning tasks, workspace-write for code editing
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.59.0+
+codex --version  # Requires v0.72.0+
 codex login
 ```
 
@@ -40,8 +40,8 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.0.1 |
-| Models | GPT-5.1, GPT-5.1-Codex-Max, GPT-5.1-Codex |
+| Version | 2.1.0 |
+| Models | GPT-5.2-Codex, GPT-5.2, GPT-5.1-Codex-Max |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 
@@ -49,17 +49,17 @@ codex login
 
 ### Gemini Plugin
 
-Google Gemini AI integration through Gemini CLI for research, reasoning, and web search.
+Google Gemini 3 Pro AI integration through Gemini CLI for research, reasoning, and web search.
 
 **Core Features:**
-- **Automatic Model Selection**: Defaults to Gemini 3 Pro with intelligent fallback to 2.5 models
+- **Gemini 3 Pro Default**: Uses `gemini-3-pro-preview` for ALL tasks (highest capability)
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest`
 - **Web Search Integration**: Built-in web search for research and documentation lookup
 
 **Quick Start:**
 ```bash
-npm install -g @google/gemini-cli@latest
+npm install -g @google/gemini-cli@latest  # Requires v0.21.1+
 gemini login
 ```
 
@@ -71,7 +71,7 @@ gemini login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
-| Version | 1.4.1 |
+| Version | 1.2.0 |
 | Models | Gemini 3 Pro, 2.5 Pro, 2.5 Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
@@ -202,12 +202,12 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.0.0
+**Marketplace**: 2.1.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.0.1 |
-| Gemini | 1.4.1 |
+| Codex | 2.1.0 |
+| Gemini | 1.2.0 |
 | Telegram Notifier | 0.1.0 |
 
 ## Links

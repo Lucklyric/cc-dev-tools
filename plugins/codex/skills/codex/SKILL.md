@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.0.1
+version: 2.1.0
 description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -8,20 +8,49 @@ description: Invoke Codex CLI for complex coding tasks requiring high reasoning 
 
 ---
 
-## DEFAULT MODEL: GPT-5.2 with xhigh Reasoning
+## DEFAULT MODEL: Task-Based Model Selection with Read-Only Default
 
-**The default model for ALL Codex invocations is `gpt-5.2` with `xhigh` reasoning effort.**
+**Codex uses task-based model selection. Sandbox is `read-only` by default - only use `workspace-write` when user explicitly requests file editing.**
 
-- Always use `gpt-5.2` with `-c model_reasoning_effort=xhigh` unless user explicitly requests otherwise
-- GPT-5.2 is the latest model with full support for all reasoning levels (low, medium, high, xhigh)
-- Use `workspace-write` sandbox for code editing, `read-only` for analysis only
+| Task Type | Model | Sandbox (default) | Sandbox (explicit edit) |
+|-----------|-------|-------------------|------------------------|
+| Code-related tasks | `gpt-5.2-codex` | read-only | workspace-write |
+| General tasks | `gpt-5.2` | read-only | workspace-write |
+
+- **Code-related tasks**: Use `gpt-5.2-codex` - optimized for agentic coding (56.4% SWE-Bench Pro)
+- **General tasks**: Use `gpt-5.2` - high-reasoning general model
+- **Sandbox default**: Always `read-only` unless user explicitly requests editing
+- **Explicit editing**: Only when user says "edit", "modify", "write changes", etc., use `workspace-write`
+- Always use `-c model_reasoning_effort=xhigh` for maximum capability
 
 ```bash
-# Default invocation - ALWAYS use gpt-5.2 with xhigh
+# Code task (read-only default)
+codex exec -m gpt-5.2-codex -s read-only \
+  -c model_reasoning_effort=xhigh \
+  "analyze this function implementation"
+
+# General task (read-only default)
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
+  "explain this architecture"
+
+# Code task with explicit edit request
+codex exec -m gpt-5.2-codex -s workspace-write \
+  -c model_reasoning_effort=xhigh \
+  "edit this file to add the feature"
+
+# General task with explicit edit request
 codex exec -m gpt-5.2 -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  "your prompt here"
+  "modify the documentation file"
 ```
+
+### Model Fallback Chain
+
+If the primary model is unavailable, fallback gracefully:
+1. **Code tasks**: `gpt-5.2-codex` → `gpt-5.2` → `gpt-5.1-codex-max`
+2. **General tasks**: `gpt-5.2` → `gpt-5.1` → `gpt-5.1-codex-max`
+3. **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
 
@@ -99,36 +128,64 @@ This skill should be invoked when:
 
 ### Detecting New Codex Requests
 
-When a user makes a request that falls into one of the above categories, determine the task type:
+When a user makes a request, first determine the task type (code vs general), then determine sandbox based on explicit edit request:
 
-**General Tasks** (architecture, design, reviews, explanations):
-- Use model: `gpt-5.1` (high-reasoning general model)
-- Example requests: "Design a queue data structure", "Review this architecture", "Explain this algorithm"
+**Step 1: Determine Task Type (Model Selection)**
+- **Code-related tasks**: Use `gpt-5.2-codex` - for implementation, refactoring, code analysis, debugging, etc.
+- **General tasks**: Use `gpt-5.2` - for architecture design, explanations, reviews, documentation, etc.
 
-**Code Editing Tasks** (file modifications, implementation):
-- Use model: `gpt-5.2` (latest model with maximum capability)
-- Example requests: "Edit this file to add feature X", "Implement the function", "Refactor this code"
+**Step 2: Determine Sandbox (Edit Permission)**
+- **Default**: `read-only` - safe for all tasks unless user explicitly requests editing
+- **Explicit edit request**: `workspace-write` - ONLY when user explicitly says to edit/modify/write files
+
+**Code-related task examples**:
+- Read-only: "Analyze this function", "Review this implementation", "Debug this code"
+- With editing: "Edit this file to fix the bug", "Modify the function", "Refactor and save"
+
+**General task examples**:
+- Read-only: "Design a queue data structure", "Explain this algorithm", "Review the architecture"
+- With editing: "Update the documentation file", "Modify the README"
+
+**⚠️ Important**: The key distinction for sandbox is whether the user explicitly asks for file modifications. Use `workspace-write` ONLY when user says "edit", "modify", "write changes", "save", etc.
 
 ### Bash CLI Command Structure
 
 **IMPORTANT**: Always use `codex exec` for non-interactive execution. Claude Code's bash environment is non-terminal, so the interactive `codex` command will fail with "stdout is not a terminal" error.
 
-#### For Code Editing Tasks (Default)
+#### Code Task (Read-Only Default)
 
 ```bash
-codex exec -m gpt-5.2 -s workspace-write \
+codex exec -m gpt-5.2-codex -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
-  "<user's prompt>"
+  "<code-related prompt>"
 ```
 
-#### For Read-Only Analysis Tasks
+#### General Task (Read-Only Default)
 
 ```bash
 codex exec -m gpt-5.2 -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
-  "<user's prompt>"
+  "<general prompt>"
+```
+
+#### Code Task with Explicit Edit Request
+
+```bash
+codex exec -m gpt-5.2-codex -s workspace-write \
+  -c model_reasoning_effort=xhigh \
+  --enable web_search_request \
+  "<edit code prompt>"
+```
+
+#### General Task with Explicit Edit Request
+
+```bash
+codex exec -m gpt-5.2 -s workspace-write \
+  -c model_reasoning_effort=xhigh \
+  --enable web_search_request \
+  "<edit general files prompt>"
 ```
 
 **Why `codex exec`?**
@@ -138,23 +195,30 @@ codex exec -m gpt-5.2 -s read-only \
 
 ### Model Selection Logic
 
-**Use `gpt-5.1` (default) when:**
-- Designing architecture or data structures
-- Reviewing code for quality, security, or performance
-- Explaining concepts or algorithms
-- Planning implementation strategies
-- General problem-solving and reasoning
+**Step 1: Choose Model Based on Task Type**
 
-**Use `gpt-5.2` when:**
-- Editing or modifying existing code files
-- Implementing specific functions or features
-- Refactoring code
-- Writing new code with file I/O
-- Any task requiring `workspace-write` sandbox
-- Complex code editing requiring maximum reasoning capability
-- Tasks requiring the latest model capabilities
+**Use `gpt-5.2-codex` for code-related tasks:**
+- Implementation, refactoring, code analysis
+- Debugging, fixing bugs, optimization
+- Any task involving code understanding or modification
 
-**Note**: `gpt-5.1-codex-max` and `gpt-5.1-codex` are still available for backward compatibility. Use `gpt-5.2` as the default for latest capabilities.
+**Use `gpt-5.2` for general tasks:**
+- Architecture and system design
+- Explanations, documentation, reviews
+- Planning, strategy, general reasoning
+
+**Step 2: Choose Sandbox Based on Edit Intent**
+
+**Use `read-only` (DEFAULT):**
+- Analysis, review, explanation tasks
+- ANY task where user does NOT explicitly request file editing
+
+**Use `workspace-write` (ONLY when explicitly requested):**
+- User explicitly says "edit this file", "modify the code", "write changes"
+- User explicitly asks to "make edits" or "save the changes"
+- User explicitly requests "refactor and save" or "implement and write"
+
+**Fallback Models**: `gpt-5.1-codex-max` and `gpt-5.1` are available if primary models are unavailable. See fallback chain in DEFAULT MODEL section.
 
 ### Default Configuration
 
@@ -162,20 +226,21 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model | `gpt-5.2` | `-m gpt-5.2` | Default for ALL tasks (latest model) |
-| Sandbox | `workspace-write` | `-s workspace-write` | Allows file modifications (default) |
-| Sandbox (analysis) | `read-only` | `-s read-only` | For read-only analysis tasks |
+| Model (code tasks) | `gpt-5.2-codex` | `-m gpt-5.2-codex` | For code-related tasks |
+| Model (general tasks) | `gpt-5.2` | `-m gpt-5.2` | For general tasks |
+| Sandbox (default) | `read-only` | `-s read-only` | Safe default for ALL tasks |
+| Sandbox (explicit edit) | `workspace-write` | `-s workspace-write` | Only when user explicitly requests editing |
 | Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
 | Verbosity | `medium` | `-c model_verbosity=medium` | Balanced output detail |
 | Web Search | `enabled` | `--enable web_search_request` | Access to up-to-date information |
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.71.0+ (requires 0.71.0+ for latest features)
+**Codex CLI Version**: 0.72.0+ (requires 0.72.0+ for gpt-5.2-codex and xhigh)
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.2`, `gpt-5.1`, `gpt-5.1-codex`, `gpt-5.1-codex-max` | Model selection |
+| `-m, --model` | `gpt-5.2-codex`, `gpt-5.2`, `gpt-5.1-codex-max`, `gpt-5.1` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=high`) |
 | `-C, --cd` | directory path | Working directory |
@@ -372,10 +437,12 @@ After authentication, try your request again.
 ```
 Error: Invalid model specified
 
-To fix: Use 'gpt-5.2' for all tasks (recommended) or 'gpt-5.1' for general reasoning
+To fix:
+- For coding tasks: Use 'gpt-5.2-codex' with workspace-write sandbox
+- For reasoning tasks: Use 'gpt-5.2' with read-only sandbox
 
-Example: codex exec -m gpt-5.2 "your prompt here"
-Example: codex exec -m gpt-5.2 -s workspace-write "code editing task"
+Example (coding): codex exec -m gpt-5.2-codex -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
+Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effort=xhigh "explain architecture"
 ```
 
 ### Troubleshooting
@@ -407,7 +474,22 @@ Example: codex exec -m gpt-5.2 -s workspace-write "code editing task"
 
 ## Examples
 
-### Example 1: Architecture Design Task
+### Example 1: Code Task (Read-Only Default)
+
+**User Request**: "Analyze this function implementation and suggest improvements"
+
+**Skill Executes**:
+```bash
+codex exec -m gpt-5.2-codex -s read-only \
+  -c model_reasoning_effort=xhigh \
+  "Analyze this function implementation and suggest improvements"
+```
+
+**Result**: Code-related task uses gpt-5.2-codex with read-only sandbox (default). No file modifications.
+
+---
+
+### Example 2: General Task (Read-Only Default)
 
 **User Request**: "Help me design a binary search tree architecture in Rust"
 
@@ -418,26 +500,26 @@ codex exec -m gpt-5.2 -s read-only \
   "Help me design a binary search tree architecture in Rust"
 ```
 
-**Result**: Codex provides maximum reasoning architectural guidance using gpt-5.2 with xhigh reasoning. Session automatically saved for continuation.
+**Result**: General task uses gpt-5.2 with read-only sandbox (default). Session automatically saved for continuation.
 
 ---
 
-### Example 2: Code Editing Task
+### Example 3: Code Task with Explicit Edit Request
 
 **User Request**: "Edit this file to implement the BST insert method"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2 -s workspace-write \
+codex exec -m gpt-5.2-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit this file to implement the BST insert method"
 ```
 
-**Result**: Codex uses gpt-5.2 with xhigh reasoning and workspace-write permissions to modify files.
+**Result**: User explicitly said "Edit this file" - code task uses gpt-5.2-codex with workspace-write permissions.
 
 ---
 
-### Example 3: Session Continuation
+### Example 4: Session Continuation
 
 **User Request**: "Continue with the BST - add a deletion method"
 
@@ -450,34 +532,34 @@ codex exec resume --last
 
 ---
 
-### Example 4: With Web Search
+### Example 5: With Web Search (Read-Only Default)
 
-**User Request**: "Use Codex with web search to research and implement async patterns"
+**User Request**: "Use Codex with web search to research async patterns"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2 -s workspace-write \
+codex exec -m gpt-5.2-codex -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
-  "Research and implement async patterns"
+  "Research async patterns"
 ```
 
-**Result**: Codex uses web search capability for latest information, then implements with gpt-5.2 xhigh reasoning.
+**Result**: Code-related research uses gpt-5.2-codex with read-only sandbox (default) and web search enabled.
 
 ---
 
-### Example 5: Complex Architectural Refactoring
+### Example 6: Explicit Refactoring Request
 
-**User Request**: "Perform complex architectural refactoring of authentication system"
+**User Request**: "Refactor and save the authentication system code"
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2 -s workspace-write \
+codex exec -m gpt-5.2-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  "Perform complex architectural refactoring of authentication system"
+  "Refactor and save the authentication system code"
 ```
 
-**Result**: Codex uses gpt-5.2 with xhigh reasoning effort for maximum capability on complex long-horizon tasks. Ideal for architectural refactoring where quality is critical.
+**Result**: User explicitly said "Refactor and save" - code task uses gpt-5.2-codex with workspace-write for file modifications.
 
 ---
 
@@ -620,46 +702,51 @@ codex exec -o result.txt "generate summary"
 
 ---
 
-## When to Use GPT-5.2 vs GPT-5.1
+## When to Use GPT-5.2-Codex vs GPT-5.2
 
-### Use GPT-5.2 (Latest Model) For:
-- Cutting-edge tasks requiring latest capabilities
-- Complex reasoning with all effort levels (low to xhigh)
-- When you want the newest model improvements
-- Tasks where latest training data matters
+### GPT-5.2-Codex (for code-related tasks):
+- Implementation, refactoring, code analysis
+- Debugging, fixing bugs, optimization
+- Any task involving code understanding
 
+**Read-only (default)**:
 ```bash
-codex exec -m gpt-5.2 -c model_reasoning_effort=xhigh "complex task"
+codex exec -m gpt-5.2-codex -s read-only -c model_reasoning_effort=xhigh "analyze code"
+```
+
+**Workspace-write (only when user explicitly requests editing)**:
+```bash
+codex exec -m gpt-5.2-codex -s workspace-write -c model_reasoning_effort=xhigh "edit this file"
+```
+
+### GPT-5.2 (for general tasks):
+- Architecture and system design
+- Explanations, documentation, reviews
+- Planning, strategy, general reasoning
+
+**Read-only (default)**:
+```bash
+codex exec -m gpt-5.2 -s read-only -c model_reasoning_effort=xhigh "design architecture"
+```
+
+**Workspace-write (only when user explicitly requests editing)**:
+```bash
+codex exec -m gpt-5.2 -s workspace-write -c model_reasoning_effort=xhigh "update the README"
 ```
 
 ---
 
-## When to Use GPT-5.1 vs GPT-5.1-Codex-Max
+## Fallback Models (Backward Compatibility)
 
-### Use GPT-5.1 (General High-Reasoning) For:
-- Architecture and system design
-- Code reviews and quality analysis
-- Security audits and vulnerability assessment
-- Performance optimization strategies
-- Algorithm design and analysis
-- Explaining complex concepts
-- Planning and strategy
+### Use GPT-5.1-Codex-Max When:
+- GPT-5.2-codex is unavailable
+- Explicit requirement for the older codex model
 
-### Use GPT-5.1-Codex-Max (Maximum Code Capability) For:
-- Editing existing code files (27-42% faster than standard codex)
-- Implementing specific features
-- Refactoring and code transformations
-- Writing new code with file I/O
-- Code generation tasks
-- Debugging and fixes requiring file changes
-- Complex architectural refactoring (with `xhigh` reasoning effort)
+### Use GPT-5.1 When:
+- GPT-5.2 is unavailable
+- Explicit requirement for the older general model
 
-### Use GPT-5.1-Codex (Standard Code Model) For:
-- Backward compatibility scenarios
-- When you need to replicate behavior from earlier versions
-- Explicit requirement to use the standard (non-max) model
-
-**Default**: Use `gpt-5.2` for all tasks (latest model with best capabilities). Use `gpt-5.1` if you specifically need the older general model, or `gpt-5.1-codex-max` for backward compatibility.
+**Default**: Use `gpt-5.2-codex` for coding tasks and `gpt-5.2` for reasoning tasks. Fall back to GPT-5.1 variants only if primary models are unavailable.
 
 ## Best Practices
 

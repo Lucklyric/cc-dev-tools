@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.1.1
+version: 1.2.0
 description: Invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -87,38 +87,45 @@ This skill should be invoked when:
 
 ### Detecting New Gemini Requests
 
-When a user makes a request that falls into one of the above categories, determine the task type:
+When a user makes a request, **default to read-only mode (default approval)** unless they explicitly request file editing:
 
-**General Reasoning Tasks** (architecture, design, reviews, research):
-- Use model: `gemini-3-pro-preview` (latest, highest reasoning)
-- Fallback: `gemini-2.5-pro` (stable, general reasoning)
-- Example requests: "Design a distributed cache", "Research GraphQL best practices", "Explain CQRS pattern"
+**Use `gemini-3-pro-preview` for ALL tasks with `default` approval mode:**
+- Architecture, design, reviews, research
+- Explanations, analysis, problem-solving
+- Code analysis and understanding
+- ANY task where user does NOT explicitly request file editing
 
-**Code Editing Tasks** (file modifications, refactoring):
-- Use model: `gemini-2.5-flash` (optimized for speed and code)
-- Fallback: `gemini-2.5-pro` (if Flash unavailable)
-- Example requests: "Refactor this function", "Fix syntax errors", "Optimize this code"
+**Approval Mode Selection:**
+- **`default`** (default): For all tasks - prompts for approval on edits (safe)
+- **`auto_edit`**: ONLY when user explicitly requests file editing
+- **`yolo`**: When user explicitly wants full auto-approval (use with caution)
+
+**⚠️ Explicit Edit Request**: If the user explicitly asks to "edit files", "modify code", "write changes", or "make edits" - ONLY then use `--approval-mode auto_edit` to enable file modifications.
+
+**Fallback Chain** (if primary unavailable):
+1. `gemini-3-pro-preview` (primary - highest capability)
+2. `gemini-2.5-pro` (stable general reasoning)
+3. `gemini-2.5-flash` (fast, always available)
+
+**Example requests**: "Design a distributed cache", "Explain CQRS pattern", "Analyze this code"
 
 ### Bash CLI Command Structure
 
 **IMPORTANT**: Gemini CLI works differently from Codex - no `exec` subcommand needed. Use positional prompts directly.
 
-#### For General Reasoning Tasks (Default)
+#### Default Command (Read-Only) - Use for ALL Tasks
+
+```bash
+gemini -m gemini-3-pro-preview \
+  "Design a microservices architecture for e-commerce"
+```
+
+#### Explicit Edit Request Only - When User Asks to Edit Files
 
 ```bash
 gemini -m gemini-3-pro-preview \
   --approval-mode auto_edit \
-  --output-format text \
-  "Design a microservices architecture for e-commerce"
-```
-
-#### For Code Editing Tasks
-
-```bash
-gemini -m gemini-2.5-flash \
-  --approval-mode auto_edit \
-  --output-format text \
-  "Refactor this function for better performance"
+  "Edit this file to refactor the function"
 ```
 
 #### For Session Continuation
@@ -142,25 +149,23 @@ gemini -r latest "Continue our discussion about caching strategies"
 
 ### Model Selection Logic
 
-**Use `gemini-3-pro-preview` (default) when:**
+**Use `gemini-3-pro-preview` (default for ALL tasks):**
+- Code editing, refactoring, implementation
 - Designing architecture or system design
 - Conducting research or analysis
 - Explaining complex concepts
 - Planning implementation strategies
 - General problem-solving and advanced reasoning
-- User explicitly requests "Gemini 3" or "use 3"
 
-**Use `gemini-2.5-pro` when:**
+**Fallback to `gemini-2.5-pro` when:**
 - Gemini 3 Pro unavailable or quota exhausted
-- Stable, production-ready tasks
-- General reasoning with proven reliability
 - User explicitly requests "Gemini 2.5" or "use 2.5"
+- Stable, production-ready tasks
 
-**Use `gemini-2.5-flash` when:**
-- Code editing or refactoring tasks
-- Fast iterations needed
-- Simple, quick responses
-- Gemini 3 Pro quota concerns
+**Fallback to `gemini-2.5-flash` when:**
+- Both Gemini 3 Pro and 2.5 Pro unavailable
+- Fast iterations needed (explicit user request)
+- Simple, quick responses (explicit user request)
 
 ### Version-Based Model Mapping
 
@@ -169,9 +174,9 @@ When users mention a version number, map to the latest model in that family:
 | User Request | Maps To | Actual Model ID |
 |--------------|---------|-----------------|
 | "use 3" / "Gemini 3" | Latest 3.x Pro | `gemini-3-pro-preview` |
-| "use 2.5" (general) | 2.5 Pro | `gemini-2.5-pro` |
-| "use 2.5" (code editing) | 2.5 Flash | `gemini-2.5-flash` |
-| No version specified | Latest Pro | `gemini-3-pro-preview` |
+| "use 2.5" | 2.5 Pro | `gemini-2.5-pro` |
+| "use flash" | 2.5 Flash | `gemini-2.5-flash` |
+| No version specified | Latest Pro (ALL tasks) | `gemini-3-pro-preview` |
 
 **See**: `references/model-selection.md` for detailed model selection guidance and decision tree.
 
@@ -181,17 +186,20 @@ All Gemini invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model (general) | `gemini-3-pro-preview` | `-m gemini-3-pro-preview` | Tries first, falls back to Flash |
-| Model (fallback) | `gemini-2.5-flash` | `-m gemini-2.5-flash` | Always works on free tier |
-| Model (code editing) | `gemini-2.5-flash` | `-m gemini-2.5-flash` | Optimized for code |
-| Approval Mode | `auto_edit` | `--approval-mode auto_edit` | Auto-approve edit tools only |
+| Model | `gemini-3-pro-preview` | `-m gemini-3-pro-preview` | For ALL tasks (highest capability) |
+| Model (fallback 1) | `gemini-2.5-pro` | `-m gemini-2.5-pro` | If Gemini 3 Pro unavailable |
+| Model (fallback 2) | `gemini-2.5-flash` | `-m gemini-2.5-flash` | Always works on free tier |
+| Approval Mode (default) | `default` | No flag | Safe default - prompts for edits |
+| Approval Mode (editing) | `auto_edit` | `--approval-mode auto_edit` | Only when user explicitly requests editing |
 | Sandbox | `false` (disabled) | No flag | Sandbox disabled by default |
 | Output Format | `text` | No flag | Human-readable text output |
 | Web Search | Enabled when appropriate | `-e web_search` (if needed) | Context-dependent |
 
 **Rationale for Defaults:**
-- **Gemini 3 Pro → Flash Fallback**: Tries latest model first, automatically falls back to Flash (which always works on OAuth free tier)
-- **auto_edit mode**: Balances safety (prompts for destructive actions) with efficiency (auto-approves edits)
+- **Gemini 3 Pro for ALL tasks**: Highest capability model, optimized for both reasoning and code
+- **Fallback chain**: gemini-3-pro-preview → gemini-2.5-pro → gemini-2.5-flash
+- **default mode**: Safe default that prompts for approval on edits
+- **auto_edit mode**: Only use when user explicitly requests file editing
 - **No sandbox**: Claude Code environment assumed trusted
 - **Text output**: Default for human consumption (use `--output-format json` for parsing)
 
@@ -267,20 +275,20 @@ gemini -m gemini-3-pro-preview "Design a scalable payment processing system"
 gemini -m gemini-3-pro-preview -e web_search "Research latest React 19 features"
 
 # Explain complex concept
-gemini -m gemini-2.5-pro "Explain the CAP theorem with real-world examples"
+gemini -m gemini-3-pro-preview "Explain the CAP theorem with real-world examples"
 ```
 
 ### Code Editing Tasks
 
 ```bash
-# Fast refactoring
-gemini -m gemini-2.5-flash "Refactor this function for better readability"
+# Refactoring (uses gemini-3-pro-preview for all tasks)
+gemini -m gemini-3-pro-preview "Refactor this function for better readability"
 
 # Fix syntax errors
-gemini -m gemini-2.5-flash "Fix the syntax errors in this JavaScript code"
+gemini -m gemini-3-pro-preview "Fix the syntax errors in this JavaScript code"
 
 # Optimize performance
-gemini -m gemini-2.5-flash "Optimize this database query for better performance"
+gemini -m gemini-3-pro-preview "Optimize this database query for better performance"
 ```
 
 ### Session Management

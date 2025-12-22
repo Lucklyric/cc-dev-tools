@@ -1,7 +1,7 @@
 {
   "name": "cc-dev-tools",
   "description": "Claude Code marketplace containing development tools and AI integrations for advanced workflows",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "owner": {
     "name": "0xasun"
   },
