@@ -208,7 +208,7 @@ Apache 2.0
 |--------|---------|
 | Codex | 2.1.0 |
 | Gemini | 1.2.0 |
-| Telegram Notifier | 0.1.0 |
+| Telegram Notifier | 0.1.1 |
 
 ## Links
 
