@@ -1,7 +1,7 @@
 ---
 name: gemini
 version: 1.2.0
-description: Invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
+description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
 # Gemini: Google AI Assistant for Claude Code
@@ -377,6 +377,31 @@ gemini -m gemini-3-pro-preview --include-directories /path1 --include-directorie
 
 **Note**: Disabled in restrictive sandbox profiles.
 
+---
+
+## File Context Passing
+
+**IMPORTANT**: Pass file paths to Gemini CLI instead of embedding file content in prompts. This enables Gemini to read files autonomously.
+
+**Quick reference**:
+- Use `--include-directories /path` for additional directories
+- Use `@path/to/file` syntax for explicit file references
+
+```bash
+# Example: analyze file with explicit @ syntax
+gemini -m gemini-3-pro-preview \
+  "Analyze @src/auth.ts and compare with @src/session.ts"
+
+# Example: multi-directory analysis
+gemini -m gemini-3-pro-preview \
+  --include-directories /shared/libs \
+  "Review how auth module uses shared utilities"
+```
+
+**See**: `references/file-context.md` for complete file context documentation.
+
+---
+
 ### Accessibility (`--screen-reader`) (v0.20.0+)
 
 Enable screen reader mode for accessibility:
@@ -409,12 +434,18 @@ gemini --experimental-acp "task"
 
 ## Reference Documentation
 
-For detailed information, see the references directory:
+For detailed information, consult these reference files:
 
-- **`references/gemini-help.md`** - Complete Gemini CLI help output and flag reference
+### Core References
+- **`references/file-context.md`** - File and directory context passing guide
+- **`references/model-selection.md`** - Model selection decision tree and version mapping
+
+### Workflow References
 - **`references/command-patterns.md`** - Common command templates organized by use case
 - **`references/session-workflows.md`** - Multi-turn conversation patterns and best practices
-- **`references/model-selection.md`** - Model selection decision tree and version mapping
+
+### CLI References
+- **`references/gemini-help.md`** - Complete Gemini CLI help output and flag reference
 
 ---
 
@@ -439,7 +470,7 @@ For detailed information, see the references directory:
 | Subcommand | Required (`exec`) | Not needed |
 | Positional Prompts | Not supported | Preferred |
 | Session Resume | `codex exec resume --last` | `gemini -r latest` |
-| Models | GPT-5.1, GPT-5.1-Codex | Gemini 3 Pro, 2.5 Pro/Flash |
+| Models | GPT-5.2, GPT-5.2-Codex | Gemini 3 Pro, 2.5 Pro/Flash |
 | Provider | OpenAI (via Codex) | Google |
 
 ---
@@ -469,18 +500,6 @@ For detailed information, see the references directory:
 
 ## Version Compatibility
 
-- **Minimum Gemini CLI**: v0.20.0
-- **Recommended**: v0.20.x stable (latest)
-- **Preview/Nightly**: Weekly previews available (Tuesdays UTC 2359)
-
-**Changes in v0.20.0:**
-- `-p/--prompt` flag officially deprecated (use positional prompts)
-- New `--include-directories` flag for workspace expansion
-- New `-i/--prompt-interactive` flag for interactive continuation
-- New `--screen-reader` accessibility flag
-- New `--experimental-acp` Agent Control Protocol mode
-- Session management via `-r` flag standard
-
----
+**Minimum Gemini CLI**: v0.23.0
 
 For questions or issues, consult `references/gemini-help.md` or run `gemini --help`.

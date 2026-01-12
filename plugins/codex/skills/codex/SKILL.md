@@ -1,7 +1,7 @@
 ---
 name: codex
 version: 2.1.0
-description: Invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
+description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
 # Codex: High-Reasoning AI Assistant for Claude Code
@@ -236,7 +236,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.72.0+ (requires 0.72.0+ for gpt-5.2-codex and xhigh)
+**Codex CLI Version**: 0.80.0+ (requires 0.80.0+ for gpt-5.2-codex and xhigh)
 
 | Flag | Values | Description |
 |------|--------|-------------|
@@ -277,7 +277,7 @@ Pass these as `-c key=value`:
 
 Use `--add-dir` flag (preferred) or config:
 ```bash
-# Preferred - simpler syntax (v0.71.0+)
+# Using --add-dir for multiple directories
 codex exec --add-dir /path1 --add-dir /path2 "task"
 
 # Alternative - config approach
@@ -286,63 +286,11 @@ codex exec -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]' "task
 
 ### Model Selection Guide
 
-**Default Models (Codex CLI v0.71.0+)**
+**Available Models**:
+- `gpt-5.2-codex` - Code tasks (implementation, refactoring, debugging)
+- `gpt-5.2` - General tasks (architecture, reviews, explanations)
 
-This skill supports the following models:
-- `gpt-5.2` - Latest model with all reasoning levels (NEW in 0.71.0)
-- `gpt-5.1` - General reasoning, architecture, reviews (default)
-- `gpt-5.1-codex-max` - Code editing (legacy, use gpt-5.2 instead)
-- `gpt-5.1-codex` - Standard code editing (available for backward compatibility)
-
-**GPT-5.2 Model (NEW)**:
-- Supports all reasoning effort levels: `low`, `medium`, `high`, `xhigh`
-- Use for cutting-edge tasks requiring latest model capabilities
-- Example: `codex exec -m gpt-5.2 -c model_reasoning_effort=xhigh "complex task"`
-
-**Performance Characteristics**:
-- `gpt-5.1-codex-max` is 27-42% faster than `gpt-5.1-codex`
-- Uses ~30% fewer thinking tokens at the same reasoning effort level
-- Supports new `xhigh` reasoning effort for maximum capability
-- Requires Codex CLI 0.71.0+ and ChatGPT Plus/Pro/Business/Edu/Enterprise subscription
-
-**Backward Compatibility**
-
-You can override to use older models when needed:
-
-```bash
-# Use older gpt-5 model explicitly
-codex exec -m gpt-5 -s read-only "Design a data structure"
-
-# Use older gpt-5-codex model explicitly
-codex exec -m gpt-5-codex -s workspace-write "Implement feature X"
-```
-
-**When to Override**
-
-- **Testing compatibility**: Verify behavior matches older model versions
-- **Specific model requirements**: Project requires specific model version
-- **Model comparison**: Compare outputs between model versions
-
-**Model Override Examples**
-
-Override via `-m` flag:
-```bash
-# Override to gpt-5 for general task
-codex exec -m gpt-5 "Explain algorithm complexity"
-
-# Override to gpt-5-codex for code task
-codex exec -m gpt-5-codex -s workspace-write "Refactor authentication"
-
-# Override to gpt-4 if available
-codex exec -m gpt-4 "Review this code"
-```
-
-**Default Behavior**
-
-Without explicit `-m` override:
-- All tasks → `gpt-5.2` (latest model, recommended default)
-- General reasoning → `gpt-5.1` (if explicitly requested)
-- Backward compatibility → `gpt-5.1-codex-max` and `gpt-5.1-codex` still work if explicitly specified
+**Default**: `gpt-5.2-codex` for code tasks, `gpt-5.2` for general tasks with `xhigh` reasoning effort.
 
 ## Session Continuation
 
@@ -474,92 +422,26 @@ Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effor
 
 ## Examples
 
-### Example 1: Code Task (Read-Only Default)
-
-**User Request**: "Analyze this function implementation and suggest improvements"
-
-**Skill Executes**:
+### Code Analysis (Read-Only)
 ```bash
 codex exec -m gpt-5.2-codex -s read-only \
   -c model_reasoning_effort=xhigh \
-  "Analyze this function implementation and suggest improvements"
+  "Analyze this function implementation"
 ```
 
-**Result**: Code-related task uses gpt-5.2-codex with read-only sandbox (default). No file modifications.
-
----
-
-### Example 2: General Task (Read-Only Default)
-
-**User Request**: "Help me design a binary search tree architecture in Rust"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5.2 -s read-only \
-  -c model_reasoning_effort=xhigh \
-  "Help me design a binary search tree architecture in Rust"
-```
-
-**Result**: General task uses gpt-5.2 with read-only sandbox (default). Session automatically saved for continuation.
-
----
-
-### Example 3: Code Task with Explicit Edit Request
-
-**User Request**: "Edit this file to implement the BST insert method"
-
-**Skill Executes**:
+### Code Editing (Explicit Request)
 ```bash
 codex exec -m gpt-5.2-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  "Edit this file to implement the BST insert method"
+  "Edit this file to implement the feature"
 ```
 
-**Result**: User explicitly said "Edit this file" - code task uses gpt-5.2-codex with workspace-write permissions.
-
----
-
-### Example 4: Session Continuation
-
-**User Request**: "Continue with the BST - add a deletion method"
-
-**Skill Executes**:
+### Session Continuation
 ```bash
 codex exec resume --last
 ```
 
-**Result**: Codex resumes the previous BST session and continues with deletion method implementation, maintaining full context.
-
----
-
-### Example 5: With Web Search (Read-Only Default)
-
-**User Request**: "Use Codex with web search to research async patterns"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5.2-codex -s read-only \
-  -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
-  "Research async patterns"
-```
-
-**Result**: Code-related research uses gpt-5.2-codex with read-only sandbox (default) and web search enabled.
-
----
-
-### Example 6: Explicit Refactoring Request
-
-**User Request**: "Refactor and save the authentication system code"
-
-**Skill Executes**:
-```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  "Refactor and save the authentication system code"
-```
-
-**Result**: User explicitly said "Refactor and save" - code task uses gpt-5.2-codex with workspace-write for file modifications.
+**See**: `references/examples.md` for more examples including web search, file context, and code review patterns.
 
 ---
 
@@ -596,157 +478,40 @@ codex exec review --uncommitted
 
 ## CLI Features Reference
 
-### Feature Flags (`--enable` / `--disable`)
-Enable or disable specific Codex features:
-```bash
-codex exec --enable web_search_request "Research latest patterns"
-codex exec --disable some_feature "Run without feature"
-```
+For detailed CLI feature documentation, see `references/cli-features.md`.
 
-### Image Attachment (`-i, --image`)
-Attach images to prompts for visual analysis:
-```bash
-codex exec -i screenshot.png "Analyze this UI design"
-codex exec -i diagram1.png -i diagram2.png "Compare these architectures"
-```
-
-### Additional Directories (`--add-dir`) (v0.71.0+)
-Add writable directories beyond the primary workspace:
-```bash
-codex exec --add-dir /shared/libs --add-dir /config "task"
-```
-
-### Full Auto Mode (`--full-auto`)
-Convenience flag for low-friction execution:
-```bash
-codex exec --full-auto "task"
-# Equivalent to: -s workspace-write with on-request approval
-```
-
-### Non-Git Environments (`--skip-git-repo-check`)
-Run Codex outside Git repositories:
-```bash
-codex exec --skip-git-repo-check "Help with this script"
-```
-
-### Structured Output (`--output-schema`)
-Define JSON schema for model responses:
-```bash
-codex exec --output-schema schema.json "Generate structured data"
-```
-
-### Output Coloring (`--color`)
-Control colored output (always, never, auto):
-```bash
-codex exec --color never "Run in CI/CD pipeline"
-```
-
-### Web Search in Exec Mode
-**Note**: `--search` flag is interactive-only. Use `--enable` for exec mode:
-```bash
-# CORRECT for codex exec
-codex exec --enable web_search_request "research topic"
-
-# WRONG - --search only works in interactive mode
-codex --search "research topic"
-```
-
-### Feature Flags (`codex features list`) (v0.71.0+)
-Inspect and manage Codex feature flags:
-```bash
-# List all feature flags with their states
-codex features list
-```
-
-**Current Feature Flags** (as of v0.71.0):
-
-**Stable Features**:
-| Feature | Default | Description |
-|---------|---------|-------------|
-| `web_search_request` | false | Enable web search capability |
-| `parallel` | true | Parallel execution |
-| `shell_tool` | true | Shell command execution |
-| `undo` | true | Undo functionality |
-| `view_image_tool` | true | Image viewing capability |
-| `warnings` | true | Display warnings |
-
-**Experimental/Beta Features**:
-| Feature | Stage | Default | Description |
-|---------|-------|---------|-------------|
-| `exec_policy` | experimental | true | Execution policy control |
-| `remote_compaction` | experimental | true | Remote compaction |
-| `unified_exec` | experimental | false | Unified execution mode |
-| `rmcp_client` | experimental | false | RMCP client support |
-| `apply_patch_freeform` | beta | false | Freeform patch application |
-| `skills` | experimental | false | Skills support |
-| `shell_snapshot` | experimental | false | Shell state snapshots |
-| `remote_models` | experimental | false | Remote model support |
-
-Enable/disable features with `--enable` and `--disable`:
-```bash
-codex exec --enable web_search_request "research task"
-codex exec --disable parallel "run sequentially"
-```
-
-### JSONL Output (`--json`) (v0.71.0+)
-Stream events as JSONL for programmatic processing:
-```bash
-codex exec --json "task" > events.jsonl
-```
-
-### Save Last Message (`-o/--output-last-message`) (v0.71.0+)
-Write the final agent message to a file:
-```bash
-codex exec -o result.txt "generate summary"
-```
+**Quick Reference** - Common features:
+- `--enable web_search_request` - Enable web search
+- `-i, --image` - Attach images to prompts
+- `--add-dir` - Add writable directories
+- `--full-auto` - Low-friction workspace-write mode
+- `--json` - JSONL output for programmatic processing
 
 ---
 
-## When to Use GPT-5.2-Codex vs GPT-5.2
+## File Context Passing
 
-### GPT-5.2-Codex (for code-related tasks):
-- Implementation, refactoring, code analysis
-- Debugging, fixing bugs, optimization
-- Any task involving code understanding
+**IMPORTANT**: Pass file paths to Codex CLI instead of embedding file content in prompts. This enables Codex to read files autonomously.
 
-**Read-only (default)**:
+**Quick reference**:
+- Use `-C /path` to set working directory
+- Use `--add-dir /path` for additional directories
+- Use `@path/to/file` syntax for explicit file references
+
 ```bash
-codex exec -m gpt-5.2-codex -s read-only -c model_reasoning_effort=xhigh "analyze code"
+# Example: analyze file with explicit @ syntax
+codex exec -m gpt-5.2-codex -s read-only \
+  "Analyze @src/auth.ts and compare with @src/session.ts"
+
+# Example: multi-directory analysis
+codex exec -m gpt-5.2-codex -s read-only \
+  --add-dir /shared/libs \
+  "Review how auth module uses shared utilities"
 ```
 
-**Workspace-write (only when user explicitly requests editing)**:
-```bash
-codex exec -m gpt-5.2-codex -s workspace-write -c model_reasoning_effort=xhigh "edit this file"
-```
-
-### GPT-5.2 (for general tasks):
-- Architecture and system design
-- Explanations, documentation, reviews
-- Planning, strategy, general reasoning
-
-**Read-only (default)**:
-```bash
-codex exec -m gpt-5.2 -s read-only -c model_reasoning_effort=xhigh "design architecture"
-```
-
-**Workspace-write (only when user explicitly requests editing)**:
-```bash
-codex exec -m gpt-5.2 -s workspace-write -c model_reasoning_effort=xhigh "update the README"
-```
+**See**: `references/file-context.md` for complete file context documentation.
 
 ---
-
-## Fallback Models (Backward Compatibility)
-
-### Use GPT-5.1-Codex-Max When:
-- GPT-5.2-codex is unavailable
-- Explicit requirement for the older codex model
-
-### Use GPT-5.1 When:
-- GPT-5.2 is unavailable
-- Explicit requirement for the older general model
-
-**Default**: Use `gpt-5.2-codex` for coding tasks and `gpt-5.2` for reasoning tasks. Fall back to GPT-5.1 variants only if primary models are unavailable.
 
 ## Best Practices
 
@@ -779,36 +544,20 @@ The skill defaults to high reasoning effort - perfect for:
 - Performance optimization
 - Security reviews
 
-## Platform & Capabilities (v0.71.0)
+## Reference Documentation
 
-### Windows Sandbox Support
-Windows sandbox is available for filesystem and network access control.
+For detailed information, consult these reference files:
 
-### Interactive Mode Features
-The `/exit` slash-command alias is available in interactive `codex` mode (not applicable to `codex exec` non-interactive mode used by this skill).
+### Core References
+- **`references/file-context.md`** - File and directory context passing guide
+- **`references/examples.md`** - Complete command examples by use case
+- **`references/cli-features.md`** - Feature flags and CLI options
 
-### Model Verbosity Override
-All models (gpt-5.2, gpt-5.1-codex-max, gpt-5.1-codex) support verbosity override via `-c model_verbosity=<level>` for controlling output detail levels.
+### Workflow References
+- **`references/command-patterns.md`** - Common codex exec usage patterns
+- **`references/session-workflows.md`** - Session continuation and resume workflows
+- **`references/advanced-patterns.md`** - Complex configuration and flag combinations
 
-### Local/OSS Model Support
-Use `--oss` with `--local-provider` to use local LLM providers:
-```bash
-codex exec --oss --local-provider ollama "task"
-codex exec --oss --local-provider lmstudio "task"
-```
-
-## Pattern References
-
-For command construction examples and workflow patterns, Claude can reference:
-- `references/command-patterns.md` - Common codex exec usage patterns
-- `references/session-workflows.md` - Session continuation and resume workflows
-- `references/advanced-patterns.md` - Complex configuration and flag combinations
-
-These files provide detailed examples for constructing valid codex exec commands for various scenarios.
-
-## Additional Resources
-
-For more details, see:
-- `references/codex-help.md` - Codex CLI command reference
-- `references/codex-config.md` - Full configuration options
-- `README.md` - Installation and quick start guide
+### CLI References
+- **`references/codex-help.md`** - Codex CLI command reference
+- **`references/codex-config.md`** - Full configuration options
