@@ -17,7 +17,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Prerequisites
 
-1. **Gemini CLI** (v0.21.1 or later for Gemini 3 Pro)
+1. **Gemini CLI** (v0.26.0 or later)
    ```bash
    npm install -g @google/gemini-cli@latest
    ```
@@ -161,6 +161,7 @@ gemini -m gemini-2.5-pro --output-format json "List design patterns"
 
 - **default**: Prompt for all tool actions
 - **auto_edit**: Auto-approve edit operations only (recommended)
+- **plan**: Read-only mode - no file modifications allowed
 - **yolo** (`-y`): Auto-approve all actions (use with caution)
 
 ## Rate Limits
@@ -218,7 +219,7 @@ gemini --list-sessions  # Check available sessions
 
 ## Version Compatibility
 
-- **Minimum**: Gemini CLI v0.21.1 (for Gemini 3 Pro support)
+- **Minimum**: Gemini CLI v0.26.0
 - **Recommended**: Latest stable version
 - **Breaking Changes**: `-p` flag deprecated (use positional prompts)
 
@@ -252,7 +253,7 @@ Apache-2.0
 
 ## Version
 
-1.2.0
+1.4.0
 
 ## Author
 

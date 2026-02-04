@@ -170,7 +170,8 @@ Codex provides:
 **Note**: `gpt-5.2-codex` is optimized for agentic coding (56.4% SWE-Bench Pro) with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
 
 ### Fallback Chain
-- **Coding**: `gpt-5.2-codex` → `gpt-5.2` → `gpt-5.1-codex-max`
+- **Coding**: `gpt-5.2-codex` → `gpt-5.2`
+- **General**: `gpt-5.2` → `gpt-5.2-codex`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---

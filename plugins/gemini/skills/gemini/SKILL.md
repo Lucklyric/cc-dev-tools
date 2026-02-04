@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.2.0
+version: 1.4.0
 description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -98,6 +98,7 @@ When a user makes a request, **default to read-only mode (default approval)** un
 **Approval Mode Selection:**
 - **`default`** (default): For all tasks - prompts for approval on edits (safe)
 - **`auto_edit`**: ONLY when user explicitly requests file editing
+- **`plan`**: Read-only mode - no file modifications allowed
 - **`yolo`**: When user explicitly wants full auto-approval (use with caution)
 
 **⚠️ Explicit Edit Request**: If the user explicitly asks to "edit files", "modify code", "write changes", or "make edits" - ONLY then use `--approval-mode auto_edit` to enable file modifications.
@@ -314,33 +315,36 @@ gemini -r latest "Now help me implement the login flow"
 
 ```bash
 # JSON output for parsing
-gemini -m gemini-2.5-pro --output-format json "List top 5 design patterns"
+gemini -m gemini-3-pro-preview --output-format json "List top 5 design patterns"
 
 # Streaming JSON for real-time
-gemini -m gemini-2.5-pro --output-format stream-json "Explain async patterns"
+gemini -m gemini-3-pro-preview --output-format stream-json "Explain async patterns"
 ```
 
 ### Approval Modes
 
 ```bash
 # Default mode (prompt for all)
-gemini -m gemini-2.5-pro --approval-mode default "Review this code"
+gemini -m gemini-3-pro-preview --approval-mode default "Review this code"
 
 # Auto-edit (auto-approve edits only)
-gemini -m gemini-2.5-pro --approval-mode auto_edit "Refactor this module"
+gemini -m gemini-3-pro-preview --approval-mode auto_edit "Refactor this module"
+
+# Plan mode (read-only, no file modifications)
+gemini -m gemini-3-pro-preview --approval-mode plan "Analyze this codebase"
 
 # YOLO mode (auto-approve ALL - use with caution)
-gemini -m gemini-2.5-pro --approval-mode yolo "Deploy to production"
+gemini -m gemini-3-pro-preview --approval-mode yolo "Deploy to production"
 ```
 
 ### Sandbox Mode
 
 ```bash
 # Enable sandbox for untrusted code
-gemini -m gemini-2.5-pro -s "Analyze this suspicious code snippet"
+gemini -m gemini-3-pro-preview -s "Analyze this suspicious code snippet"
 
 # Disabled by default (trusted environment)
-gemini -m gemini-2.5-pro "Review this internal codebase"
+gemini -m gemini-3-pro-preview "Review this internal codebase"
 ```
 
 ### Extensions & MCP Integration
@@ -359,6 +363,34 @@ gemini -m gemini-3-pro-preview "Design system architecture"
 ```
 
 **Note**: This plugin does not implement custom extensions or MCP servers. Users can configure extensions and MCP servers through the Gemini CLI's standard configuration in `~/.gemini/settings.json`. Extensions are enabled by default when appropriate for the task.
+
+### Skills Management (`gemini skills`) (v0.26.0+)
+
+Gemini CLI supports agent skills - reusable capabilities that extend the agent's abilities. Manage skills through the CLI:
+
+```bash
+# List available skills
+gemini skills list
+
+# Get help on skills management
+gemini skills --help
+```
+
+**Note**: Skills in Gemini CLI are agent-level capabilities (like file operations, code execution), distinct from Claude Code plugin skills. Configure skills in `~/.gemini/settings.json`.
+
+### Hooks Management (`gemini hooks`) (v0.26.0+)
+
+Gemini CLI supports hooks - event-driven automation that runs at specific points during agent execution. Manage hooks through the CLI:
+
+```bash
+# List configured hooks
+gemini hooks list
+
+# Get help on hooks management
+gemini hooks --help
+```
+
+**Note**: Gemini CLI hooks are similar to Claude Code hooks but managed through Gemini's configuration. Configure hooks in `~/.gemini/settings.json`.
 
 ### Additional Directories (`--include-directories`) (v0.20.0+)
 
@@ -418,7 +450,7 @@ Execute a prompt and continue in interactive mode:
 gemini -m gemini-3-pro-preview -i "initial prompt here"
 ```
 
-**Note**: Limited applicability for Claude Code skills which use non-interactive mode.
+**⚠️ Not applicable for Claude Code**: This flag requires an interactive terminal and will not work in Claude Code's non-interactive bash environment. Use standard positional prompts instead.
 
 ### Experimental ACP Mode (`--experimental-acp`)
 
@@ -500,6 +532,15 @@ For detailed information, consult these reference files:
 
 ## Version Compatibility
 
-**Minimum Gemini CLI**: v0.23.0
+**Minimum Gemini CLI**: v0.26.0
+
+| Feature | Minimum Version | Notes |
+|---------|-----------------|-------|
+| Core functionality | v0.20.0+ | Positional prompts, session resume |
+| `--include-directories` | v0.20.0+ | Workspace expansion |
+| `--screen-reader` | v0.20.0+ | Accessibility mode |
+| `--approval-mode plan` | v0.26.0+ | Read-only mode |
+| `gemini skills` | v0.26.0+ | Skills management |
+| `gemini hooks` | v0.26.0+ | Hooks management |
 
 For questions or issues, consult `references/gemini-help.md` or run `gemini --help`.

@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.71.0
+**Version**: 0.94.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -33,6 +33,7 @@ Commands:
   app-server  [experimental] Run the app server or related tooling
   completion  Generate shell completion scripts
   sandbox     Run commands within a Codex-provided sandbox [aliases: debug]
+  fork        Fork a previous interactive session (use --last for most recent)
   apply       Apply the latest diff produced by Codex agent as a `git apply` to your local working
               tree [aliases: a]
   resume      Resume a previous interactive session (picker by default; use --last to continue the
@@ -71,8 +72,11 @@ Options:
           model_provider=oss; verifies a local LM Studio or Ollama server is running
 
       --local-provider <OSS_PROVIDER>
-          Specify which local provider to use (lmstudio or ollama). If not specified with --oss,
-          will use config default or show selection
+          Specify which local provider to use (lmstudio, ollama, or ollama-chat). If not specified
+          with --oss, will use config default or show selection
+
+      --no-alt-screen
+          Disable alternate screen mode (useful in Zellij)
 
   -p, --profile <CONFIG_PROFILE>
           Configuration profile from config.toml to specify default options
@@ -167,8 +171,11 @@ Options:
           Use open-source provider
 
       --local-provider <OSS_PROVIDER>
-          Specify which local provider to use (lmstudio or ollama). If not specified with --oss,
-          will use config default or show selection
+          Specify which local provider to use (lmstudio, ollama, or ollama-chat). If not specified
+          with --oss, will use config default or show selection
+
+      --no-alt-screen
+          Disable alternate screen mode (useful in Zellij)
 
   -s, --sandbox <SANDBOX_MODE>
           Select the sandbox policy to use when executing model-generated shell commands
@@ -300,19 +307,7 @@ Usage: codex features list
 
 Lists all known features with their stage (stable/beta/experimental) and effective state (enabled/disabled).
 
-Current features (v0.71.0):
-- undo (stable, default: true)
-- parallel (stable, default: true)
-- view_image_tool (stable, default: true)
-- shell_tool (stable, default: true)
-- warnings (stable, default: true)
-- web_search_request (stable, default: false)
-- exec_policy (experimental, default: true)
-- remote_compaction (experimental, default: true)
-- unified_exec (experimental, default: false)
-- rmcp_client (experimental, default: false)
-- apply_patch_freeform (beta, default: false)
-- skills (experimental, default: false)
+Run `codex features list` to see currently available features.
 ```
 
 ## Cloud Command: `codex cloud --help` (EXPERIMENTAL)
@@ -330,13 +325,39 @@ Commands:
   help    Print this message or the help of the given subcommand(s)
 ```
 
-## Model Support (v0.71.0)
+## Fork Command: `codex fork --help` (Interactive Only)
+
+**⚠️ Note**: `codex fork` is an **interactive-only** command. It is NOT available under `codex exec` and will fail with "stdin is not a terminal" in non-interactive environments like Claude Code.
+
+```
+Fork a previous interactive session (picker by default; use --last to fork the most recent)
+
+Usage: codex fork [OPTIONS] [SESSION_ID] [PROMPT]
+
+Arguments:
+  [SESSION_ID]
+          Conversation/session id (UUID). When provided, forks this session. If omitted, use
+          --last to pick the most recent recorded session
+
+  [PROMPT]
+          Optional user prompt to start the session
+
+Options:
+      --last
+          Fork the most recent session without showing the picker
+
+      --all
+          Show all sessions (disables cwd filtering and shows CWD column)
+
+  -h, --help
+          Print help
+```
+
+## Model Support (v0.94.0)
 
 **Available Models**:
-- `gpt-5.2` - Latest model with all reasoning levels (NEW)
-- `gpt-5.1` - General high-reasoning model
-- `gpt-5.1-codex-max` - Maximum capability code editing (27-42% faster)
-- `gpt-5.1-codex` - Standard code editing (backward compatibility)
+- `gpt-5.2-codex` - Optimized for agentic coding tasks
+- `gpt-5.2` - High-reasoning general model
 
 **Reasoning Effort Levels** (all supported by gpt-5.2):
 - `low` - Minimal reasoning

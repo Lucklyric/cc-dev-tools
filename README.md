@@ -28,7 +28,7 @@ High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.72.0+
+codex --version  # Requires v0.94.0+
 codex login
 ```
 
@@ -40,8 +40,8 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.1.0 |
-| Models | GPT-5.2-Codex, GPT-5.2, GPT-5.1-Codex-Max |
+| Version | 2.3.0 |
+| Models | GPT-5.2-Codex, GPT-5.2 |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 
@@ -59,7 +59,7 @@ Google Gemini 3 Pro AI integration through Gemini CLI for research, reasoning, a
 
 **Quick Start:**
 ```bash
-npm install -g @google/gemini-cli@latest  # Requires v0.21.1+
+npm install -g @google/gemini-cli@latest  # Requires v0.26.0+
 gemini login
 ```
 
@@ -71,7 +71,7 @@ gemini login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
-| Version | 1.2.0 |
+| Version | 1.4.0 |
 | Models | Gemini 3 Pro, 2.5 Pro, 2.5 Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
@@ -202,12 +202,12 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.1.0
+**Marketplace**: 2.3.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.1.0 |
-| Gemini | 1.2.0 |
+| Codex | 2.3.0 |
+| Gemini | 1.4.0 |
 | Telegram Notifier | 0.1.1 |
 
 ## Links

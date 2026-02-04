@@ -17,10 +17,10 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.2 
 
 ## Prerequisites
 
-1. **Codex CLI** (v0.72.0 or later for gpt-5.2-codex and xhigh)
+1. **Codex CLI** (v0.94.0 or later)
    ```bash
    # Install Codex CLI (follow OpenAI's installation instructions)
-   codex --version  # Should show v0.72.0+
+   codex --version  # Should show v0.94.0+
    ```
 
 2. **Authentication**
@@ -143,7 +143,8 @@ codex exec -m gpt-5.2 -s danger-full-access "Complex task"
 | GPT-5.2 | Architecture, design, reviews, analysis | read-only | xhigh |
 
 ### Fallback Chain
-- **Coding**: `gpt-5.2-codex` → `gpt-5.2` → `gpt-5.1-codex-max`
+- **Coding**: `gpt-5.2-codex` → `gpt-5.2`
+- **General**: `gpt-5.2` → `gpt-5.2-codex`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ## Troubleshooting
@@ -169,10 +170,10 @@ codex login
 **Solution**: Always use `codex exec` in Claude Code:
 ```bash
 # WRONG
-codex -m gpt-5.1 "prompt"
+codex -m gpt-5.2 "prompt"
 
 # CORRECT
-codex exec -m gpt-5.1 "prompt"
+codex exec -m gpt-5.2 "prompt"
 ```
 
 ### Session Not Found
@@ -181,7 +182,7 @@ codex exec -m gpt-5.1 "prompt"
 codex exec resume --list
 
 # Start a new session
-codex exec -m gpt-5.1 "New task"
+codex exec -m gpt-5.2 "New task"
 ```
 
 ### API Rate Limits
@@ -199,7 +200,7 @@ If you encounter rate limits, check your OpenAI API usage dashboard. The plugin 
 
 ## Version Compatibility
 
-- **Minimum**: Codex CLI v0.72.0 (for gpt-5.2-codex and xhigh)
+- **Minimum**: Codex CLI v0.94.0
 - **Recommended**: Latest stable version
 - **Models**: GPT-5.2-Codex (coding), GPT-5.2 (reasoning)
 
@@ -251,4 +252,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-2.1.0
+2.3.0

@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.1.0
+version: 2.3.0
 description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -48,8 +48,8 @@ codex exec -m gpt-5.2 -s workspace-write \
 ### Model Fallback Chain
 
 If the primary model is unavailable, fallback gracefully:
-1. **Code tasks**: `gpt-5.2-codex` → `gpt-5.2` → `gpt-5.1-codex-max`
-2. **General tasks**: `gpt-5.2` → `gpt-5.1` → `gpt-5.1-codex-max`
+1. **Code tasks**: `gpt-5.2-codex` → `gpt-5.2`
+2. **General tasks**: `gpt-5.2` → `gpt-5.2-codex`
 3. **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
@@ -150,48 +150,11 @@ When a user makes a request, first determine the task type (code vs general), th
 
 ### Bash CLI Command Structure
 
-**IMPORTANT**: Always use `codex exec` for non-interactive execution. Claude Code's bash environment is non-terminal, so the interactive `codex` command will fail with "stdout is not a terminal" error.
+See the [DEFAULT MODEL](#default-model-task-based-model-selection-with-read-only-default) section above for complete command templates. Key points:
 
-#### Code Task (Read-Only Default)
-
-```bash
-codex exec -m gpt-5.2-codex -s read-only \
-  -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
-  "<code-related prompt>"
-```
-
-#### General Task (Read-Only Default)
-
-```bash
-codex exec -m gpt-5.2 -s read-only \
-  -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
-  "<general prompt>"
-```
-
-#### Code Task with Explicit Edit Request
-
-```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
-  "<edit code prompt>"
-```
-
-#### General Task with Explicit Edit Request
-
-```bash
-codex exec -m gpt-5.2 -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
-  "<edit general files prompt>"
-```
-
-**Why `codex exec`?**
-- Non-interactive mode required for automation and Claude Code integration
-- Produces clean output suitable for parsing
-- Works in non-TTY environments (like Claude Code's bash)
+- Always use `codex exec` (non-interactive mode required)
+- Add `--enable web_search_request` for research tasks
+- See `references/command-patterns.md` for additional patterns
 
 ### Model Selection Logic
 
@@ -218,7 +181,7 @@ codex exec -m gpt-5.2 -s workspace-write \
 - User explicitly asks to "make edits" or "save the changes"
 - User explicitly requests "refactor and save" or "implement and write"
 
-**Fallback Models**: `gpt-5.1-codex-max` and `gpt-5.1` are available if primary models are unavailable. See fallback chain in DEFAULT MODEL section.
+**Fallback**: If primary model unavailable, fallback to the other 5.2 variant. See fallback chain in DEFAULT MODEL section.
 
 ### Default Configuration
 
@@ -236,28 +199,15 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.80.0+ (requires 0.80.0+ for gpt-5.2-codex and xhigh)
+**Codex CLI Version**: 0.94.0+
 
-| Flag | Values | Description |
-|------|--------|-------------|
-| `-m, --model` | `gpt-5.2-codex`, `gpt-5.2`, `gpt-5.1-codex-max`, `gpt-5.1` | Model selection |
-| `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
-| `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=high`) |
-| `-C, --cd` | directory path | Working directory |
-| `-p, --profile` | profile name | Use config profile |
-| `--enable` | feature name | Enable a feature (e.g., `web_search_request`) |
-| `--disable` | feature name | Disable a feature |
-| `-i, --image` | file path(s) | Attach image(s) to initial prompt |
-| `--add-dir` | directory path | Additional writable directory (repeatable) |
-| `--full-auto` | flag | Convenience for workspace-write sandbox with on-request approval |
-| `--oss` | flag | Use local open source model provider |
-| `--local-provider` | `lmstudio`, `ollama` | Specify local provider (with --oss) |
-| `--skip-git-repo-check` | flag | Allow running outside Git repository |
-| `--output-schema` | file path | JSON Schema file for response shape |
-| `--color` | `always`, `never`, `auto` | Color settings for output |
-| `--json` | flag | Print events as JSONL |
-| `-o, --output-last-message` | file path | Save last message to file |
-| `--dangerously-bypass-approvals-and-sandbox` | flag | Skip confirmations (DANGEROUS) |
+**See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
+
+**Key flags for this skill**:
+- `-m, --model` - Model selection (`gpt-5.2-codex`, `gpt-5.2`)
+- `-s, --sandbox` - Sandbox mode (`read-only`, `workspace-write`)
+- `-c, --config` - Config overrides (e.g., `model_reasoning_effort=xhigh`)
+- `--enable` / `--disable` - Feature toggles (e.g., `web_search_request`)
 
 ### Configuration Parameters
 
@@ -266,7 +216,7 @@ Pass these as `-c key=value`:
 - `model_reasoning_effort`: `minimal`, `low`, `medium`, `high`, `xhigh`
   - **CLI default**: `high` - The Codex CLI defaults to high reasoning
   - **Skill default**: `xhigh` - This skill explicitly uses xhigh for maximum capability
-  - **`xhigh`**: Extra-high reasoning for maximum capability (supported by gpt-5.2 and gpt-5.1-codex-max)
+  - **`xhigh`**: Extra-high reasoning for maximum capability (supported by gpt-5.2 models)
   - Use `xhigh` for complex architectural refactoring, long-horizon tasks, or when quality is more important than speed
 - `model_verbosity`: `low`, `medium`, `high` (default: `medium`)
 - `model_reasoning_summary`: `auto`, `concise`, `detailed`, `none` (default: `auto`)
@@ -323,6 +273,24 @@ Resume a specific session by providing its UUID. Get session IDs from previous C
 
 **Note**: The interactive session picker (`codex resume` without arguments) is NOT available in non-interactive/Claude Code environments. Always use `--last` or provide explicit session ID.
 
+### Forking Sessions (Interactive Only)
+
+The `codex fork` command creates a new session from a previous one, allowing exploration of different directions without affecting the original session.
+
+```bash
+# Fork the most recent session (interactive terminal only)
+codex fork --last
+
+# Fork a specific session by ID (interactive terminal only)
+codex fork <session-id>
+```
+
+**⚠️ Important**: `codex fork` is an **interactive-only** command. It is NOT available under `codex exec` and will fail with "stdin is not a terminal" in Claude Code's non-interactive environment.
+
+**Workaround for Claude Code**: To achieve similar functionality, use `codex exec resume --last` with a prompt that indicates you want to explore an alternative approach. The session history will be preserved.
+
+**Note**: Unlike `resume` which continues the same session, `fork` creates a new independent session with the same history as a starting point.
+
 ### Decision Logic: New vs. Continue
 
 **Use `codex exec -m ... "<prompt>"`** when:
@@ -334,6 +302,7 @@ Resume a specific session by providing its UUID. Get session IDs from previous C
 - User indicates continuation ("continue", "resume", "add to that")
 - Follow-up question building on previous Codex conversation
 - Iterative development on same task
+- User wants to explore alternatives (provide new direction in prompt)
 
 ### Session History Management
 
@@ -399,6 +368,8 @@ Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effor
 1. Check Codex CLI built-in help: `codex --help`, `codex exec --help`, `codex exec resume --help`
 2. Consult official documentation: [https://github.com/openai/codex/tree/main/docs](https://github.com/openai/codex/tree/main/docs)
 3. Verify skill resources in `references/` directory
+
+**Note**: Commands like `codex --help`, `codex --version`, `codex login`, and `codex logout` work without the `exec` subcommand. The `exec` requirement only applies to task execution.
 
 **Skill not being invoked?**
 - Check that request matches trigger keywords (Codex, complex coding, high reasoning, etc.)
@@ -473,6 +444,19 @@ codex exec review --uncommitted
 | `--base <BRANCH>` | Review changes against the given base branch |
 | `--commit <SHA>` | Review the changes introduced by a commit |
 | `--title <TITLE>` | Optional commit title for review summary |
+
+---
+
+## Apply Command (v0.94.0+)
+
+The `codex apply` command applies the latest diff produced by the Codex agent as a `git apply` to your local working tree:
+
+```bash
+# Apply the latest diff from Codex
+codex apply
+```
+
+This is useful when Codex generates code changes in read-only mode and you want to apply those changes to your local files.
 
 ---
 

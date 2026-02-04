@@ -1,8 +1,8 @@
 # Gemini CLI Help Reference
 
-**Version**: v0.20.0
+**Version**: v0.26.0
 **Source**: Output from `gemini --help`
-**Last Updated**: 2025-12-10
+**Last Updated**: 2026-02-03
 
 ## Command Overview
 
@@ -17,6 +17,8 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 - `gemini [query..]` - Launch Gemini CLI (default)
 - `gemini mcp` - Manage MCP servers
 - `gemini extensions <command>` - Manage Gemini CLI extensions
+- `gemini skills` - Manage agent skills [aliases: skill]
+- `gemini hooks` - Manage Gemini CLI hooks [aliases: hook]
 
 ## Positionals
 
@@ -37,7 +39,7 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 
 - `-y, --yolo` - Automatically accept all actions (YOLO mode) [boolean] [default: false]
 - `--approval-mode` - Set approval mode [string]
-  **Choices**: `default` (prompt for approval), `auto_edit` (auto-approve edit tools), `yolo` (auto-approve all tools)
+  **Choices**: `default` (prompt for approval), `auto_edit` (auto-approve edit tools), `plan` (read-only mode), `yolo` (auto-approve all tools)
 - `--allowed-tools` - Tools allowed to run without confirmation [array]
 
 ### Session Management
@@ -71,7 +73,7 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 - `-h, --help` - Show help [boolean]
 - `--experimental-acp` - Start agent in ACP mode [boolean]
 
-## Full CLI Output (v0.20.0)
+## Full CLI Output (v0.26.0)
 
 ```
 Usage: gemini [options] [command]
@@ -82,6 +84,8 @@ Commands:
   gemini [query..]             Launch Gemini CLI  [default]
   gemini mcp                   Manage MCP servers
   gemini extensions <command>  Manage Gemini CLI extensions.  [aliases: extension]
+  gemini skills                Manage agent skills  [aliases: skill]
+  gemini hooks                 Manage Gemini CLI hooks  [aliases: hook]
 
 Positionals:
   query  Positional prompt. Defaults to one-shot; use -i/--prompt-interactive for interactive.
@@ -93,7 +97,7 @@ Options:
   -i, --prompt-interactive        Execute the provided prompt and continue in interactive mode  [string]
   -s, --sandbox                   Run in sandbox?  [boolean]
   -y, --yolo                      Automatically accept all actions (aka YOLO mode)?  [boolean] [default: false]
-      --approval-mode             Set the approval mode: default (prompt for approval), auto_edit (auto-approve edit tools), yolo (auto-approve all tools)  [string] [choices: "default", "auto_edit", "yolo"]
+      --approval-mode             Set the approval mode: default (prompt for approval), auto_edit (auto-approve edit tools), yolo (auto-approve all tools), plan (read-only mode)  [string] [choices: "default", "auto_edit", "yolo", "plan"]
       --experimental-acp          Starts the agent in ACP mode  [boolean]
       --allowed-mcp-server-names  Allowed MCP server names  [array]
       --allowed-tools             Tools that are allowed to run without confirmation  [array]
@@ -178,7 +182,7 @@ gemini -m gemini-3-pro-preview --screen-reader "task"
 1. **Positional Prompts**: Required as of v0.20.0 (preferred over `-p` flag)
 2. **Deprecation Warning**: `-p/--prompt` flag officially deprecated, will be removed in future versions
 3. **Session Resume**: Fully supported via `-r/--resume` flag
-4. **Approval Modes**: Three levels (default, auto_edit, yolo)
+4. **Approval Modes**: Four levels (default, auto_edit, plan, yolo)
 5. **Output Formats**: Text (default), JSON, or streaming JSON for programmatic use
 6. **MCP Integration**: Built-in support for Model Context Protocol servers
 7. **Extensions**: Plugin system for custom commands and functionality
@@ -193,7 +197,10 @@ Sessions are identified by:
 
 ## Compatibility Notes
 
-- **Minimum Version**: v0.20.0
+- **Minimum Version**: v0.26.0
+- **Changes in v0.26.0**:
+  - New `skills` command for managing agent skills
+  - New `hooks` command for managing CLI hooks
 - **Changes in v0.20.0**:
   - `-p` flag officially deprecated (use positional prompts)
   - New `--include-directories` flag for workspace expansion

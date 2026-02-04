@@ -20,8 +20,8 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Help me design a queue data structure in Python"
 ```
 
@@ -53,8 +53,8 @@ codex exec resume --last
 **User**: "Design a REST API for a blog system"
 
 ```bash
-codex exec -m gpt-5.1 -s read-only \
-  -c model_reasoning_effort=high \
+codex exec -m gpt-5.2 -s read-only \
+  -c model_reasoning_effort=xhigh \
   "Design a REST API for a blog system"
 ```
 
@@ -248,7 +248,7 @@ This allows Codex to provide increasingly sophisticated, context-aware assistanc
 
 **Fix**: Start a new session first:
 ```bash
-codex exec -m gpt-5.1"Design a queue"
+codex exec -m gpt-5.2 "Design a queue"
 ```
 
 Then subsequent "continue" requests will work.
