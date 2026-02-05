@@ -52,10 +52,10 @@ Codex provides:
 ### What Happens
 
 1. **Skill detects** code editing request
-2. **Uses gpt-5.2-codex** (optimized for agentic coding - 56.4% SWE-Bench Pro):
+2. **Uses gpt-5.3-codex** (optimized for agentic coding - 56.8% SWE-Bench Pro):
 
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit my Python file to implement the queue with thread-safety"
 ```
@@ -137,7 +137,7 @@ Codex provides:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Refactor the authentication system with comprehensive security improvements"
 ```
@@ -152,7 +152,7 @@ Codex provides:
 - Detailed reasoning about trade-offs
 - Long-horizon planning for complex changes (native context compaction)
 
-**Note**: xhigh is the default reasoning effort for all Codex invocations. gpt-5.2-codex has native context compaction ideal for long-horizon refactoring tasks.
+**Note**: xhigh is the default reasoning effort for all Codex invocations. gpt-5.3-codex has native context compaction ideal for long-horizon refactoring tasks.
 
 ---
 
@@ -163,15 +163,15 @@ Codex provides:
 | General reasoning | `gpt-5.2` | `read-only` | xhigh | "Design a queue" |
 | Architecture design | `gpt-5.2` | `read-only` | xhigh | "Design REST API" |
 | Code review | `gpt-5.2` | `read-only` | xhigh | "Review this code" |
-| Code editing | `gpt-5.2-codex` | `workspace-write` | xhigh | "Edit file to add X" |
-| Complex refactoring | `gpt-5.2-codex` | `workspace-write` | xhigh | "Refactor auth system" |
-| Implementation | `gpt-5.2-codex` | `workspace-write` | xhigh | "Implement function Y" |
+| Code editing | `gpt-5.3-codex` | `workspace-write` | xhigh | "Edit file to add X" |
+| Complex refactoring | `gpt-5.3-codex` | `workspace-write` | xhigh | "Refactor auth system" |
+| Implementation | `gpt-5.3-codex` | `workspace-write` | xhigh | "Implement function Y" |
 
-**Note**: `gpt-5.2-codex` is optimized for agentic coding (56.4% SWE-Bench Pro) with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
+**Note**: `gpt-5.3-codex` is optimized for agentic coding (56.8% SWE-Bench Pro) with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
 
 ### Fallback Chain
-- **Coding**: `gpt-5.2-codex` → `gpt-5.2`
-- **General**: `gpt-5.2` → `gpt-5.2-codex`
+- **Coding**: `gpt-5.3-codex` → `gpt-5.2`
+- **General**: `gpt-5.2` → `gpt-5.3-codex`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
@@ -181,12 +181,12 @@ Codex provides:
 1. **Be specific** in your requests - detailed prompts get better reasoning
 2. **Indicate task type** clearly (design vs. implementation)
 3. **Mention permissions** when you need file writes ("allow file writing")
-4. **Use continuation** for iterative development (see session-continuation.md)
+4. **Use continuation** for iterative development (see session-workflows.md)
 
 ---
 
 ## Next Steps
 
-- **Continue a session**: See [session-continuation.md](./session-continuation.md)
-- **Advanced config**: See [advanced-config.md](./advanced-config.md)
+- **Continue a session**: See [session-workflows.md](./session-workflows.md)
+- **Advanced config**: See [advanced-patterns.md](./advanced-patterns.md)
 - **Full documentation**: See [../SKILL.md](../SKILL.md)

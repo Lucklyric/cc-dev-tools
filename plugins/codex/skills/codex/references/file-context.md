@@ -15,7 +15,7 @@ Use `-C` to set the working directory for Codex operations:
 
 ```bash
 # Set working directory to project root
-codex exec -m gpt-5.2-codex -s read-only -C /path/to/project \
+codex exec -m gpt-5.3-codex -s read-only -C /path/to/project \
   "Analyze the authentication module"
 
 # Codex will explore files within /path/to/project
@@ -27,12 +27,12 @@ Use `--add-dir` to include directories outside the primary workspace:
 
 ```bash
 # Include shared libraries directory
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   --add-dir /shared/libs \
   "Review how the auth module uses shared utilities"
 
 # Include multiple directories
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   --add-dir /shared/libs \
   --add-dir /config \
   "Analyze configuration usage across the codebase"
@@ -42,15 +42,15 @@ codex exec -m gpt-5.2-codex -s read-only \
 
 ```bash
 # Analyze a specific file (Codex reads it autonomously)
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   "Analyze the implementation in src/auth/login.ts"
 
 # Review multiple files
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   "Compare the implementations in src/v1/api.ts and src/v2/api.ts"
 
 # Work with files across directories
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   --add-dir /shared/types \
   "Check how src/services/user.ts uses types from the shared directory"
 ```
@@ -59,11 +59,11 @@ codex exec -m gpt-5.2-codex -s read-only \
 
 ```bash
 # Analyze entire directory
-codex exec -m gpt-5.2-codex -s read-only -C /project/src \
+codex exec -m gpt-5.3-codex -s read-only -C /project/src \
   "Review the architecture of this module"
 
 # Multi-directory codebase analysis
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   --add-dir /frontend/src \
   --add-dir /backend/src \
   "Analyze how frontend and backend communicate"
@@ -87,11 +87,11 @@ The skill automatically detects file/directory paths in user requests:
 
 ```bash
 # Complete example using @ prefix syntax
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   "Analyze @src/auth.ts and compare with @src/session.ts"
 
 # Directory reference with @ prefix
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   "Review the structure of @src/components/ directory"
 ```
 

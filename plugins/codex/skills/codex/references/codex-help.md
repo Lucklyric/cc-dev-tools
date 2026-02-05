@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.94.0
+**Version**: 0.98.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -31,13 +31,16 @@ Commands:
   mcp         [experimental] Run Codex as an MCP server and manage MCP servers
   mcp-server  [experimental] Run the Codex MCP server (stdio transport)
   app-server  [experimental] Run the app server or related tooling
+  app         Launch the Codex desktop app (downloads the macOS installer if missing)
   completion  Generate shell completion scripts
-  sandbox     Run commands within a Codex-provided sandbox [aliases: debug]
-  fork        Fork a previous interactive session (use --last for most recent)
+  sandbox     Run commands within a Codex-provided sandbox
+  debug       Debugging tools
   apply       Apply the latest diff produced by Codex agent as a `git apply` to your local working
               tree [aliases: a]
   resume      Resume a previous interactive session (picker by default; use --last to continue the
               most recent)
+  fork        Fork a previous interactive session (picker by default; use --last to fork the most
+              recent)
   cloud       [EXPERIMENTAL] Browse tasks from Codex Cloud and apply changes locally
   features    Inspect feature flags
   help        Print this message or the help of the given subcommand(s)
@@ -72,8 +75,8 @@ Options:
           model_provider=oss; verifies a local LM Studio or Ollama server is running
 
       --local-provider <OSS_PROVIDER>
-          Specify which local provider to use (lmstudio, ollama, or ollama-chat). If not specified
-          with --oss, will use config default or show selection
+          Specify which local provider to use (lmstudio or ollama). If not specified with --oss,
+          will use config default or show selection
 
       --no-alt-screen
           Disable alternate screen mode (useful in Zellij)
@@ -171,11 +174,8 @@ Options:
           Use open-source provider
 
       --local-provider <OSS_PROVIDER>
-          Specify which local provider to use (lmstudio, ollama, or ollama-chat). If not specified
-          with --oss, will use config default or show selection
-
-      --no-alt-screen
-          Disable alternate screen mode (useful in Zellij)
+          Specify which local provider to use (lmstudio or ollama). If not specified with --oss,
+          will use config default or show selection
 
   -s, --sandbox <SANDBOX_MODE>
           Select the sandbox policy to use when executing model-generated shell commands
@@ -353,10 +353,10 @@ Options:
           Print help
 ```
 
-## Model Support (v0.94.0)
+## Model Support (v0.98.0)
 
 **Available Models**:
-- `gpt-5.2-codex` - Optimized for agentic coding tasks
+- `gpt-5.3-codex` - Optimized for agentic coding tasks
 - `gpt-5.2` - High-reasoning general model
 
 **Reasoning Effort Levels** (all supported by gpt-5.2):

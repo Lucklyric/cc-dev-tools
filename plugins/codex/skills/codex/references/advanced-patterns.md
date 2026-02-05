@@ -36,12 +36,12 @@ codex exec -m gpt-5.2 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Implement the authentication module"
 ```
 
-**Why**: Implementation requires file writing and code generation - use gpt-5.2-codex (56.4% SWE-Bench Pro).
+**Why**: Implementation requires file writing and code generation - use gpt-5.3-codex (56.8% SWE-Bench Pro).
 
 ---
 
@@ -53,7 +53,7 @@ codex exec -m gpt-5.2-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Refactor this codebase for better maintainability"
 ```
@@ -87,7 +87,7 @@ codex exec -m gpt-5.2 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "Research latest Python async patterns and implement them"
@@ -203,13 +203,15 @@ codex exec -m gpt-5.2 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  -a on-request \
+  -c approval_policy=on-request \
   "Implement the build script"
 ```
 
-**Safety**: `-a on-request` requires approval before executing shell commands.
+**Safety**: `approval_policy=on-request` requires approval before executing shell commands.
+
+**Note**: `-a`/`--ask-for-approval` is interactive-only. Use `-c approval_policy=on-request` in `codex exec`.
 
 ---
 
@@ -221,10 +223,10 @@ codex exec -m gpt-5.2-codex -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c model_verbosity=high \
-  -a on-request \
+  -c approval_policy=on-request \
   --enable web_search_request \
   "Find latest security practices, review my auth module in detail, and fix issues"
 ```
@@ -234,11 +236,11 @@ codex exec -m gpt-5.2-codex -s workspace-write \
 - Maximum reasoning (`model_reasoning_effort=xhigh`)
 - Detailed output (`model_verbosity=high`)
 - File writing allowed (`workspace-write`)
-- Requires approval for commands (`-a on-request`)
+- Requires approval for commands (`-c approval_policy=on-request`)
 
 ---
 
-## Decision Tree: When to Use GPT-5.2 vs GPT-5.2-Codex
+## Decision Tree: When to Use GPT-5.2 vs GPT-5.3-Codex
 
 ### Use GPT-5.2 (General Reasoning) For:
 
@@ -264,7 +266,7 @@ codex exec -m gpt-5.2-codex -s workspace-write \
 └─────────────────────────────────────┘
 ```
 
-### Use GPT-5.2-Codex (Agentic Coding) For:
+### Use GPT-5.3-Codex (Agentic Coding) For:
 
 ```
 ┌─────────────────────────────────────┐
@@ -288,7 +290,7 @@ codex exec -m gpt-5.2-codex -s workspace-write \
 └─────────────────────────────────────┘
 ```
 
-**Note**: gpt-5.2-codex has native context compaction for long-horizon work (56.4% SWE-Bench Pro).
+**Note**: gpt-5.3-codex has native context compaction for long-horizon work (56.8% SWE-Bench Pro).
 
 ---
 
@@ -320,7 +322,7 @@ model_reasoning_effort = "xhigh"
 model_verbosity = "medium"
 
 [profiles.implement]
-model = "gpt-5.2-codex"
+model = "gpt-5.3-codex"
 sandbox = "workspace-write"
 model_reasoning_effort = "xhigh"
 approval_policy = "on-request"
@@ -344,7 +346,7 @@ codex exec -p review "Analyze this code"
 ### 1. Match Model to Task Type
 
 - **Thinking/Design** → GPT-5.2 (general reasoning)
-- **Doing/Coding** → GPT-5.2-Codex (agentic coding)
+- **Doing/Coding** → GPT-5.3-Codex (agentic coding)
 
 ### 2. Use Safe Defaults, Override Intentionally
 
@@ -364,10 +366,12 @@ codex exec -m gpt-5.2 -s read-only \
 
 ### 4. Request Approval for Risky Operations
 
-Use `-a on-request` when:
+Use `-c approval_policy=on-request` (in `codex exec`) when:
 - Working with production code
 - Running shell commands
 - Making broad changes
+
+**Note**: `-a`/`--ask-for-approval` is interactive-only. In `codex exec`, use `-c approval_policy=on-request`.
 
 ---
 
@@ -389,9 +393,9 @@ codex exec resume --last
 # "Design the authentication system based on research"
 ```
 
-**Phase 3 - Implement** (GPT-5.2-Codex + workspace-write):
+**Phase 3 - Implement** (GPT-5.3-Codex + workspace-write):
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Implement the authentication system we designed"
 ```
@@ -407,7 +411,7 @@ codex exec -m gpt-5.2 -s read-only \
   "Review this code for security issues"
 ```
 
-**Fix** (GPT-5.2-Codex + workspace-write):
+**Fix** (GPT-5.3-Codex + workspace-write):
 ```bash
 codex exec resume --last
 # "Fix the security issues identified"
@@ -423,8 +427,8 @@ codex exec resume --last
 
 ## Next Steps
 
-- **Basic usage**: See [basic-usage.md](./basic-usage.md)
-- **Session continuation**: See [session-continuation.md](./session-continuation.md)
+- **Basic usage**: See [command-patterns.md](./command-patterns.md)
+- **Session continuation**: See [session-workflows.md](./session-workflows.md)
 - **Full documentation**: See [../SKILL.md](../SKILL.md)
-- **CLI reference**: See [../resources/codex-help.md](../resources/codex-help.md)
-- **Config reference**: See [../resources/codex-config.md](../resources/codex-config.md)
+- **CLI reference**: See [codex-help.md](./codex-help.md)
+- **Config reference**: See [codex-config.md](./codex-config.md)

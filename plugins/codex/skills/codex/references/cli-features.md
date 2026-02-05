@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.94.0+
+**Codex CLI Version**: 0.98.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -8,7 +8,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.2-codex`, `gpt-5.2` | Model selection |
+| `-m, --model` | `gpt-5.3-codex`, `gpt-5.2` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=xhigh`) |
 | `-C, --cd` | directory path | Working directory |
@@ -19,7 +19,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 | `--add-dir` | directory path | Additional writable directory (repeatable) |
 | `--full-auto` | flag | Convenience for workspace-write sandbox with on-request approval |
 | `--oss` | flag | Use local open source model provider |
-| `--local-provider` | `lmstudio`, `ollama`, `ollama-chat` | Specify local provider (with --oss) |
+| `--local-provider` | `lmstudio`, `ollama` | Specify local provider (with --oss) |
 | `--no-alt-screen` | flag | Disable alternate screen mode (useful in Zellij) |
 | `--skip-git-repo-check` | flag | Allow running outside Git repository |
 | `--output-schema` | file path | JSON Schema file for response shape |

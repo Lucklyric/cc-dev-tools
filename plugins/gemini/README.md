@@ -232,8 +232,8 @@ gemini --list-sessions  # Check available sessions
 - Codex is unavailable or rate-limited
 
 **Use Codex when:**
-- You need GPT-5.1's reasoning capabilities
-- High-reasoning tasks require OpenAI models
+- You need GPT-5.2's high-reasoning capabilities
+- Complex coding tasks require GPT-5.3-Codex
 
 **Use Claude (native) when:**
 - Simple queries within Claude Code's capabilities

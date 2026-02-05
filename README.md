@@ -22,13 +22,13 @@ High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
 
 **Core Features:**
 - **High-Reasoning Capabilities**: GPT-5.2 with xhigh reasoning effort (extra-high) for complex tasks
-- **Intelligent Model Selection**: Automatic selection between coding (GPT-5.2-Codex) and general reasoning (GPT-5.2) models
+- **Intelligent Model Selection**: Automatic selection between coding (GPT-5.3-Codex) and general reasoning (GPT-5.2) models
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only for reasoning tasks, workspace-write for code editing
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.94.0+
+codex --version  # Requires v0.98.0+
 codex login
 ```
 
@@ -41,7 +41,7 @@ codex login
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
 | Version | 2.3.0 |
-| Models | GPT-5.2-Codex, GPT-5.2 |
+| Models | GPT-5.3-Codex, GPT-5.2 |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 

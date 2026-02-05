@@ -1,8 +1,8 @@
 # Gemini CLI Session Workflows
 
 **Purpose**: Guide for session management and multi-turn conversations
-**Version**: v0.16.0+
-**Last Updated**: 2025-11-18
+**Version**: v0.26.0+
+**Last Updated**: 2026-02-05
 
 **Note**: Session management features documented here are available in Gemini CLI v0.16.0+ but may not be directly accessible through Claude Code's headless integration. See limitations section below.
 

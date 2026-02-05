@@ -1,8 +1,8 @@
 # Gemini CLI Command Patterns
 
 **Purpose**: Common command templates for Gemini CLI integration
-**Version**: v0.16.0+
-**Last Updated**: 2025-11-18
+**Version**: v0.26.0+
+**Last Updated**: 2026-02-05
 
 ## Basic Invocation Patterns
 
@@ -102,6 +102,12 @@ gemini -m gemini-3-pro-preview "Refactor this code"
 
 ```bash
 gemini -m gemini-3-pro-preview --approval-mode auto_edit "Fix bugs in this file"
+```
+
+### Plan Mode (Require plan approval before execution)
+
+```bash
+gemini -m gemini-3-pro-preview --approval-mode plan "Refactor the authentication module"
 ```
 
 ### YOLO Mode (Auto-approve all tools)
@@ -255,22 +261,39 @@ gemini -m gemini-3-pro-preview "task" 2>&1 || echo "Gemini CLI failed"
 
 ## Model Selection by Task Type
 
-### Complex Reasoning (General)
+**Default**: Use `gemini-3-pro-preview` for ALL tasks (highest capability).
 
 ```bash
+# All tasks default to gemini-3-pro-preview
 gemini -m gemini-3-pro-preview "Design system architecture"
+gemini -m gemini-3-pro-preview "Review this pull request"
+gemini -m gemini-3-pro-preview "Fix syntax errors in this file"
 ```
 
-### Code Review & Analysis
+**Fallback models** (only if gemini-3-pro-preview is unavailable):
+- `gemini-2.5-pro` - Strong alternative for complex tasks
+- `gemini-2.5-flash` - Fast responses, lower capability
+
+## Skills & Hooks Management (v0.26.0+)
+
+### Skills Management
 
 ```bash
-gemini -m gemini-2.5-pro "Review this pull request"
+# List available skills
+gemini skills list
+
+# Get help on skills
+gemini skills --help
 ```
 
-### Fast Code Editing
+### Hooks Management
 
 ```bash
-gemini -m gemini-2.5-flash "Fix syntax errors in this file"
+# List configured hooks
+gemini hooks list
+
+# Get help on hooks
+gemini hooks --help
 ```
 
 ## Anti-Patterns (Avoid These)

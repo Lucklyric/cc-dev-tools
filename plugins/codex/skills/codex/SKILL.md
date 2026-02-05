@@ -14,10 +14,10 @@ description: This skill should be used when the user wants to invoke Codex CLI f
 
 | Task Type | Model | Sandbox (default) | Sandbox (explicit edit) |
 |-----------|-------|-------------------|------------------------|
-| Code-related tasks | `gpt-5.2-codex` | read-only | workspace-write |
+| Code-related tasks | `gpt-5.3-codex` | read-only | workspace-write |
 | General tasks | `gpt-5.2` | read-only | workspace-write |
 
-- **Code-related tasks**: Use `gpt-5.2-codex` - optimized for agentic coding (56.4% SWE-Bench Pro)
+- **Code-related tasks**: Use `gpt-5.3-codex` - optimized for agentic coding (56.8% SWE-Bench Pro)
 - **General tasks**: Use `gpt-5.2` - high-reasoning general model
 - **Sandbox default**: Always `read-only` unless user explicitly requests editing
 - **Explicit editing**: Only when user says "edit", "modify", "write changes", etc., use `workspace-write`
@@ -25,7 +25,7 @@ description: This skill should be used when the user wants to invoke Codex CLI f
 
 ```bash
 # Code task (read-only default)
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   -c model_reasoning_effort=xhigh \
   "analyze this function implementation"
 
@@ -35,7 +35,7 @@ codex exec -m gpt-5.2 -s read-only \
   "explain this architecture"
 
 # Code task with explicit edit request
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "edit this file to add the feature"
 
@@ -48,8 +48,8 @@ codex exec -m gpt-5.2 -s workspace-write \
 ### Model Fallback Chain
 
 If the primary model is unavailable, fallback gracefully:
-1. **Code tasks**: `gpt-5.2-codex` → `gpt-5.2`
-2. **General tasks**: `gpt-5.2` → `gpt-5.2-codex`
+1. **Code tasks**: `gpt-5.3-codex` → `gpt-5.2`
+2. **General tasks**: `gpt-5.2` → `gpt-5.3-codex`
 3. **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
@@ -131,7 +131,7 @@ This skill should be invoked when:
 When a user makes a request, first determine the task type (code vs general), then determine sandbox based on explicit edit request:
 
 **Step 1: Determine Task Type (Model Selection)**
-- **Code-related tasks**: Use `gpt-5.2-codex` - for implementation, refactoring, code analysis, debugging, etc.
+- **Code-related tasks**: Use `gpt-5.3-codex` - for implementation, refactoring, code analysis, debugging, etc.
 - **General tasks**: Use `gpt-5.2` - for architecture design, explanations, reviews, documentation, etc.
 
 **Step 2: Determine Sandbox (Edit Permission)**
@@ -160,7 +160,7 @@ See the [DEFAULT MODEL](#default-model-task-based-model-selection-with-read-only
 
 **Step 1: Choose Model Based on Task Type**
 
-**Use `gpt-5.2-codex` for code-related tasks:**
+**Use `gpt-5.3-codex` for code-related tasks:**
 - Implementation, refactoring, code analysis
 - Debugging, fixing bugs, optimization
 - Any task involving code understanding or modification
@@ -189,7 +189,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model (code tasks) | `gpt-5.2-codex` | `-m gpt-5.2-codex` | For code-related tasks |
+| Model (code tasks) | `gpt-5.3-codex` | `-m gpt-5.3-codex` | For code-related tasks |
 | Model (general tasks) | `gpt-5.2` | `-m gpt-5.2` | For general tasks |
 | Sandbox (default) | `read-only` | `-s read-only` | Safe default for ALL tasks |
 | Sandbox (explicit edit) | `workspace-write` | `-s workspace-write` | Only when user explicitly requests editing |
@@ -199,12 +199,12 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.94.0+
+**Codex CLI Version**: 0.98.0+
 
 **See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
 
 **Key flags for this skill**:
-- `-m, --model` - Model selection (`gpt-5.2-codex`, `gpt-5.2`)
+- `-m, --model` - Model selection (`gpt-5.3-codex`, `gpt-5.2`)
 - `-s, --sandbox` - Sandbox mode (`read-only`, `workspace-write`)
 - `-c, --config` - Config overrides (e.g., `model_reasoning_effort=xhigh`)
 - `--enable` / `--disable` - Feature toggles (e.g., `web_search_request`)
@@ -237,10 +237,10 @@ codex exec -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]' "task
 ### Model Selection Guide
 
 **Available Models**:
-- `gpt-5.2-codex` - Code tasks (implementation, refactoring, debugging)
+- `gpt-5.3-codex` - Code tasks (implementation, refactoring, debugging)
 - `gpt-5.2` - General tasks (architecture, reviews, explanations)
 
-**Default**: `gpt-5.2-codex` for code tasks, `gpt-5.2` for general tasks with `xhigh` reasoning effort.
+**Default**: `gpt-5.3-codex` for code tasks, `gpt-5.2` for general tasks with `xhigh` reasoning effort.
 
 ## Session Continuation
 
@@ -355,10 +355,10 @@ After authentication, try your request again.
 Error: Invalid model specified
 
 To fix:
-- For coding tasks: Use 'gpt-5.2-codex' with workspace-write sandbox
+- For coding tasks: Use 'gpt-5.3-codex' with workspace-write sandbox
 - For reasoning tasks: Use 'gpt-5.2' with read-only sandbox
 
-Example (coding): codex exec -m gpt-5.2-codex -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
+Example (coding): codex exec -m gpt-5.3-codex -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
 Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effort=xhigh "explain architecture"
 ```
 
@@ -395,14 +395,14 @@ Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effor
 
 ### Code Analysis (Read-Only)
 ```bash
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   -c model_reasoning_effort=xhigh \
   "Analyze this function implementation"
 ```
 
 ### Code Editing (Explicit Request)
 ```bash
-codex exec -m gpt-5.2-codex -s workspace-write \
+codex exec -m gpt-5.3-codex -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit this file to implement the feature"
 ```
@@ -447,7 +447,7 @@ codex exec review --uncommitted
 
 ---
 
-## Apply Command (v0.94.0+)
+## Apply Command (v0.98.0+)
 
 The `codex apply` command applies the latest diff produced by the Codex agent as a `git apply` to your local working tree:
 
@@ -484,11 +484,11 @@ For detailed CLI feature documentation, see `references/cli-features.md`.
 
 ```bash
 # Example: analyze file with explicit @ syntax
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   "Analyze @src/auth.ts and compare with @src/session.ts"
 
 # Example: multi-directory analysis
-codex exec -m gpt-5.2-codex -s read-only \
+codex exec -m gpt-5.3-codex -s read-only \
   --add-dir /shared/libs \
   "Review how auth module uses shared utilities"
 ```

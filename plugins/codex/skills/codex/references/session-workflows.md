@@ -282,6 +282,6 @@ codex exec resume --last
 
 ## Next Steps
 
-- **Advanced config**: See [advanced-config.md](./advanced-config.md)
-- **Basic examples**: See [basic-usage.md](./basic-usage.md)
+- **Advanced config**: See [advanced-patterns.md](./advanced-patterns.md)
+- **Basic examples**: See [command-patterns.md](./command-patterns.md)
 - **Full docs**: See [../SKILL.md](../SKILL.md)

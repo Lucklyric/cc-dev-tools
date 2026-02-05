@@ -1,8 +1,8 @@
 # Gemini Model Selection Guide
 
 **Purpose**: Guide for selecting the right Gemini model for your task
-**Version**: v0.21.1+
-**Last Updated**: 2025-12-21
+**Version**: v0.26.0+
+**Last Updated**: 2026-02-05
 
 ## Quick Reference
 
@@ -20,7 +20,7 @@
 
 When users mention a version number (e.g., "use Gemini 3"), map to the latest model in that family for future-proofing.
 
-### Current Mappings (as of Dec 2025)
+### Current Mappings (as of Feb 2026)
 
 | User Request | Maps To | Actual Model ID | Status | Notes |
 |--------------|---------|-----------------|--------|-------|

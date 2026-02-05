@@ -488,7 +488,7 @@ For detailed information, consult these reference files:
 3. **Enable Web Search When Needed**: Add `-e web_search` for research tasks
 4. **Resume Sessions for Complex Tasks**: Use `-r latest` for multi-turn conversations
 5. **Start with Gemini 3 Pro**: Default to `gemini-3-pro-preview`, fallback to 2.5 models
-6. **Use Appropriate Approval Mode**: `auto_edit` for code, `default` for untrusted tasks
+6. **Use Appropriate Approval Mode**: `default` for all tasks, `auto_edit` only when user explicitly requests file editing
 7. **Monitor Rate Limits**: 60 req/min, 1000 req/day on free tier
 8. **Check CLI Availability**: Validate `command -v gemini` before invocation
 
@@ -502,7 +502,7 @@ For detailed information, consult these reference files:
 | Subcommand | Required (`exec`) | Not needed |
 | Positional Prompts | Not supported | Preferred |
 | Session Resume | `codex exec resume --last` | `gemini -r latest` |
-| Models | GPT-5.2, GPT-5.2-Codex | Gemini 3 Pro, 2.5 Pro/Flash |
+| Models | GPT-5.2, GPT-5.3-Codex | Gemini 3 Pro, 2.5 Pro/Flash |
 | Provider | OpenAI (via Codex) | Google |
 
 ---
@@ -517,8 +517,8 @@ For detailed information, consult these reference files:
 - Task benefits from Gemini's strengths
 
 **Use Codex when:**
-- You need GPT-5.1's reasoning capabilities
-- Task requires high-reasoning model
+- You need GPT-5.2's high-reasoning capabilities
+- Complex coding tasks require GPT-5.3-Codex (optimized for agentic coding)
 - Code editing with specific Codex optimizations
 - You're already using Codex workflow
 
