@@ -1,7 +1,7 @@
 # Gemini CLI Command Patterns
 
 **Purpose**: Common command templates for Gemini CLI integration
-**Version**: v0.26.0+
+**Version**: v0.28.2+
 **Last Updated**: 2026-02-05
 
 ## Basic Invocation Patterns
@@ -199,7 +199,7 @@ gemini --include-directories ./lib --include-directories ./tests "Analyze projec
 ### Production-Safe Code Review
 
 ```bash
-gemini -m gemini-2.5-pro \
+gemini -m gemini-3-pro-preview \
   --approval-mode default \
   --output-format json \
   "Review this pull request for security issues"
@@ -208,7 +208,7 @@ gemini -m gemini-2.5-pro \
 ### Fast Code Refactoring
 
 ```bash
-gemini -m gemini-2.5-flash \
+gemini -m gemini-3-pro-preview \
   --approval-mode auto_edit \
   "Refactor these functions for better performance"
 ```
@@ -225,7 +225,7 @@ gemini -m gemini-3-pro-preview \
 ### Sandbox Testing
 
 ```bash
-gemini -m gemini-2.5-pro \
+gemini -m gemini-3-pro-preview \
   -s \
   --approval-mode default \
   "Test this suspicious code snippet"
@@ -240,10 +240,10 @@ gemini -m gemini-2.5-pro \
 gemini -m gemini-3-pro-preview "Explain microservices"
 
 # With explicit approval mode
-gemini -m gemini-2.5-pro --approval-mode auto_edit "Fix type errors"
+gemini -m gemini-3-pro-preview --approval-mode auto_edit "Fix type errors"
 
 # With JSON output for parsing
-gemini -m gemini-2.5-flash --output-format json "List API endpoints"
+gemini -m gemini-3-pro-preview --output-format json "List API endpoints"
 ```
 
 ### Error Handling Pattern
@@ -274,7 +274,7 @@ gemini -m gemini-3-pro-preview "Fix syntax errors in this file"
 - `gemini-2.5-pro` - Strong alternative for complex tasks
 - `gemini-2.5-flash` - Fast responses, lower capability
 
-## Skills & Hooks Management (v0.26.0+)
+## Skills & Hooks Management (v0.28.2+)
 
 ### Skills Management
 
@@ -282,18 +282,38 @@ gemini -m gemini-3-pro-preview "Fix syntax errors in this file"
 # List available skills
 gemini skills list
 
-# Get help on skills
-gemini skills --help
+# Install a skill
+gemini skills install <source>
+
+# Enable/disable a skill
+gemini skills enable <name>
+gemini skills disable <name>
+
+# Uninstall a skill
+gemini skills uninstall <name>
 ```
 
 ### Hooks Management
 
 ```bash
-# List configured hooks
-gemini hooks list
+# Migrate hooks from Claude Code
+gemini hooks migrate
 
 # Get help on hooks
 gemini hooks --help
+```
+
+### Extensions Management
+
+```bash
+# List installed extensions
+gemini extensions list
+
+# Install an extension
+gemini extensions install <source>
+
+# Update extensions
+gemini extensions update --all
 ```
 
 ## Anti-Patterns (Avoid These)

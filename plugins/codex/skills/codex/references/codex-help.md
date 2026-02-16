@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.98.0
+**Version**: 0.101.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -115,13 +115,18 @@ Options:
           Tell the agent to use the specified directory as its working root
 
       --search
-          Enable web search (off by default). When enabled, the native Responses `web_search` tool
-          is available to the model (no per‑call approval)
-
-          NOTE: This flag is ONLY available in interactive mode, NOT in `codex exec`
+          Enable live web search. When enabled, the native Responses `web_search` tool is available
+          to the model (no per‑call approval)
 
       --add-dir <DIR>
           Additional directories that should be writable alongside the primary workspace
+
+      --no-alt-screen
+          Disable alternate screen mode
+
+          Runs the TUI in inline mode, preserving terminal scrollback history. This is useful in
+          terminal multiplexers like Zellij that follow the xterm spec strictly and disable
+          scrollback in alternate screen buffers.
 
   -h, --help
           Print help (see a summary with '-h')
@@ -201,6 +206,9 @@ Options:
 
       --add-dir <DIR>
           Additional directories that should be writable alongside the primary workspace
+
+      --ephemeral
+          Run without persisting session files to disk
 
       --output-schema <FILE>
           Path to a JSON Schema file describing the model's final response shape
@@ -353,7 +361,7 @@ Options:
           Print help
 ```
 
-## Model Support (v0.98.0)
+## Model Support (v0.101.0)
 
 **Available Models**:
 - `gpt-5.3-codex` - Optimized for agentic coding tasks

@@ -28,7 +28,7 @@ High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.98.0+
+codex --version  # Requires v0.101.0+
 codex login
 ```
 
@@ -59,7 +59,7 @@ Google Gemini 3 Pro AI integration through Gemini CLI for research, reasoning, a
 
 **Quick Start:**
 ```bash
-npm install -g @google/gemini-cli@latest  # Requires v0.26.0+
+npm install -g @google/gemini-cli@latest  # Requires v0.28.2+
 gemini login
 ```
 

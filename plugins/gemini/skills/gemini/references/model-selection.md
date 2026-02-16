@@ -1,8 +1,8 @@
 # Gemini Model Selection Guide
 
 **Purpose**: Guide for selecting the right Gemini model for your task
-**Version**: v0.26.0+
-**Last Updated**: 2026-02-05
+**Version**: v0.28.2+
+**Last Updated**: 2026-02-16
 
 ## Quick Reference
 

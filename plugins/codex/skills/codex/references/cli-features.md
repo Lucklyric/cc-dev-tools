@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.98.0+
+**Codex CLI Version**: 0.101.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -21,6 +21,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 | `--oss` | flag | Use local open source model provider |
 | `--local-provider` | `lmstudio`, `ollama` | Specify local provider (with --oss) |
 | `--no-alt-screen` | flag | Disable alternate screen mode (useful in Zellij) |
+| `--ephemeral` | flag | Run without persisting session files to disk |
 | `--skip-git-repo-check` | flag | Allow running outside Git repository |
 | `--output-schema` | file path | JSON Schema file for response shape |
 | `--color` | `always`, `never`, `auto` | Color settings for output |
