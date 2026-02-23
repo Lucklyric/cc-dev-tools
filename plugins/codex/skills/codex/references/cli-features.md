@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.101.0+
+**Codex CLI Version**: 0.104.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 

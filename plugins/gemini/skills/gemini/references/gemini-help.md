@@ -1,6 +1,6 @@
 # Gemini CLI Help Reference
 
-**Version**: v0.28.2
+**Version**: v0.29.5
 **Source**: Output from `gemini --help`
 **Last Updated**: 2026-02-16
 
@@ -74,7 +74,7 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 - `-h, --help` - Show help [boolean]
 - `--experimental-acp` - Start agent in ACP mode [boolean]
 
-## Full CLI Output (v0.28.2)
+## Full CLI Output (v0.29.5)
 
 ```
 Usage: gemini [options] [command]
@@ -122,16 +122,16 @@ Options:
 
 ```bash
 # Preferred: Positional prompt
-gemini -m gemini-3-pro-preview "Explain quicksort algorithm"
+gemini -m gemini-3.1-pro-preview "Explain quicksort algorithm"
 
 # Deprecated but still works: -p flag
-gemini -m gemini-3-pro-preview -p "Explain quicksort algorithm"
+gemini -m gemini-3.1-pro-preview -p "Explain quicksort algorithm"
 
 # With output formatting
-gemini -m gemini-3-pro-preview --output-format json "Analyze this code"
+gemini -m gemini-3.1-pro-preview --output-format json "Analyze this code"
 
 # With approval mode
-gemini -m gemini-3-pro-preview --approval-mode auto_edit "Refactor this function"
+gemini -m gemini-3.1-pro-preview --approval-mode auto_edit "Refactor this function"
 ```
 
 ### Session Management
@@ -164,20 +164,20 @@ gemini -i "Start by explaining React hooks"
 
 ```bash
 # Include additional directories
-gemini -m gemini-3-pro-preview --include-directories /shared/libs "task"
+gemini -m gemini-3.1-pro-preview --include-directories /shared/libs "task"
 
 # Multiple directories (comma-separated)
-gemini -m gemini-3-pro-preview --include-directories /path1,/path2 "task"
+gemini -m gemini-3.1-pro-preview --include-directories /path1,/path2 "task"
 
 # Multiple directories (repeated flag)
-gemini -m gemini-3-pro-preview --include-directories /path1 --include-directories /path2 "task"
+gemini -m gemini-3.1-pro-preview --include-directories /path1 --include-directories /path2 "task"
 ```
 
 ### Accessibility (v0.20.0+)
 
 ```bash
 # Enable screen reader mode
-gemini -m gemini-3-pro-preview --screen-reader "task"
+gemini -m gemini-3.1-pro-preview --screen-reader "task"
 ```
 
 ## Important Notes
@@ -200,7 +200,14 @@ Sessions are identified by:
 
 ## Compatibility Notes
 
-- **Minimum Version**: v0.28.2
+- **Minimum Version**: v0.29.5
+- **Changes in v0.29.x**:
+  - Gemini 3 is now the default model family
+  - `-p`/`--prompt` is now the headless (non-interactive) mode flag (no longer deprecated)
+  - Positional prompts default to interactive mode
+  - Plan mode via `/plan` command
+  - Extension discovery and registry client
+  - `gemini-3.1-pro-preview` model available (released Feb 19, 2026)
 - **Changes in v0.28.x**:
   - New `--raw-output` and `--accept-raw-output-risk` flags
   - Skills expanded with install/uninstall/enable/disable subcommands

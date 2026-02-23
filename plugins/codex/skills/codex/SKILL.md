@@ -199,7 +199,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.101.0+
+**Codex CLI Version**: 0.104.0+
 
 **See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
 

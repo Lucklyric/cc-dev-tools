@@ -8,7 +8,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Features
 
-- **Unified Model Selection**: Defaults to Gemini 3 Pro for ALL tasks (coding and reasoning)
+- **Unified Model Selection**: Defaults to Gemini 3.1 Pro for ALL tasks (coding and reasoning)
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest` or `-r <index>`
 - **Safe Defaults**: Auto-edit approval mode and disabled sandbox for trusted environments
@@ -17,7 +17,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Prerequisites
 
-1. **Gemini CLI** (v0.28.2 or later)
+1. **Gemini CLI** (v0.29.5 or later)
    ```bash
    npm install -g @google/gemini-cli@latest
    ```
@@ -28,7 +28,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
    ```
    Authenticate via OAuth (personal Google account) or API key
 
-3. **Gemini 3 Pro Access** (Optional)
+3. **Gemini 3.1 Pro Access** (Optional)
    - Google AI Ultra subscription
    - Paid Gemini API key
    - Vertex API key with Gemini 3 access
@@ -40,7 +40,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ### The Issue
 
-When `previewFeatures: true` in `~/.gemini/settings.json`, Gemini CLI automatically routes **all** requests to Gemini 3 Pro, even when you explicitly request `-m gemini-2.5-pro`. Since free tier OAuth accounts don't have Gemini 3 Pro access, this causes **404 "Requested entity was not found"** errors.
+When `previewFeatures: true` in `~/.gemini/settings.json`, Gemini CLI automatically routes **all** requests to Gemini 3.1 Pro, even when you explicitly request `-m gemini-2.5-pro`. Since free tier OAuth accounts don't have Gemini 3.1 Pro access, this causes **404 "Requested entity was not found"** errors.
 
 ### The Solution
 
@@ -63,7 +63,7 @@ The plugin automatically falls back to `gemini-2.5-flash` when other models are 
 
 This plugin implements a three-step fallback chain for ALL tasks:
 
-1. **Try Gemini 3 Pro** (`gemini-3-pro-preview`) - Primary for all tasks
+1. **Try Gemini 3.1 Pro** (`gemini-3.1-pro-preview`) - Primary for all tasks
 2. **Fallback to Gemini 2.5 Pro** (`gemini-2.5-pro`) - If 3 Pro unavailable
 3. **Fallback to Gemini 2.5 Flash** (`gemini-2.5-flash`) - Always works
 
@@ -97,18 +97,18 @@ User: "Gemini, design a microservices architecture for e-commerce"
 
 ### Model Selection
 
-**Default (Gemini 3 Pro for ALL tasks)**:
+**Default (Gemini 3.1 Pro for ALL tasks)**:
 ```bash
-gemini -m gemini-3-pro-preview "Design a distributed cache"
+gemini -m gemini-3.1-pro-preview "Design a distributed cache"
 ```
 
-**Code Editing (Also uses Gemini 3 Pro)**:
+**Code Editing (Also uses Gemini 3.1 Pro)**:
 ```bash
-gemini -m gemini-3-pro-preview "Refactor this function"
+gemini -m gemini-3.1-pro-preview "Refactor this function"
 ```
 
 **Version-Based Requests**:
-- "use 3" → `gemini-3-pro-preview`
+- "use 3" → `gemini-3.1-pro-preview`
 - "use 2.5" → `gemini-2.5-pro`
 - "use flash" → `gemini-2.5-flash`
 
@@ -132,7 +132,7 @@ gemini -r latest "Continue our discussion about caching"
 
 **With Web Search**:
 ```bash
-gemini -m gemini-3-pro-preview -e web_search "Research React 19 features"
+gemini -m gemini-3.1-pro-preview -e web_search "Research React 19 features"
 ```
 
 **With Sandbox**:
@@ -151,7 +151,7 @@ gemini -m gemini-2.5-pro --output-format json "List design patterns"
 
 | Parameter | Default | Override |
 |-----------|---------|----------|
-| Model | `gemini-3-pro-preview` | `-m <model>` |
+| Model | `gemini-3.1-pro-preview` | `-m <model>` |
 | Approval Mode | `auto_edit` | `--approval-mode <mode>` |
 | Sandbox | `false` | `-s` |
 | Output Format | `text` | `--output-format <format>` |
@@ -171,7 +171,7 @@ gemini -m gemini-2.5-pro --output-format json "List design patterns"
 - 1,000 requests per day
 - 1M token context window (Gemini 2.5 Pro)
 
-**Gemini 3 Pro**:
+**Gemini 3.1 Pro**:
 - May have stricter quotas
 - Automatic fallback to 2.5 models when exhausted
 
@@ -179,11 +179,11 @@ gemini -m gemini-2.5-pro --output-format json "List design patterns"
 
 | Model | Use Case | Context | Speed | Access |
 |-------|----------|---------|-------|--------|
-| Gemini 3 Pro | ALL tasks (default) | 1M tokens | Medium | Preview |
+| Gemini 3.1 Pro | ALL tasks (default) | 1M tokens | Medium | Preview |
 | Gemini 2.5 Pro | Fallback for all tasks | 1M tokens | Fast | Free |
 | Gemini 2.5 Flash | Last resort fallback | Unknown | Fastest | Free |
 
-**Note**: Gemini 3 Pro is used for ALL tasks by default. Fallback to older models only when primary is unavailable.
+**Note**: Gemini 3.1 Pro is used for ALL tasks by default. Fallback to older models only when primary is unavailable.
 
 ## Troubleshooting
 
@@ -200,7 +200,7 @@ gemini login
 ### Rate Limit Exceeded
 Wait for reset or upgrade to paid tier
 
-### Gemini 3 Pro Unavailable
+### Gemini 3.1 Pro Unavailable
 - Enable Preview Features in settings
 - Or use fallback: `gemini-2.5-pro`
 
@@ -219,7 +219,7 @@ gemini --list-sessions  # Check available sessions
 
 ## Version Compatibility
 
-- **Minimum**: Gemini CLI v0.28.2
+- **Minimum**: Gemini CLI v0.29.5
 - **Recommended**: Latest stable version
 - **Breaking Changes**: `-p` flag deprecated (use positional prompts)
 

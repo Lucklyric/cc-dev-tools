@@ -1,7 +1,7 @@
 # Gemini CLI Session Workflows
 
 **Purpose**: Guide for session management and multi-turn conversations
-**Version**: v0.28.2+
+**Version**: v0.29.5+
 **Last Updated**: 2026-02-16
 
 **Note**: Session management features documented here are available in Gemini CLI v0.16.0+ but may not be directly accessible through Claude Code's headless integration. See limitations section below.
@@ -76,7 +76,7 @@ gemini --delete-session 2
 
 ```bash
 # Session 1: Initial design
-gemini -m gemini-3-pro-preview "Design a user authentication system"
+gemini -m gemini-3.1-pro-preview "Design a user authentication system"
 # ... conversation happens ...
 
 # Later: Resume to implement
@@ -92,7 +92,7 @@ gemini -r latest "Review the implementation for security issues"
 
 ```bash
 # Day 1: Start research
-gemini -m gemini-3-pro-preview -e web_search "Research GraphQL best practices"
+gemini -m gemini-3.1-pro-preview -e web_search "Research GraphQL best practices"
 
 # Day 2: Continue research
 gemini -r latest "Now compare GraphQL with REST for our use case"

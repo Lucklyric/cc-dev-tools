@@ -15,17 +15,17 @@ Use `--include-directories` to include additional directories:
 
 ```bash
 # Include shared libraries directory
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   --include-directories /shared/libs \
   "Review how the auth module uses shared utilities"
 
 # Include multiple directories (comma-separated)
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   --include-directories /shared/libs,/config \
   "Analyze configuration usage across the codebase"
 
 # Include multiple directories (repeated flag)
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   --include-directories /shared/libs \
   --include-directories /config \
   "Analyze configuration usage"
@@ -35,15 +35,15 @@ gemini -m gemini-3-pro-preview \
 
 ```bash
 # Analyze a specific file (include path in prompt)
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   "Analyze the implementation in src/auth/login.ts"
 
 # Review multiple files (paths in prompt)
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   "Compare the implementations in src/v1/api.ts and src/v2/api.ts"
 
 # Work with files across directories
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   --include-directories /shared/types \
   "Check how src/services/user.ts uses types from /shared/types"
 ```
@@ -52,11 +52,11 @@ gemini -m gemini-3-pro-preview \
 
 ```bash
 # Analyze entire directory
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   "Review the architecture of the src/ module"
 
 # Multi-directory codebase analysis
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   --include-directories /frontend/src,/backend/src \
   "Analyze how frontend and backend communicate"
 ```
@@ -79,11 +79,11 @@ The skill automatically detects file/directory paths in user requests:
 
 ```bash
 # Complete example using @ prefix syntax
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   "Analyze @src/auth.ts and compare with @src/session.ts"
 
 # Directory reference with @ prefix
-gemini -m gemini-3-pro-preview \
+gemini -m gemini-3.1-pro-preview \
   "Review the structure of @src/components/ directory"
 ```
 

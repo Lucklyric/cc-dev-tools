@@ -11,7 +11,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 | Plugin | Description | Type |
 |--------|-------------|------|
 | [Codex](#codex-plugin) | OpenAI GPT-5.2 integration for high-reasoning coding tasks | Skill |
-| [Gemini](#gemini-plugin) | Google Gemini 3 Pro AI integration for research and reasoning | Skill |
+| [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
 
 ---
@@ -28,7 +28,7 @@ High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.101.0+
+codex --version  # Requires v0.104.0+
 codex login
 ```
 
@@ -49,17 +49,17 @@ codex login
 
 ### Gemini Plugin
 
-Google Gemini 3 Pro AI integration through Gemini CLI for research, reasoning, and web search.
+Google Gemini 3.1 Pro AI integration through Gemini CLI for research, reasoning, and web search.
 
 **Core Features:**
-- **Gemini 3 Pro Default**: Uses `gemini-3-pro-preview` for ALL tasks (highest capability)
+- **Gemini 3.1 Pro Default**: Uses `gemini-3.1-pro-preview` for ALL tasks (highest capability)
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest`
 - **Web Search Integration**: Built-in web search for research and documentation lookup
 
 **Quick Start:**
 ```bash
-npm install -g @google/gemini-cli@latest  # Requires v0.28.2+
+npm install -g @google/gemini-cli@latest  # Requires v0.29.5+
 gemini login
 ```
 
@@ -72,7 +72,7 @@ gemini login
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
 | Version | 1.4.0 |
-| Models | Gemini 3 Pro, 2.5 Pro, 2.5 Flash |
+| Models | Gemini 3.1 Pro, 3 Pro, 2.5 Pro/Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
 

@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.101.0
+**Version**: 0.104.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -28,8 +28,8 @@ Commands:
   review      Run a code review non-interactively
   login       Manage login
   logout      Remove stored authentication credentials
-  mcp         [experimental] Run Codex as an MCP server and manage MCP servers
-  mcp-server  [experimental] Run the Codex MCP server (stdio transport)
+  mcp         Manage external MCP servers for Codex
+  mcp-server  Start Codex as an MCP server (stdio)
   app-server  [experimental] Run the app server or related tooling
   app         Launch the Codex desktop app (downloads the macOS installer if missing)
   completion  Generate shell completion scripts
@@ -96,9 +96,10 @@ Options:
           - untrusted:  Only run "trusted" commands (e.g. ls, cat, sed) without asking for user
             approval. Will escalate to the user if the model proposes a command that is not in the
             "trusted" set
-          - on-failure: Run all commands without asking for user approval. Only asks for approval if
-            a command fails to execute, in which case it will escalate to the user to ask for
-            un-sandboxed execution
+          - on-failure: DEPRECATED: Run all commands without asking for user approval. Only asks for
+            approval if a command fails to execute, in which case it will escalate to the user to
+            ask for un-sandboxed execution. Prefer `on-request` for interactive runs or `never` for
+            non-interactive runs
           - on-request: The model decides when to ask the user for approval
           - never:      Never ask for user approval Execution failures are immediately returned to
             the model
@@ -361,7 +362,7 @@ Options:
           Print help
 ```
 
-## Model Support (v0.101.0)
+## Model Support (v0.104.0)
 
 **Available Models**:
 - `gpt-5.3-codex` - Optimized for agentic coding tasks
