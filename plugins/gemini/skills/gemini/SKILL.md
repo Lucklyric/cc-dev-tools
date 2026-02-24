@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.5.0
+version: 1.6.0
 description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 

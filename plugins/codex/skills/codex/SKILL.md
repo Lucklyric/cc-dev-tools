@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.4.0
+version: 2.5.0
 description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
