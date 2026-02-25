@@ -70,9 +70,9 @@ curl -s -X POST "https://api.telegram.org/bot$CC_TELEGRAM_BOT_TOKEN/sendMessage"
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CC_TELEGRAM_STOP_MSG` | `Claude Code response completed at {timestamp}` | Custom message for Stop events |
-| `CC_TELEGRAM_SUBAGENT_MSG` | `Claude Code subagent completed at {timestamp}` | Custom message for SubagentStop events |
-| `CC_TELEGRAM_NOTIFY_MSG` | `Claude Code notification` | Custom message for Notification events |
+| `CC_TELEGRAM_STOP_MSG` | `[{session_id}] Claude Code response completed at {timestamp}` | Custom message for Stop events |
+| `CC_TELEGRAM_SUBAGENT_MSG` | `[{session_id}] Claude Code subagent completed at {timestamp}` | Custom message for SubagentStop events |
+| `CC_TELEGRAM_NOTIFY_MSG` | `[{session_id}] Claude Code notification` | Custom message for Notification events |
 
 ### Optional (Control)
 
@@ -111,9 +111,9 @@ When enabled, the plugin prints `[DRY RUN] <message>` to the terminal instead of
 
 | Event | Default Message | When |
 |-------|-----------------|------|
-| Stop | Claude Code response completed at {time} | Claude Code completes a response |
-| SubagentStop | Claude Code subagent completed at {time} | Background agent finishes |
-| Notification | Claude Code notification | System notification |
+| Stop | [session_id] Claude Code response completed at {time} | Claude Code completes a response |
+| SubagentStop | [session_id] Claude Code subagent completed at {time} | Background agent finishes |
+| Notification | [session_id] Claude Code notification | System notification |
 
 ## Troubleshooting
 

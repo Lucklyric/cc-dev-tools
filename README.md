@@ -202,13 +202,13 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.3.0
+**Marketplace**: 2.6.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.3.0 |
-| Gemini | 1.4.0 |
-| Telegram Notifier | 0.1.1 |
+| Codex | 2.5.0 |
+| Gemini | 1.6.0 |
+| Telegram Notifier | 0.2.0 |
 
 ## Links
 
