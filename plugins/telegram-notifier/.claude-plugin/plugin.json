@@ -1,7 +1,7 @@
 {
   "name": "telegram-notifier",
   "description": "Telegram notifications for Claude Code response completion, subagent tasks, and system notifications",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "author": {
     "name": "0xasun"
   },
