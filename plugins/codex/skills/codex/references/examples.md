@@ -10,12 +10,12 @@ Complete examples showing common Codex invocation patterns.
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Analyze this function implementation and suggest improvements"
 ```
 
-**Result**: Code-related task uses gpt-5.3-codex with read-only sandbox (default). No file modifications.
+**Result**: Code-related task uses gpt-5.4 with read-only sandbox (default). No file modifications.
 
 ### Example 2: Architecture Review
 
@@ -23,12 +23,12 @@ codex exec -m gpt-5.3-codex -s read-only \
 
 **Command**:
 ```bash
-codex exec -m gpt-5.2 -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Help me design a binary search tree architecture in Rust"
 ```
 
-**Result**: General task uses gpt-5.2 with read-only sandbox (default). Session automatically saved for continuation.
+**Result**: General task uses gpt-5.4 with read-only sandbox (default). Session automatically saved for continuation.
 
 ### Example 3: Web Search Research
 
@@ -36,13 +36,13 @@ codex exec -m gpt-5.2 -s read-only \
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "Research async patterns"
 ```
 
-**Result**: Code-related research uses gpt-5.3-codex with read-only sandbox (default) and web search enabled.
+**Result**: Code-related research uses gpt-5.4 with read-only sandbox (default) and web search enabled.
 
 ## Code Tasks (Explicit Edit Request)
 
@@ -52,12 +52,12 @@ codex exec -m gpt-5.3-codex -s read-only \
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s workspace-write \
+codex exec -m gpt-5.4 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit this file to implement the BST insert method"
 ```
 
-**Result**: User explicitly said "Edit this file" - code task uses gpt-5.3-codex with workspace-write permissions.
+**Result**: User explicitly said "Edit this file" - code task uses gpt-5.4 with workspace-write permissions.
 
 ### Example 5: Refactoring
 
@@ -65,12 +65,12 @@ codex exec -m gpt-5.3-codex -s workspace-write \
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s workspace-write \
+codex exec -m gpt-5.4 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Refactor and save the authentication system code"
 ```
 
-**Result**: User explicitly said "Refactor and save" - code task uses gpt-5.3-codex with workspace-write for file modifications.
+**Result**: User explicitly said "Refactor and save" - code task uses gpt-5.4 with workspace-write for file modifications.
 
 ## Session Continuation
 
@@ -103,7 +103,7 @@ codex exec resume --last
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Analyze @src/auth.ts for security issues"
 ```
@@ -114,7 +114,7 @@ codex exec -m gpt-5.3-codex -s read-only \
 
 **Command**:
 ```bash
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   --add-dir /frontend/src \
   --add-dir /backend/src \

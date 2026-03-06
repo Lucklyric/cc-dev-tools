@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.104.0
+**Version**: 0.111.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -220,6 +220,9 @@ Options:
           [default: auto]
           [possible values: always, never, auto]
 
+      --progress-cursor
+          Force cursor-based progress updates in exec mode
+
       --json
           Print events to stdout as JSONL
 
@@ -362,14 +365,15 @@ Options:
           Print help
 ```
 
-## Model Support (v0.104.0)
+## Model Support (v0.111.0)
 
 **Available Models**:
-- `gpt-5.3-codex` - Optimized for agentic coding tasks
-- `gpt-5.2` - High-reasoning general model
+- `gpt-5.4` - Frontier reasoning model for all tasks (default)
+- `gpt-5.4-fast` - Speed-optimized variant for quick tasks (on demand)
 
-**Reasoning Effort Levels** (all supported by gpt-5.2):
+**Reasoning Effort Levels** (all supported by gpt-5.4):
+- `none` - No extended reasoning
 - `low` - Minimal reasoning
 - `medium` - Balanced reasoning
-- `high` - High reasoning (default)
-- `xhigh` - Extra-high reasoning for maximum capability
+- `high` - High reasoning (default for gpt-5.4-fast)
+- `xhigh` - Extra-high reasoning for maximum capability (default for gpt-5.4)

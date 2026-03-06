@@ -10,7 +10,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 | Plugin | Description | Type |
 |--------|-------------|------|
-| [Codex](#codex-plugin) | OpenAI GPT-5.2 integration for high-reasoning coding tasks | Skill |
+| [Codex](#codex-plugin) | OpenAI GPT-5.4 integration for frontier reasoning tasks | Skill |
 | [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
 
@@ -18,17 +18,17 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 ### Codex Plugin
 
-High-reasoning AI assistant through OpenAI Codex CLI (GPT-5.2) integration.
+Frontier AI assistant through OpenAI Codex CLI (GPT-5.4) integration.
 
 **Core Features:**
-- **High-Reasoning Capabilities**: GPT-5.2 with xhigh reasoning effort (extra-high) for complex tasks
-- **Intelligent Model Selection**: Automatic selection between coding (GPT-5.3-Codex) and general reasoning (GPT-5.2) models
+- **Frontier Reasoning**: GPT-5.4 with xhigh reasoning effort for maximum capability
+- **Fast Mode**: `gpt-5.4-fast` available on demand for speed-sensitive tasks
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
-- **Safe Sandbox Defaults**: Read-only for reasoning tasks, workspace-write for code editing
+- **Safe Sandbox Defaults**: Read-only by default, workspace-write for code editing
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.104.0+
+codex --version  # Requires v0.111.0+
 codex login
 ```
 
@@ -40,8 +40,8 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.3.0 |
-| Models | GPT-5.3-Codex, GPT-5.2 |
+| Version | 2.6.0 |
+| Models | GPT-5.4, GPT-5.4-Fast |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 
@@ -71,7 +71,7 @@ gemini login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
-| Version | 1.4.0 |
+| Version | 1.7.0 |
 | Models | Gemini 3.1 Pro, 3 Pro, 2.5 Pro/Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
@@ -202,12 +202,12 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.7.0
+**Marketplace**: 2.8.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.5.0 |
-| Gemini | 1.6.0 |
+| Codex | 2.6.0 |
+| Gemini | 1.7.0 |
 | Telegram Notifier | 0.2.1 |
 
 ## Links

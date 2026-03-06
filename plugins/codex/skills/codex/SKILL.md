@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.5.0
+version: 2.6.0
 description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -8,49 +8,42 @@ description: This skill should be used when the user wants to invoke Codex CLI f
 
 ---
 
-## DEFAULT MODEL: Task-Based Model Selection with Read-Only Default
+## DEFAULT MODEL: GPT-5.4 with Read-Only Default
 
-**Codex uses task-based model selection. Sandbox is `read-only` by default - only use `workspace-write` when user explicitly requests file editing.**
+**GPT-5.4 is the default model for ALL tasks. Sandbox is `read-only` by default - only use `workspace-write` when user explicitly requests file editing.**
 
-| Task Type | Model | Sandbox (default) | Sandbox (explicit edit) |
-|-----------|-------|-------------------|------------------------|
-| Code-related tasks | `gpt-5.3-codex` | read-only | workspace-write |
-| General tasks | `gpt-5.2` | read-only | workspace-write |
+| Model | Use Case | Reasoning Effort |
+|-------|----------|-----------------|
+| `gpt-5.4` | ALL tasks (default) | `xhigh` |
+| `gpt-5.4-fast` | On-demand when user requests speed | `high` (default) |
 
-- **Code-related tasks**: Use `gpt-5.3-codex` - optimized for agentic coding (56.8% SWE-Bench Pro)
-- **General tasks**: Use `gpt-5.2` - high-reasoning general model
+- **`gpt-5.4`**: OpenAI's most capable frontier model - unified for both code and general tasks
+- **`gpt-5.4-fast`**: Faster variant for speed-sensitive tasks (use ONLY when user explicitly requests "fast", "quick", or "speed")
 - **Sandbox default**: Always `read-only` unless user explicitly requests editing
 - **Explicit editing**: Only when user says "edit", "modify", "write changes", etc., use `workspace-write`
 - Always use `-c model_reasoning_effort=xhigh` for maximum capability
 
 ```bash
-# Code task (read-only default)
-codex exec -m gpt-5.3-codex -s read-only \
+# Default (read-only)
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "analyze this function implementation"
 
-# General task (read-only default)
-codex exec -m gpt-5.2 -s read-only \
-  -c model_reasoning_effort=xhigh \
-  "explain this architecture"
-
-# Code task with explicit edit request
-codex exec -m gpt-5.3-codex -s workspace-write \
+# With explicit edit request
+codex exec -m gpt-5.4 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "edit this file to add the feature"
 
-# General task with explicit edit request
-codex exec -m gpt-5.2 -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  "modify the documentation file"
+# Fast mode (on demand only)
+codex exec -m gpt-5.4-fast -s read-only \
+  "quick analysis of this function"
 ```
 
 ### Model Fallback Chain
 
 If the primary model is unavailable, fallback gracefully:
-1. **Code tasks**: `gpt-5.3-codex` → `gpt-5.2`
-2. **General tasks**: `gpt-5.2` → `gpt-5.3-codex`
-3. **Reasoning effort**: `xhigh` → `high` → `medium`
+1. `gpt-5.4` → `gpt-5.4-fast` → `gpt-5.4`
+2. **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---
 
@@ -62,8 +55,8 @@ If the primary model is unavailable, fallback gracefully:
 **ALWAYS USE**: `codex exec` (non-interactive mode)
 
 **Examples:**
-- `codex exec -m gpt-5.2 "prompt"` (CORRECT)
-- `codex -m gpt-5.2 "prompt"` (WRONG - will fail)
+- `codex exec -m gpt-5.4 "prompt"` (CORRECT)
+- `codex -m gpt-5.4 "prompt"` (WRONG - will fail)
 - `codex exec resume --last` (CORRECT)
 - `codex resume --last` (WRONG - will fail)
 
@@ -128,25 +121,20 @@ This skill should be invoked when:
 
 ### Detecting New Codex Requests
 
-When a user makes a request, first determine the task type (code vs general), then determine sandbox based on explicit edit request:
+When a user makes a request, determine sandbox based on explicit edit request:
 
-**Step 1: Determine Task Type (Model Selection)**
-- **Code-related tasks**: Use `gpt-5.3-codex` - for implementation, refactoring, code analysis, debugging, etc.
-- **General tasks**: Use `gpt-5.2` - for architecture design, explanations, reviews, documentation, etc.
+**Step 1: Model Selection**
+- **Default**: `gpt-5.4` for ALL tasks (code and general)
+- **Fast mode**: `gpt-5.4-fast` ONLY when user explicitly requests speed
 
 **Step 2: Determine Sandbox (Edit Permission)**
 - **Default**: `read-only` - safe for all tasks unless user explicitly requests editing
 - **Explicit edit request**: `workspace-write` - ONLY when user explicitly says to edit/modify/write files
 
-**Code-related task examples**:
-- Read-only: "Analyze this function", "Review this implementation", "Debug this code"
-- With editing: "Edit this file to fix the bug", "Modify the function", "Refactor and save"
+**Read-only examples**: "Analyze this function", "Design a queue", "Explain this algorithm"
+**Edit examples**: "Edit this file to fix the bug", "Modify the function", "Update the README"
 
-**General task examples**:
-- Read-only: "Design a queue data structure", "Explain this algorithm", "Review the architecture"
-- With editing: "Update the documentation file", "Modify the README"
-
-**⚠️ Important**: The key distinction for sandbox is whether the user explicitly asks for file modifications. Use `workspace-write` ONLY when user says "edit", "modify", "write changes", "save", etc.
+**⚠️ Important**: Use `workspace-write` ONLY when user says "edit", "modify", "write changes", "save", etc.
 
 ### Bash CLI Command Structure
 
@@ -158,30 +146,14 @@ See the [DEFAULT MODEL](#default-model-task-based-model-selection-with-read-only
 
 ### Model Selection Logic
 
-**Step 1: Choose Model Based on Task Type**
+**Model**: `gpt-5.4` for ALL tasks (unified model, no task-based selection needed)
+- `gpt-5.4-fast` ONLY when user explicitly requests speed/fast mode
 
-**Use `gpt-5.3-codex` for code-related tasks:**
-- Implementation, refactoring, code analysis
-- Debugging, fixing bugs, optimization
-- Any task involving code understanding or modification
+**Sandbox**:
+- **`read-only` (DEFAULT)**: Analysis, review, explanation, any task without explicit edit request
+- **`workspace-write`**: ONLY when user explicitly says "edit", "modify", "write changes", "save"
 
-**Use `gpt-5.2` for general tasks:**
-- Architecture and system design
-- Explanations, documentation, reviews
-- Planning, strategy, general reasoning
-
-**Step 2: Choose Sandbox Based on Edit Intent**
-
-**Use `read-only` (DEFAULT):**
-- Analysis, review, explanation tasks
-- ANY task where user does NOT explicitly request file editing
-
-**Use `workspace-write` (ONLY when explicitly requested):**
-- User explicitly says "edit this file", "modify the code", "write changes"
-- User explicitly asks to "make edits" or "save the changes"
-- User explicitly requests "refactor and save" or "implement and write"
-
-**Fallback**: If primary model unavailable, fallback to the other 5.2 variant. See fallback chain in DEFAULT MODEL section.
+**Fallback**: `gpt-5.4` → `gpt-5.4-fast` → `gpt-5.4`. See fallback chain in DEFAULT MODEL section.
 
 ### Default Configuration
 
@@ -189,8 +161,8 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model (code tasks) | `gpt-5.3-codex` | `-m gpt-5.3-codex` | For code-related tasks |
-| Model (general tasks) | `gpt-5.2` | `-m gpt-5.2` | For general tasks |
+| Model | `gpt-5.4` | `-m gpt-5.4` | For ALL tasks (default) |
+| Model (fast) | `gpt-5.4-fast` | `-m gpt-5.4-fast` | Only when user requests speed |
 | Sandbox (default) | `read-only` | `-s read-only` | Safe default for ALL tasks |
 | Sandbox (explicit edit) | `workspace-write` | `-s workspace-write` | Only when user explicitly requests editing |
 | Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
@@ -199,12 +171,12 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.104.0+
+**Codex CLI Version**: 0.111.0+
 
 **See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
 
 **Key flags for this skill**:
-- `-m, --model` - Model selection (`gpt-5.3-codex`, `gpt-5.2`)
+- `-m, --model` - Model selection (`gpt-5.4`, `gpt-5.4-fast`)
 - `-s, --sandbox` - Sandbox mode (`read-only`, `workspace-write`)
 - `-c, --config` - Config overrides (e.g., `model_reasoning_effort=xhigh`)
 - `--enable` / `--disable` - Feature toggles (e.g., `web_search_request`)
@@ -213,10 +185,10 @@ All Codex invocations use these defaults unless user specifies otherwise:
 
 Pass these as `-c key=value`:
 
-- `model_reasoning_effort`: `minimal`, `low`, `medium`, `high`, `xhigh`
+- `model_reasoning_effort`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
   - **CLI default**: `high` - The Codex CLI defaults to high reasoning
   - **Skill default**: `xhigh` - This skill explicitly uses xhigh for maximum capability
-  - **`xhigh`**: Extra-high reasoning for maximum capability (supported by gpt-5.2 models)
+  - **`xhigh`**: Extra-high reasoning for maximum capability
   - Use `xhigh` for complex architectural refactoring, long-horizon tasks, or when quality is more important than speed
 - `model_verbosity`: `low`, `medium`, `high` (default: `medium`)
 - `model_reasoning_summary`: `auto`, `concise`, `detailed`, `none` (default: `auto`)
@@ -237,10 +209,10 @@ codex exec -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]' "task
 ### Model Selection Guide
 
 **Available Models**:
-- `gpt-5.3-codex` - Code tasks (implementation, refactoring, debugging)
-- `gpt-5.2` - General tasks (architecture, reviews, explanations)
+- `gpt-5.4` - ALL tasks (default, highest capability)
+- `gpt-5.4-fast` - Speed-sensitive tasks (on demand only)
 
-**Default**: `gpt-5.3-codex` for code tasks, `gpt-5.2` for general tasks with `xhigh` reasoning effort.
+**Default**: `gpt-5.4` with `xhigh` reasoning effort for all tasks.
 
 ## Session Continuation
 
@@ -355,11 +327,11 @@ After authentication, try your request again.
 Error: Invalid model specified
 
 To fix:
-- For coding tasks: Use 'gpt-5.3-codex' with workspace-write sandbox
-- For reasoning tasks: Use 'gpt-5.2' with read-only sandbox
+- Use 'gpt-5.4' for all tasks
+- Use 'gpt-5.4-fast' for speed-sensitive tasks
 
-Example (coding): codex exec -m gpt-5.3-codex -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
-Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effort=xhigh "explain architecture"
+Example: codex exec -m gpt-5.4 -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
+Example (fast): codex exec -m gpt-5.4-fast -s read-only "quick analysis"
 ```
 
 ### Troubleshooting
@@ -395,14 +367,14 @@ Example (reasoning): codex exec -m gpt-5.2 -s read-only -c model_reasoning_effor
 
 ### Code Analysis (Read-Only)
 ```bash
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Analyze this function implementation"
 ```
 
 ### Code Editing (Explicit Request)
 ```bash
-codex exec -m gpt-5.3-codex -s workspace-write \
+codex exec -m gpt-5.4 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Edit this file to implement the feature"
 ```
@@ -484,11 +456,11 @@ For detailed CLI feature documentation, see `references/cli-features.md`.
 
 ```bash
 # Example: analyze file with explicit @ syntax
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   "Analyze @src/auth.ts and compare with @src/session.ts"
 
 # Example: multi-directory analysis
-codex exec -m gpt-5.3-codex -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   --add-dir /shared/libs \
   "Review how auth module uses shared utilities"
 ```

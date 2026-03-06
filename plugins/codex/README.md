@@ -1,15 +1,15 @@
 # Codex CLI Integration Plugin
 
-OpenAI Codex (GPT-5.2) integration for Claude Code, providing high-reasoning capabilities for complex coding tasks.
+OpenAI Codex (GPT-5.4) integration for Claude Code, providing high-reasoning capabilities for complex coding tasks.
 
 ## Overview
 
-This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.2 models for advanced reasoning, complex implementations, and architectural design. It provides intelligent model selection, session continuation, and safe defaults for seamless integration.
+This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.4 models for advanced reasoning, complex implementations, and architectural design. It provides intelligent model selection, session continuation, and safe defaults for seamless integration.
 
 ## Features
 
-- **High-Reasoning Capabilities**: GPT-5.2 with xhigh reasoning effort for maximum capability
-- **Intelligent Model Selection**: Automatic selection between `gpt-5.3-codex` (coding) and `gpt-5.2` (reasoning) models
+- **High-Reasoning Capabilities**: GPT-5.4 with xhigh reasoning effort for maximum capability
+- **Fast Mode**: `gpt-5.4-fast` available on demand for speed-sensitive tasks
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only for general tasks, workspace-write for code editing
 - **Web Search Integration**: Built-in web search for research and documentation lookup
@@ -17,10 +17,10 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.2 
 
 ## Prerequisites
 
-1. **Codex CLI** (v0.104.0 or later)
+1. **Codex CLI** (v0.111.0 or later)
    ```bash
    # Install Codex CLI (follow OpenAI's installation instructions)
-   codex --version  # Should show v0.104.0+
+   codex --version  # Should show v0.111.0+
    ```
 
 2. **Authentication**
@@ -30,7 +30,7 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.2 
    Authenticate with your OpenAI account (requires API access)
 
 3. **API Access**
-   - OpenAI API key with GPT-5.2 access
+   - OpenAI API key with GPT-5.4 access
    - Codex CLI API access enabled
 
 ## Installation
@@ -61,16 +61,16 @@ User: "Use Codex to design a binary search tree in Rust"
 
 ### Model Selection
 
-**Code Editing Tasks (GPT-5.3-Codex)**:
+**Code Editing Tasks (GPT-5.4)**:
 ```bash
-codex exec -m gpt-5.3-codex -s workspace-write \
+codex exec -m gpt-5.4 -s workspace-write \
   -c model_reasoning_effort=xhigh \
   "Implement thread-safe queue in Python"
 ```
 
-**General Reasoning Tasks (GPT-5.2)**:
+**General Reasoning Tasks (GPT-5.4)**:
 ```bash
-codex exec -m gpt-5.2 -s read-only \
+codex exec -m gpt-5.4 -s read-only \
   -c model_reasoning_effort=xhigh \
   "Design a distributed cache system"
 ```
@@ -79,7 +79,7 @@ codex exec -m gpt-5.2 -s read-only \
 
 ```bash
 # Start a new session (automatic on first request)
-codex exec -m gpt-5.3-codex "Implement authentication system"
+codex exec -m gpt-5.4 "Implement authentication system"
 
 # Resume most recent session
 codex exec resume --last
@@ -92,27 +92,27 @@ codex exec resume --last "Now implement the login flow"
 
 **With Web Search**:
 ```bash
-codex exec -m gpt-5.3-codex --enable web_search_request \
+codex exec -m gpt-5.4 --enable web_search_request \
   -c model_reasoning_effort=xhigh \
   "Research React 19 Server Components"
 ```
 
 **Custom Reasoning Effort**:
 ```bash
-codex exec -m gpt-5.2 -c model_reasoning_effort=medium \
+codex exec -m gpt-5.4 -c model_reasoning_effort=medium \
   "Explain quicksort algorithm"
 ```
 
 **Different Sandbox Modes**:
 ```bash
 # Read-only (for reasoning tasks)
-codex exec -m gpt-5.2 -s read-only "Review code"
+codex exec -m gpt-5.4 -s read-only "Review code"
 
 # Workspace-write (for code editing)
-codex exec -m gpt-5.3-codex -s workspace-write "Refactor module"
+codex exec -m gpt-5.4 -s workspace-write "Refactor module"
 
 # Full access (advanced users only)
-codex exec -m gpt-5.2 -s danger-full-access "Complex task"
+codex exec -m gpt-5.4 -s danger-full-access "Complex task"
 ```
 
 ## Configuration
@@ -121,8 +121,8 @@ codex exec -m gpt-5.2 -s danger-full-access "Complex task"
 
 | Parameter | Default Value | CLI Flag | Notes |
 |-----------|---------------|----------|-------|
-| Model (coding) | `gpt-5.3-codex` | `-m gpt-5.3-codex` | Optimized for agentic coding (56.8% SWE-Bench Pro) |
-| Model (reasoning) | `gpt-5.2` | `-m gpt-5.2` | High-reasoning general model |
+| Model | `gpt-5.4` | `-m gpt-5.4` | Frontier reasoning model for all tasks |
+| Model (fast) | `gpt-5.4-fast` | `-m gpt-5.4-fast` | Speed-optimized variant (on demand) |
 | Sandbox (coding) | `workspace-write` | `-s workspace-write` | Can edit files |
 | Sandbox (reasoning) | `read-only` | `-s read-only` | Safe for reviews |
 | Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
@@ -139,12 +139,11 @@ codex exec -m gpt-5.2 -s danger-full-access "Complex task"
 
 | Model | Use Case | Sandbox | Reasoning |
 |-------|----------|---------|-----------|
-| GPT-5.3-Codex | Code editing, implementation, refactoring | workspace-write | xhigh |
-| GPT-5.2 | Architecture, design, reviews, analysis | read-only | xhigh |
+| GPT-5.4 | All tasks (default) | read-only / workspace-write | xhigh |
+| GPT-5.4-Fast | Quick tasks (on demand) | read-only / workspace-write | high |
 
 ### Fallback Chain
-- **Coding**: `gpt-5.3-codex` → `gpt-5.2`
-- **General**: `gpt-5.2` → `gpt-5.3-codex`
+- **Primary**: `gpt-5.4` → `gpt-5.4-fast` → `gpt-5.3-codex`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ## Troubleshooting
@@ -170,10 +169,10 @@ codex login
 **Solution**: Always use `codex exec` in Claude Code:
 ```bash
 # WRONG
-codex -m gpt-5.2 "prompt"
+codex -m gpt-5.4 "prompt"
 
 # CORRECT
-codex exec -m gpt-5.2 "prompt"
+codex exec -m gpt-5.4 "prompt"
 ```
 
 ### Session Not Found
@@ -182,7 +181,7 @@ codex exec -m gpt-5.2 "prompt"
 codex exec resume --list
 
 # Start a new session
-codex exec -m gpt-5.2 "New task"
+codex exec -m gpt-5.4 "New task"
 ```
 
 ### API Rate Limits
@@ -200,15 +199,15 @@ If you encounter rate limits, check your OpenAI API usage dashboard. The plugin 
 
 ## Version Compatibility
 
-- **Minimum**: Codex CLI v0.104.0
+- **Minimum**: Codex CLI v0.111.0
 - **Recommended**: Latest stable version
-- **Models**: GPT-5.3-Codex (coding), GPT-5.2 (reasoning)
+- **Models**: GPT-5.4 (default), GPT-5.4-Fast (on demand)
 
 ## When to Use Codex vs Gemini vs Claude
 
 **Use Codex when:**
-- You need GPT-5.2's high-reasoning capabilities with xhigh effort
-- Complex coding tasks require gpt-5.3-codex (optimized for agentic coding)
+- You need GPT-5.4's frontier reasoning capabilities with xhigh effort
+- Complex coding tasks requiring high-reasoning model
 - Architecture and system design with maximum reasoning
 - Code reviews requiring deep analysis
 
@@ -226,7 +225,7 @@ If you encounter rate limits, check your OpenAI API usage dashboard. The plugin 
 ## Rate Limits & Costs
 
 **Note**: Codex CLI uses OpenAI's API, which may have associated costs:
-- GPT-5.2 and GPT-5.3-Codex usage is billed per token
+- GPT-5.4 and GPT-5.4-Fast usage is billed per token
 - xhigh reasoning effort may consume more tokens
 - Check OpenAI's pricing for current rates
 
@@ -252,4 +251,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-2.3.0
+2.6.0

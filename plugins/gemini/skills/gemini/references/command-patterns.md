@@ -1,7 +1,7 @@
 # Gemini CLI Command Patterns
 
 **Purpose**: Common command templates for Gemini CLI integration
-**Version**: v0.29.5+
+**Version**: v0.32.1+
 **Last Updated**: 2026-02-05
 
 ## Basic Invocation Patterns
@@ -274,7 +274,7 @@ gemini -m gemini-3.1-pro-preview "Fix syntax errors in this file"
 - `gemini-2.5-pro` - Strong alternative for complex tasks
 - `gemini-2.5-flash` - Fast responses, lower capability
 
-## Skills & Hooks Management (v0.29.5+)
+## Skills & Hooks Management (v0.32.1+)
 
 ### Skills Management
 

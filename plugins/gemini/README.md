@@ -17,7 +17,7 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 
 ## Prerequisites
 
-1. **Gemini CLI** (v0.29.5 or later)
+1. **Gemini CLI** (v0.32.1 or later)
    ```bash
    npm install -g @google/gemini-cli@latest
    ```
@@ -219,7 +219,7 @@ gemini --list-sessions  # Check available sessions
 
 ## Version Compatibility
 
-- **Minimum**: Gemini CLI v0.29.5
+- **Minimum**: Gemini CLI v0.32.1
 - **Recommended**: Latest stable version
 - **Breaking Changes**: `-p` flag deprecated (use positional prompts)
 
@@ -232,8 +232,8 @@ gemini --list-sessions  # Check available sessions
 - Codex is unavailable or rate-limited
 
 **Use Codex when:**
-- You need GPT-5.2's high-reasoning capabilities
-- Complex coding tasks require GPT-5.3-Codex
+- You need GPT-5.4's frontier reasoning capabilities
+- Complex coding tasks with GPT-5.4
 
 **Use Claude (native) when:**
 - Simple queries within Claude Code's capabilities
@@ -253,7 +253,7 @@ Apache-2.0
 
 ## Version
 
-1.4.0
+1.7.0
 
 ## Author
 

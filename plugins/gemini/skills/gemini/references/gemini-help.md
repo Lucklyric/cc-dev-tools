@@ -1,6 +1,6 @@
 # Gemini CLI Help Reference
 
-**Version**: v0.29.5
+**Version**: v0.32.1
 **Source**: Output from `gemini --help`
 **Last Updated**: 2026-02-16
 
@@ -39,7 +39,9 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 - `-y, --yolo` - Automatically accept all actions (YOLO mode) [boolean] [default: false]
 - `--approval-mode` - Set approval mode [string]
   **Choices**: `default` (prompt for approval), `auto_edit` (auto-approve edit tools), `plan` (read-only mode), `yolo` (auto-approve all tools)
-- `--allowed-tools` - Tools allowed to run without confirmation [array]
+- `--policy` - Additional policy files or directories to load [array]
+  Comma-separated or multiple `--policy` flags
+- `--allowed-tools` - [DEPRECATED: Use Policy Engine instead] Tools allowed to run without confirmation [array]
 
 ### Session Management
 
@@ -74,7 +76,7 @@ Gemini CLI - Launch an interactive CLI, use -p/--prompt for non-interactive mode
 - `-h, --help` - Show help [boolean]
 - `--experimental-acp` - Start agent in ACP mode [boolean]
 
-## Full CLI Output (v0.29.5)
+## Full CLI Output (v0.32.1)
 
 ```
 Usage: gemini [options] [command]
@@ -99,9 +101,10 @@ Options:
   -s, --sandbox                   Run in sandbox?  [boolean]
   -y, --yolo                      Automatically accept all actions (aka YOLO mode, see https://www.youtube.com/watch?v=xvFZjo5PgG0 for more details)?  [boolean] [default: false]
       --approval-mode             Set the approval mode: default (prompt for approval), auto_edit (auto-approve edit tools), yolo (auto-approve all tools), plan (read-only mode)  [string] [choices: "default", "auto_edit", "yolo", "plan"]
+      --policy                    Additional policy files or directories to load (comma-separated or multiple --policy)  [array]
       --experimental-acp          Starts the agent in ACP mode  [boolean]
       --allowed-mcp-server-names  Allowed MCP server names  [array]
-      --allowed-tools             Tools that are allowed to run without confirmation  [array]
+      --allowed-tools             [DEPRECATED: Use Policy Engine instead See https://geminicli.com/docs/core/policy-engine] Tools that are allowed to run without confirmation  [array]
   -e, --extensions                A list of extensions to use. If not provided, all extensions are used.  [array]
   -l, --list-extensions           List all available extensions and exit.  [boolean]
   -r, --resume                    Resume a previous session. Use "latest" for most recent or index number (e.g. --resume 5)  [string]
@@ -200,7 +203,12 @@ Sessions are identified by:
 
 ## Compatibility Notes
 
-- **Minimum Version**: v0.29.5
+- **Minimum Version**: v0.32.1
+- **Changes in v0.32.x**:
+  - New `--policy` flag for Policy Engine integration
+  - `--allowed-tools` deprecated in favor of Policy Engine
+  - New `--experimental-acp` flag for Agent Control Protocol mode
+  - New `--delete-session` flag for session management
 - **Changes in v0.29.x**:
   - Gemini 3 is now the default model family
   - `-p`/`--prompt` is now the headless (non-interactive) mode flag (no longer deprecated)

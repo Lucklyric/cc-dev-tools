@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.6.0
+version: 1.7.0
 description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -363,7 +363,7 @@ gemini -m gemini-3.1-pro-preview "Design system architecture"
 
 **Note**: This plugin does not implement custom extensions or MCP servers. Users can configure extensions and MCP servers through the Gemini CLI's standard configuration in `~/.gemini/settings.json`. Extensions are enabled by default when appropriate for the task.
 
-### Skills Management (`gemini skills`) (v0.29.5+)
+### Skills Management (`gemini skills`) (v0.32.1+)
 
 Gemini CLI supports agent skills - reusable capabilities that extend the agent's abilities. Manage skills through the CLI:
 
@@ -381,7 +381,7 @@ gemini skills disable <name>
 
 **Note**: Skills in Gemini CLI are agent-level capabilities (like file operations, code execution), distinct from Claude Code plugin skills. Configure skills in `~/.gemini/settings.json`.
 
-### Hooks Management (`gemini hooks`) (v0.29.5+)
+### Hooks Management (`gemini hooks`) (v0.32.1+)
 
 Gemini CLI supports hooks - event-driven automation that runs at specific points during agent execution. Manage hooks through the CLI:
 
@@ -505,7 +505,7 @@ For detailed information, consult these reference files:
 | Subcommand | Required (`exec`) | Not needed |
 | Positional Prompts | Not supported | Preferred |
 | Session Resume | `codex exec resume --last` | `gemini -r latest` |
-| Models | GPT-5.2, GPT-5.3-Codex | Gemini 3.1 Pro, 2.5 Pro/Flash |
+| Models | GPT-5.4, GPT-5.4-Fast | Gemini 3.1 Pro, 2.5 Pro/Flash |
 | Provider | OpenAI (via Codex) | Google |
 
 ---
@@ -520,8 +520,8 @@ For detailed information, consult these reference files:
 - Task benefits from Gemini's strengths
 
 **Use Codex when:**
-- You need GPT-5.2's high-reasoning capabilities
-- Complex coding tasks require GPT-5.3-Codex (optimized for agentic coding)
+- You need GPT-5.4's frontier reasoning capabilities
+- Complex coding tasks with GPT-5.4 (unified model for code and general tasks)
 - Code editing with specific Codex optimizations
 - You're already using Codex workflow
 
@@ -535,15 +535,15 @@ For detailed information, consult these reference files:
 
 ## Version Compatibility
 
-**Minimum Gemini CLI**: v0.29.5
+**Minimum Gemini CLI**: v0.32.1
 
 | Feature | Minimum Version | Notes |
 |---------|-----------------|-------|
 | Core functionality | v0.20.0+ | Positional prompts, session resume |
 | `--include-directories` | v0.20.0+ | Workspace expansion |
 | `--screen-reader` | v0.20.0+ | Accessibility mode |
-| `--approval-mode plan` | v0.29.5+ | Read-only mode |
-| `gemini skills` | v0.29.5+ | Skills management |
-| `gemini hooks` | v0.29.5+ | Hooks management |
+| `--approval-mode plan` | v0.32.1+ | Read-only mode |
+| `gemini skills` | v0.32.1+ | Skills management |
+| `gemini hooks` | v0.32.1+ | Hooks management |
 
 For questions or issues, consult `references/gemini-help.md` or run `gemini --help`.

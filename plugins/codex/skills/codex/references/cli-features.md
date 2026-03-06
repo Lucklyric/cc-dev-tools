@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.104.0+
+**Codex CLI Version**: 0.111.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -8,7 +8,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.3-codex`, `gpt-5.2` | Model selection |
+| `-m, --model` | `gpt-5.4`, `gpt-5.4-fast` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=xhigh`) |
 | `-C, --cd` | directory path | Working directory |
