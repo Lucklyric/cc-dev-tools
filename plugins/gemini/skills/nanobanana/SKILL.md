@@ -1,59 +1,65 @@
 ---
 name: nanobanana
-version: 1.2.0
-description: This skill should be used when the user wants to generate, edit, or manipulate images using Google's Nano Banana models via Gemini CLI. Trigger phrases include "generate image", "create image", "edit image", "restore photo", "make icon", "create pattern", "draw diagram", "visual story", "nanobanana", "image generation", "text to image", or when users request any image creation, editing, or visual content generation tasks. Inherits Gemini CLI conventions for headless execution.
+version: 2.0.0
+description: REQUIRED for all image generation requests. Generate and edit images using Nano Banana (Gemini CLI). Handles illustrations, icons, diagrams, patterns, thumbnails, featured images, visual assets, graphics, artwork, photos. Use this skill whenever the user asks to create, generate, make, draw, design, edit, or restore any image or visual content.
+allowed-tools: Bash(gemini:*)
 ---
 
-# Nanobanana: Image Generation via Gemini CLI
+# Nano Banana Image Generation
 
-This skill extends the Gemini plugin with image generation, editing, and manipulation capabilities using the [Nanobanana extension](https://github.com/gemini-cli-extensions/nanobanana).
+Generate professional images via the Gemini CLI's nanobanana extension.
+
+## When to Use This Skill
+
+ALWAYS use this skill when the user:
+- Asks for any image, graphic, illustration, or visual
+- Wants a thumbnail, featured image, or banner
+- Requests icons, diagrams, or patterns
+- Asks to edit, modify, or restore a photo
+- Uses words like: generate, create, make, draw, design, visualize
+
+Do NOT attempt to generate images through any other method.
 
 ---
 
-## IMPORTANT: Run Health Check First
-
-**Before executing any nanobanana command, run the health check below.** If any check fails, guide the user through the fix before proceeding.
+## Health Check (Run Before First Use)
 
 ```bash
 # 1. Check Gemini CLI installed
 command -v gemini && echo "OK: gemini found" || echo "FAIL: gemini not found"
 
 # 2. Check nanobanana extension installed
-gemini extensions list 2>/dev/null | grep -qi nanobanana && echo "OK: nanobanana installed" || echo "FAIL: nanobanana not installed"
+ls ~/.gemini/extensions/ 2>/dev/null | grep -qi nanobanana && echo "OK: nanobanana installed" || echo "FAIL: nanobanana not installed"
 
 # 3. Check authentication (API key OR Vertex AI)
 AUTH="${NANOBANANA_AUTH_METHOD:-api_key}"
 if [ "$AUTH" = "vertex_ai" ]; then
   [ -n "$GCP_PROJECT_ID" ] && [ -n "$GCP_REGION" ] && echo "OK: Vertex AI auth ($GCP_PROJECT_ID / $GCP_REGION)" || echo "FAIL: Vertex AI requires GCP_PROJECT_ID and GCP_REGION"
 elif [ "$AUTH" = "auto" ]; then
-  [ -n "$NANOBANANA_API_KEY" ] || [ -n "$GCP_PROJECT_ID" ] && echo "OK: auth auto ($AUTH)" || echo "FAIL: Set NANOBANANA_API_KEY or GCP_PROJECT_ID+GCP_REGION"
+  [ -n "$NANOBANANA_API_KEY" ] || [ -n "$GEMINI_API_KEY" ] || [ -n "$GCP_PROJECT_ID" ] && echo "OK: auth auto" || echo "FAIL: Set NANOBANANA_API_KEY, GEMINI_API_KEY, or GCP_PROJECT_ID+GCP_REGION"
 else
-  [ -n "$NANOBANANA_API_KEY" ] && echo "OK: API key set" || echo "FAIL: NANOBANANA_API_KEY not set"
+  ([ -n "$NANOBANANA_API_KEY" ] || [ -n "$GEMINI_API_KEY" ]) && echo "OK: API key set" || echo "FAIL: NANOBANANA_API_KEY or GEMINI_API_KEY not set"
 fi
 echo "AUTH_METHOD=$AUTH"
 ```
 
-Run all checks in a single bash call. Then evaluate:
-
-| Check | If FAIL | Guide |
-|-------|---------|-------|
+| Check | If FAIL | Fix |
+|-------|---------|-----|
 | Gemini CLI not found | Install it | `npm install -g @google/gemini-cli` |
 | Nanobanana not installed | Install extension | `gemini extensions install https://github.com/gemini-cli-extensions/nanobanana` |
-| API key not set | Set env var | Get key from [Google AI Studio](https://aistudio.google.com/apikey), then `export NANOBANANA_API_KEY=your_key` |
+| API key not set | Set env var | Get key from [Google AI Studio](https://aistudio.google.com/apikey), then `export GEMINI_API_KEY=your_key` |
 | Vertex AI missing vars | Set GCP env vars | `export NANOBANANA_AUTH_METHOD=vertex_ai GCP_PROJECT_ID=your-project GCP_REGION=us-central1` |
 
-**If all checks pass**, proceed with the command. **If any check fails**, stop and tell the user exactly what to fix with the command to run. Do not attempt to execute nanobanana commands until all checks pass.
+**If any check fails**, stop and guide the user. Do not run nanobanana commands until all checks pass.
 
 ---
 
 ## Authentication Methods
 
-Nanobanana supports three auth methods via `NANOBANANA_AUTH_METHOD`:
-
 | Method | Env Vars Required | Best For |
 |--------|-------------------|----------|
-| `api_key` (default) | `NANOBANANA_API_KEY` | Local dev, simple setups |
-| `vertex_ai` | `GCP_PROJECT_ID`, `GCP_REGION` + ADC | Production on GCP (Cloud Run, GKE, GCE) |
+| `api_key` (default) | `NANOBANANA_API_KEY` or `GEMINI_API_KEY` | Local dev, simple setups |
+| `vertex_ai` | `GCP_PROJECT_ID`, `GCP_REGION` + ADC | Production on GCP |
 | `auto` | Tries API key first, falls back to Vertex AI | Flexible environments |
 
 **Vertex AI setup** (add to `.zshrc`):
@@ -63,70 +69,53 @@ export GCP_PROJECT_ID=your-project-id
 export GCP_REGION=us-central1
 ```
 
-**IAM requirement**: Grant `roles/aiplatform.user` to the service account or user running the CLI.
+**IAM requirement**: Grant `roles/aiplatform.user` to the service account or user.
 
 ---
 
-## CRITICAL: Headless Execution via Gemini CLI
+## Command Pattern
 
-**All nanobanana commands run through Gemini CLI in headless mode using `-p`.**
-
-Nanobanana slash commands are Gemini CLI extension commands. In Claude Code's non-interactive environment, pass them as the prompt:
+**Always use `--yolo` flag** to auto-approve all tool actions (prevents hanging in non-interactive mode):
 
 ```bash
-# General pattern
-gemini -e nanobanana -p '/command "description" --flags'
+gemini --yolo "/command 'description' --flags"
 ```
 
-**Why `-e nanobanana`?** Ensures only the nanobanana extension is loaded, avoiding unnecessary tool conflicts.
-
-**Why `-p`?** Required for headless/non-interactive mode in Claude Code (see parent gemini skill).
+**Skill default: `--count=3`** — always generate 3 images unless user specifies otherwise.
 
 ---
 
-## Supported Models
+## Command Selection
 
-Pass via inline env var in the command:
-
-| Model | Description |
-|-------|-------------|
-| `gemini-3.1-flash-image-preview` | Default (v1.0.11+), fast image generation |
-| `gemini-3-pro-image-preview` | Pro variant, higher quality |
-| `gemini-2.5-flash-image` | v1, legacy |
-
-```bash
-# Default model (no override needed)
-gemini -e nanobanana -p '/generate "prompt"'
-
-# Use pro model for higher quality
-NANOBANANA_MODEL=gemini-3-pro-image-preview gemini -e nanobanana -p '/generate "prompt"'
-
-# Use legacy v1 model
-NANOBANANA_MODEL=gemini-2.5-flash-image gemini -e nanobanana -p '/generate "prompt"'
-```
+| User Request | Command |
+|--------------|---------|
+| "generate an image of..." | `/generate` |
+| "create an app icon" | `/icon` |
+| "draw a flowchart of..." | `/diagram` |
+| "fix this old photo" | `/restore` |
+| "edit this image" | `/edit` |
+| "create a repeating texture" | `/pattern` |
+| "make a comic strip" | `/story` |
+| General/unclear request | `/nanobanana` |
 
 ---
 
 ## Commands Reference
 
-### `/generate` - Text-to-Image Creation
-
-Create single or multiple images from text descriptions.
-
-**Skill default: `--count=3`** — always use `--count=3` unless the user specifies a different number.
+### `/generate` - Text-to-Image
 
 ```bash
-# Basic (default 3 images)
-gemini -e nanobanana -p '/generate "a sunset over mountains" --count=3'
+# Default (3 images)
+gemini --yolo "/generate 'a sunset over mountains' --count=3"
 
-# With styles (3 images, one per style)
-gemini -e nanobanana -p '/generate "mountain landscape" --count=3 --styles="watercolor,oil-painting,sketch"'
+# With styles
+gemini --yolo "/generate 'mountain landscape' --count=3 --styles='watercolor,oil-painting,sketch'"
 
-# User requested specific count
-gemini -e nanobanana -p '/generate "portrait of a cat" --count=5 --variations="lighting,angle" --preview'
+# With preview
+gemini --yolo "/generate 'portrait of a cat' --count=3 --preview"
 
-# Reproducible with seed
-gemini -e nanobanana -p '/generate "abstract art" --seed=42 --count=3'
+# Reproducible
+gemini --yolo "/generate 'abstract art' --seed=42 --count=3"
 ```
 
 **Flags:**
@@ -140,172 +129,140 @@ gemini -e nanobanana -p '/generate "abstract art" --seed=42 --count=3'
 | `--seed` | integer | Reproducible variations |
 | `--preview` | flag | Auto-open results |
 
-**Available Styles:** photorealistic, watercolor, oil-painting, sketch, pixel-art, anime, vintage, modern, abstract, minimalist
+**Styles:** photorealistic, watercolor, oil-painting, sketch, pixel-art, anime, vintage, modern, abstract, minimalist
 
-**Available Variations:** lighting, angle, color-palette, composition, mood, season, time-of-day
-
----
+**Variations:** lighting, angle, color-palette, composition, mood, season, time-of-day
 
 ### `/edit` - Image Modification
 
-Modify existing images with natural language instructions.
-
 ```bash
-gemini -e nanobanana -p '/edit path/to/image.jpg "change background to beach scene" --preview'
-gemini -e nanobanana -p '/edit portrait.png "add sunglasses and a hat"'
+gemini --yolo "/edit path/to/image.jpg 'change background to beach scene' --preview"
 ```
-
----
 
 ### `/restore` - Photo Enhancement
 
-Restore and improve old or damaged photos.
-
 ```bash
-gemini -e nanobanana -p '/restore old_photo.jpg "remove scratches and enhance colors" --preview'
-gemini -e nanobanana -p '/restore damaged.png "fix color fading and sharpen details"'
+gemini --yolo "/restore old_photo.jpg 'remove scratches and enhance colors' --preview"
 ```
-
----
 
 ### `/icon` - Icon Generation
 
-Create app icons, favicons, and UI elements in multiple sizes.
-
 ```bash
-# App icon set
-gemini -e nanobanana -p '/icon "coffee cup logo" --sizes="64,128,256,512" --type="app-icon" --preview'
-
-# Favicon
-gemini -e nanobanana -p '/icon "letter A" --type="favicon" --style="minimal" --background="transparent"'
+gemini --yolo "/icon 'coffee cup logo' --sizes='64,128,256,512' --type='app-icon' --corners='rounded' --preview"
 ```
 
-**Flags:**
-
-| Flag | Values | Description |
-|------|--------|-------------|
-| `--sizes` | comma-separated pixels | e.g., "64,128,256,512" |
-| `--type` | `app-icon`, `favicon`, `ui-element` | Icon type |
-| `--style` | `flat`, `skeuomorphic`, `minimal`, `modern` | Visual style |
-| `--format` | `png`, `jpeg` | Output format |
-| `--background` | `transparent`, `white`, `black`, color | Background |
-| `--corners` | `rounded`, `sharp` | Corner style |
-
----
+| Flag | Values |
+|------|--------|
+| `--sizes` | e.g., "64,128,256,512" |
+| `--type` | `app-icon`, `favicon`, `ui-element` |
+| `--style` | `flat`, `skeuomorphic`, `minimal`, `modern` |
+| `--background` | `transparent`, `white`, `black`, color |
+| `--corners` | `rounded`, `sharp` |
 
 ### `/pattern` - Seamless Patterns
 
-Generate backgrounds, textures, and wallpapers.
-
 ```bash
-# Geometric pattern
-gemini -e nanobanana -p '/pattern "geometric triangles" --type="seamless" --style="geometric" --preview'
-
-# Organic texture
-gemini -e nanobanana -p '/pattern "marble texture" --type="texture" --density="dense" --colors="mono"'
+gemini --yolo "/pattern 'geometric triangles' --type='seamless' --style='geometric' --preview"
 ```
 
-**Flags:**
-
-| Flag | Values | Description |
-|------|--------|-------------|
-| `--size` | e.g., "256x256" | Tile dimensions |
-| `--type` | `seamless`, `texture`, `wallpaper` | Pattern type |
-| `--style` | `geometric`, `organic`, `abstract`, `floral`, `tech` | Visual style |
-| `--density` | `sparse`, `medium`, `dense` | Element density |
-| `--colors` | `mono`, `duotone`, `colorful` | Color scheme |
-| `--repeat` | `tile`, `mirror` | Repeat mode |
-
----
+| Flag | Values |
+|------|--------|
+| `--type` | `seamless`, `texture`, `wallpaper` |
+| `--style` | `geometric`, `organic`, `abstract`, `floral`, `tech` |
+| `--density` | `sparse`, `medium`, `dense` |
+| `--colors` | `mono`, `duotone`, `colorful` |
 
 ### `/story` - Sequential Visual Narratives
 
-Create step-by-step visual sequences.
-
 ```bash
-# Process visualization
-gemini -e nanobanana -p '/story "seed growing into tree" --steps=4 --type="process" --preview'
-
-# Comic-style story
-gemini -e nanobanana -p '/story "a day in the life of a robot" --steps=6 --layout="comic" --style="consistent"'
+gemini --yolo "/story 'seed growing into tree' --steps=4 --type='process' --preview"
 ```
 
-**Flags:**
-
-| Flag | Values | Description |
-|------|--------|-------------|
-| `--steps` | 2-8 | Number of sequential images |
-| `--type` | `story`, `process`, `tutorial`, `timeline` | Narrative type |
-| `--style` | `consistent`, `evolving` | Visual consistency |
-| `--layout` | `separate`, `grid`, `comic` | Output layout |
-| `--transition` | `smooth`, `dramatic`, `fade` | Between-step transition |
-| `--format` | `storyboard`, `individual` | Output format |
-
----
+| Flag | Values |
+|------|--------|
+| `--steps` | 2-8 |
+| `--type` | `story`, `process`, `tutorial`, `timeline` |
+| `--style` | `consistent`, `evolving` |
+| `--layout` | `separate`, `grid`, `comic` |
 
 ### `/diagram` - Technical Diagrams
 
-Generate flowcharts, architecture diagrams, and technical visuals.
-
 ```bash
-# Architecture diagram
-gemini -e nanobanana -p '/diagram "microservices architecture" --type="architecture" --complexity="detailed"'
-
-# Flowchart
-gemini -e nanobanana -p '/diagram "user authentication flow" --type="flowchart" --style="professional"'
-
-# Database schema
-gemini -e nanobanana -p '/diagram "e-commerce database schema" --type="database" --annotations="detailed"'
+gemini --yolo "/diagram 'microservices architecture' --type='architecture' --complexity='detailed'"
 ```
 
-**Flags:**
-
-| Flag | Values | Description |
-|------|--------|-------------|
-| `--type` | `flowchart`, `architecture`, `network`, `database`, `wireframe`, `mindmap`, `sequence` | Diagram type |
-| `--style` | `professional`, `clean`, `hand-drawn`, `technical` | Visual style |
-| `--layout` | `horizontal`, `vertical`, `hierarchical`, `circular` | Layout direction |
-| `--complexity` | `simple`, `detailed`, `comprehensive` | Detail level |
-| `--colors` | `mono`, `accent`, `categorical` | Color scheme |
-| `--annotations` | `minimal`, `detailed` | Annotation level |
-
----
+| Flag | Values |
+|------|--------|
+| `--type` | `flowchart`, `architecture`, `network`, `database`, `wireframe`, `mindmap`, `sequence` |
+| `--style` | `professional`, `clean`, `hand-drawn`, `technical` |
+| `--complexity` | `simple`, `detailed`, `comprehensive` |
 
 ### `/nanobanana` - Natural Language Interface
 
-Open-ended command for flexible image requests without specific command syntax.
-
 ```bash
-gemini -e nanobanana -p '/nanobanana create a logo for my tech startup'
-gemini -e nanobanana -p '/nanobanana I need 5 different versions of a cat illustration in different art styles'
+gemini --yolo "/nanobanana create a logo for my tech startup"
 ```
 
-Use this when the request doesn't map cleanly to a specific command.
+Use when the request doesn't map cleanly to a specific command.
 
 ---
 
-## How to Use This Skill
+## Common Sizes
 
-When the user requests image generation or manipulation:
+| Use Case | Dimensions | Notes |
+|----------|------------|-------|
+| YouTube thumbnail | 1280x720 | `--aspect=16:9` |
+| Blog featured image | 1200x630 | Social preview friendly |
+| Square social | 1080x1080 | Instagram, LinkedIn |
+| Twitter/X header | 1500x500 | Wide banner |
+| Vertical story | 1080x1920 | `--aspect=9:16` |
 
-**Step 1: Identify the command**
-- Image creation → `/generate`
-- Edit existing image → `/edit`
-- Restore/enhance photo → `/restore`
-- App icons/favicons → `/icon`
-- Patterns/textures → `/pattern`
-- Sequential visuals → `/story`
-- Technical diagrams → `/diagram`
-- Unclear/flexible → `/nanobanana`
+---
 
-**Step 2: Build the command**
+## Model Selection
+
+Default: `gemini-3.1-flash-image-preview` (fast, good quality)
+
+| Model | Quality | Speed |
+|-------|---------|-------|
+| `gemini-3.1-flash-image-preview` | Good (default) | Fast |
+| `gemini-3-pro-image-preview` | Higher quality | Slower |
+| `gemini-2.5-flash-image` | Legacy v1 | Fast |
+
+Override inline:
 ```bash
-gemini -e nanobanana -p '/command "description" --relevant-flags'
+NANOBANANA_MODEL=gemini-3-pro-image-preview gemini --yolo "/generate 'prompt' --count=3"
 ```
 
-**Step 3: Execute via Bash tool**
+---
 
-Always run in the user's project directory. Output files are saved to the current working directory with auto-generated filenames.
+## Output Location
+
+All generated images are saved to `./nanobanana-output/` in the current directory.
+
+## Presenting Results
+
+After generation completes:
+1. List contents of `./nanobanana-output/` to find generated files
+2. Present the most recent image(s) to the user using the Read tool
+3. Offer to regenerate with variations if needed
+
+---
+
+## Refinements and Iterations
+
+When the user asks for changes:
+- **"Try again" / "Give me options"**: Regenerate with `--count=3`
+- **"Make it more [adjective]"**: Adjust prompt and regenerate
+- **"Edit this one"**: Use `gemini --yolo "/edit nanobanana-output/filename.png 'adjustment'"`
+- **"Different style"**: Add `--styles="requested_style"` to the command
+
+## Prompt Tips
+
+1. **Be specific**: Include style, mood, colors, composition details
+2. **Add "no text"**: If you don't want text rendered in the image
+3. **Reference styles**: "editorial photography", "flat illustration", "3D render", "watercolor"
+4. **Specify aspect ratio**: "wide banner", "square thumbnail", "vertical story"
 
 ---
 
@@ -314,19 +271,9 @@ Always run in the user's project directory. Output files are saved to the curren
 | Error | Cause | Fix |
 |-------|-------|-----|
 | Extension not found | Not installed | `gemini extensions install https://github.com/gemini-cli-extensions/nanobanana` |
-| API key missing | `NANOBANANA_API_KEY` not set | Set env var or switch to `vertex_ai` auth |
-| Vertex AI auth failed | Missing `GCP_PROJECT_ID` / `GCP_REGION` or no ADC | Run `gcloud auth application-default login` and set env vars |
+| API key missing | No auth configured | Set `GEMINI_API_KEY` or switch to `vertex_ai` auth |
+| Vertex AI auth failed | Missing GCP vars or no ADC | Run `gcloud auth application-default login` and set env vars |
 | IAM permission denied | Missing `roles/aiplatform.user` | Grant IAM role to service account |
 | Model unavailable | Invalid model ID | Check `NANOBANANA_MODEL` value |
 | Generation failed | Prompt safety filter | Rephrase the prompt |
-
----
-
-## Tips
-
-1. **Use `--preview`** to auto-open generated images
-2. **Use `--count`** for multiple variations in one pass
-3. **Use `--seed`** for reproducible results
-4. **Combine `--styles` with `--variations`** for diverse outputs
-5. **Use `/nanobanana`** when unsure which specific command to use
-6. **Pro model** (`gemini-3-pro-image-preview`) gives higher quality but is slower
+| Quota exceeded | Rate limit hit | Wait for reset or switch to flash model |
