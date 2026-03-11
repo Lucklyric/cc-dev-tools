@@ -1,6 +1,6 @@
 # Gemini CLI Help Reference
 
-**Version**: v0.32.1
+**Version**: v0.33.0
 **Source**: Output from `gemini --help`
 **Last Updated**: 2026-02-16
 
@@ -203,7 +203,16 @@ Sessions are identified by:
 
 ## Compatibility Notes
 
-- **Minimum Version**: v0.32.1
+- **Minimum Version**: v0.33.0
+- **Changes in v0.33.0**:
+  - Plan mode with built-in research subagents
+  - Plan `copy` subcommand
+  - HTTP authentication for A2A remote agents
+  - MCPOAuthProvider for MCP server auth
+  - New slash commands: `/memory`, `/init`, `/extensions`, `/restore`
+  - 30-day default retention for chat history
+  - Compact header redesign
+  - LLM-based loop detection improvements
 - **Changes in v0.32.x**:
   - New `--policy` flag for Policy Engine integration
   - `--allowed-tools` deprecated in favor of Policy Engine

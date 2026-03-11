@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.111.0+
+**Codex CLI Version**: 0.114.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -88,15 +88,15 @@ Control colored output (always, never, auto):
 codex exec --color never "Run in CI/CD pipeline"
 ```
 
-## Web Search in Exec Mode
+## Web Search
 
-**Note**: `--search` flag is interactive-only. Use `--enable` for exec mode:
+**Note (v0.114.0+)**: The `web_search_request` feature flag is **deprecated**. Web search is now built-in when the model supports it. No `--enable` flag is needed.
 
 ```bash
-# CORRECT for codex exec
-codex exec --enable web_search_request "research topic"
+# v0.114.0+ - web search is automatic, no flag needed
+codex exec -m gpt-5.4 "research latest patterns"
 
-# WRONG - --search only works in interactive mode
+# Interactive mode still supports --search flag
 codex --search "research topic"
 ```
 
@@ -113,31 +113,36 @@ codex features list
 
 | Feature | Default | Description |
 |---------|---------|-------------|
-| `web_search_request` | false | Enable web search capability |
-| `parallel` | true | Parallel execution |
+| `enable_request_compression` | true | Request compression |
+| `fast_mode` | true | Fast mode |
+| `personality` | true | Personality customization |
+| `shell_snapshot` | true | Shell state snapshots |
 | `shell_tool` | true | Shell command execution |
-| `undo` | true | Undo functionality |
-| `view_image_tool` | true | Image viewing capability |
-| `warnings` | true | Display warnings |
+| `skill_mcp_dependency_install` | true | Auto-install MCP skill dependencies |
+| `unified_exec` | true | Unified execution mode |
+| `undo` | false | Undo functionality |
 
-### Experimental/Beta Features
+### Experimental Features
 
 | Feature | Stage | Default | Description |
 |---------|-------|---------|-------------|
-| `exec_policy` | experimental | true | Execution policy control |
-| `remote_compaction` | experimental | true | Remote compaction |
-| `unified_exec` | experimental | false | Unified execution mode |
-| `rmcp_client` | experimental | false | RMCP client support |
-| `apply_patch_freeform` | beta | false | Freeform patch application |
-| `skills` | experimental | false | Skills support |
-| `shell_snapshot` | experimental | false | Shell state snapshots |
-| `remote_models` | experimental | false | Remote model support |
+| `guardian_approval` | experimental | false | Guardian approval system |
+| `js_repl` | experimental | false | JavaScript REPL |
+| `multi_agent` | experimental | false | Multi-agent support |
+| `prevent_idle_sleep` | experimental | false | Prevent system idle sleep |
+
+### Deprecated Features
+
+| Feature | Description |
+|---------|-------------|
+| `web_search_request` | Web search (now built-in, no flag needed) |
+| `web_search_cached` | Cached web search (now built-in) |
 
 Enable/disable features with `--enable` and `--disable`:
 
 ```bash
-codex exec --enable web_search_request "research task"
-codex exec --disable parallel "run sequentially"
+codex exec --enable multi_agent "complex task"
+codex exec --disable fast_mode "run in standard mode"
 ```
 
 ## JSONL Output (`--json`) (v0.71.0+)

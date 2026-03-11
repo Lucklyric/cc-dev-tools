@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 1.7.0
+version: 1.8.0
 description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -535,7 +535,7 @@ For detailed information, consult these reference files:
 
 ## Version Compatibility
 
-**Minimum Gemini CLI**: v0.32.1
+**Minimum Gemini CLI**: v0.33.0
 
 | Feature | Minimum Version | Notes |
 |---------|-----------------|-------|
@@ -545,5 +545,8 @@ For detailed information, consult these reference files:
 | `--approval-mode plan` | v0.32.1+ | Read-only mode |
 | `gemini skills` | v0.32.1+ | Skills management |
 | `gemini hooks` | v0.32.1+ | Hooks management |
+| Plan mode research subagents | v0.33.0+ | Built-in research subagents in plan mode |
+| Plan `copy` subcommand | v0.33.0+ | Copy plans |
+| 30-day chat history retention | v0.33.0+ | Default retention for chat history |
 
 For questions or issues, consult `references/gemini-help.md` or run `gemini --help`.

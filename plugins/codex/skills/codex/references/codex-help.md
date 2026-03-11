@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.111.0
+**Version**: 0.114.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -282,29 +282,51 @@ Usage: codex exec resume [OPTIONS] [SESSION_ID] [PROMPT]
 
 Arguments:
   [SESSION_ID]
-          Conversation/session id (UUID). When provided, resumes this session. If omitted, use
-          --last to pick the most recent recorded session
+          Conversation/session id (UUID) or thread name. UUIDs take precedence if it parses. If
+          omitted, use --last to pick the most recent recorded session
 
   [PROMPT]
           Prompt to send after resuming the session. If `-` is used, read from stdin
 
 Options:
   -c, --config <key=value>
-          Override a configuration value that would otherwise be loaded from `~/.codex/config.toml`.
-          Use a dotted path (`foo.bar.baz`) to override nested values. The `value` portion is parsed
-          as TOML. If it fails to parse as TOML, the raw string is used as a literal.
-
-          Examples: - `-c model="o3"` - `-c 'sandbox_permissions=["disk-full-read-access"]'` - `-c
-          shell_environment_policy.inherit=all`
+          Override a configuration value
 
       --last
           Resume the most recent recorded session (newest) without specifying an id
 
+      --all
+          Show all sessions (disables cwd filtering)
+
       --enable <FEATURE>
-          Enable a feature (repeatable). Equivalent to `-c features.<name>=true`
+          Enable a feature (repeatable)
 
       --disable <FEATURE>
-          Disable a feature (repeatable). Equivalent to `-c features.<name>=false`
+          Disable a feature (repeatable)
+
+  -i, --image <FILE>
+          Optional image(s) to attach to the prompt sent after resuming
+
+  -m, --model <MODEL>
+          Model the agent should use
+
+      --full-auto
+          Convenience alias for low-friction sandboxed automatic execution
+
+      --dangerously-bypass-approvals-and-sandbox
+          Skip all confirmation prompts and execute commands without sandboxing
+
+      --skip-git-repo-check
+          Allow running Codex outside a Git repository
+
+      --ephemeral
+          Run without persisting session files to disk
+
+      --json
+          Print events to stdout as JSONL
+
+  -o, --output-last-message <FILE>
+          Specifies file where the last message from the agent should be written
 
   -h, --help
           Print help (see a summary with '-h')
@@ -365,7 +387,7 @@ Options:
           Print help
 ```
 
-## Model Support (v0.111.0)
+## Model Support (v0.114.0)
 
 **Available Models**:
 - `gpt-5.4` - Frontier reasoning model for all tasks (default)

@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.6.0
+version: 2.7.0
 description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
 ---
 
@@ -70,19 +70,12 @@ If the primary model is unavailable, fallback gracefully:
 
 | Flag | Interactive `codex` | `codex exec` | Alternative for exec |
 |------|---------------------|--------------|---------------------|
-| `--search` | ✅ Available | ❌ NOT available | `--enable web_search_request` |
+| `--search` | ✅ Available | ❌ NOT available | Web search is now built-in (no flag needed) |
 | `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `--full-auto` or `-c approval_policy=...` |
 | `--add-dir` | ✅ Available | ✅ Available | N/A |
 | `--full-auto` | ✅ Available | ✅ Available | N/A |
 
-**For web search in exec mode**:
-```bash
-# CORRECT - works in codex exec
-codex exec --enable web_search_request "research topic"
-
-# WRONG - --search only works in interactive mode
-codex --search "research topic"
-```
+**⚠️ Web Search Note (v0.114.0+)**: The `web_search_request` feature flag is **deprecated**. Web search is now built-in when the model supports it. No `--enable` flag is needed in exec mode.
 
 **For approval control in exec mode**:
 ```bash
@@ -141,7 +134,7 @@ When a user makes a request, determine sandbox based on explicit edit request:
 See the [DEFAULT MODEL](#default-model-task-based-model-selection-with-read-only-default) section above for complete command templates. Key points:
 
 - Always use `codex exec` (non-interactive mode required)
-- Add `--enable web_search_request` for research tasks
+- Web search is built-in (no flag needed as of v0.114.0)
 - See `references/command-patterns.md` for additional patterns
 
 ### Model Selection Logic
@@ -167,11 +160,11 @@ All Codex invocations use these defaults unless user specifies otherwise:
 | Sandbox (explicit edit) | `workspace-write` | `-s workspace-write` | Only when user explicitly requests editing |
 | Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
 | Verbosity | `medium` | `-c model_verbosity=medium` | Balanced output detail |
-| Web Search | `enabled` | `--enable web_search_request` | Access to up-to-date information |
+| Web Search | `enabled` | `--search` (interactive) | Access to up-to-date information (see note below) |
 
 ### CLI Flags Reference
 
-**Codex CLI Version**: 0.111.0+
+**Codex CLI Version**: 0.114.0+
 
 **See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
 
@@ -179,7 +172,7 @@ All Codex invocations use these defaults unless user specifies otherwise:
 - `-m, --model` - Model selection (`gpt-5.4`, `gpt-5.4-fast`)
 - `-s, --sandbox` - Sandbox mode (`read-only`, `workspace-write`)
 - `-c, --config` - Config overrides (e.g., `model_reasoning_effort=xhigh`)
-- `--enable` / `--disable` - Feature toggles (e.g., `web_search_request`)
+- `--enable` / `--disable` - Feature toggles (e.g., `multi_agent`)
 
 ### Configuration Parameters
 
@@ -437,7 +430,7 @@ This is useful when Codex generates code changes in read-only mode and you want 
 For detailed CLI feature documentation, see `references/cli-features.md`.
 
 **Quick Reference** - Common features:
-- `--enable web_search_request` - Enable web search
+- Web search is built-in (no flag needed as of v0.114.0)
 - `-i, --image` - Attach images to prompts
 - `--add-dir` - Add writable directories
 - `--full-auto` - Low-friction workspace-write mode
