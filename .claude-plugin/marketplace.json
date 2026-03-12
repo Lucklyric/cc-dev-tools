@@ -1,7 +1,7 @@
 {
   "name": "cc-dev-tools",
   "description": "Claude Code marketplace containing development tools and AI integrations for advanced workflows",
-  "version": "2.12.0",
+  "version": "2.13.0",
   "owner": {
     "name": "0xasun"
   },
@@ -15,6 +15,11 @@
       "name": "gemini",
       "source": "./plugins/gemini",
       "description": "Google Gemini CLI integration for Claude Code. Provides access to Gemini AI models with intelligent model selection, session continuation, and safe defaults."
+    },
+    {
+      "name": "nanobanana",
+      "source": "./plugins/nanobanana",
+      "description": "Standalone image generation using Nano Banana MCP server. Generates and edits images, icons, diagrams, patterns, and visual assets via Gemini image models. No Gemini CLI required."
     },
     {
       "name": "telegram-notifier",

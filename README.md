@@ -12,6 +12,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 |--------|-------------|------|
 | [Codex](#codex-plugin) | OpenAI GPT-5.4 integration for frontier reasoning tasks | Skill |
 | [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
+| [Nano Banana](#nano-banana-plugin) | Standalone image generation via MCP (no Gemini CLI needed) | MCP + Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
 
 ---
@@ -77,6 +78,39 @@ gemini login
 | Models | Gemini 3.1 Pro, 3 Pro, 2.5 Pro/Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
+
+---
+
+### Nano Banana Plugin
+
+Standalone image generation plugin using the [Nano Banana MCP server](https://github.com/gemini-cli-extensions/nanobanana). Runs directly as an MCP server — no Gemini CLI dependency.
+
+**Core Features:**
+- **Direct MCP Integration**: 7 native image tools without CLI overhead
+- **Text-to-Image**: Generate batch images with style and variation controls
+- **Image Editing**: Modify and restore photos with natural language
+- **Icon Generation**: App icons, favicons, UI elements in multiple sizes
+- **Diagrams & Patterns**: Technical diagrams, seamless textures, visual stories
+
+**Quick Start:**
+```bash
+export GEMINI_API_KEY=your_key  # Requires Node.js v18+
+```
+
+**Usage:**
+```
+> Generate 3 variations of a sunset over mountains
+> Create an app icon for a coffee shop
+> Draw a flowchart for user authentication
+```
+
+| Info | Value |
+|------|-------|
+| Path | [`plugins/nanobanana/`](plugins/nanobanana/) |
+| Version | 1.0.0 |
+| Tools | generate_image, edit_image, restore_image, generate_icon, generate_pattern, generate_story, generate_diagram |
+
+**Full Documentation**: [Nano Banana Plugin README](plugins/nanobanana/README.md)
 
 ---
 
@@ -168,6 +202,16 @@ cc-dev-tools/                          # Marketplace root
     │       └── nanobanana/            # Image generation skill
     │           └── SKILL.md
     │
+    ├── nanobanana/                    # Standalone image generation (MCP)
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── .mcp.json                  # MCP server definition
+    │   ├── mcp-server/                # Bundled MCP server (Node.js)
+    │   ├── README.md
+    │   └── skills/nanobanana/
+    │       ├── SKILL.md
+    │       └── references/
+    │
     └── telegram-notifier/             # Telegram notifications
         ├── .claude-plugin/
         │   └── plugin.json
@@ -207,12 +251,13 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.12.0
+**Marketplace**: 2.13.0
 
 | Plugin | Version |
 |--------|---------|
 | Codex | 2.7.0 |
 | Gemini | 1.9.0 |
+| Nano Banana | 1.0.0 |
 | Telegram Notifier | 0.3.0 |
 
 ## Links
