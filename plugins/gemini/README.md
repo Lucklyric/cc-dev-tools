@@ -14,7 +14,6 @@ This plugin enables Claude Code users to invoke Google's Gemini AI models for co
 - **Safe Defaults**: Auto-edit approval mode and disabled sandbox for trusted environments
 - **Extensions Support**: Built-in web search and MCP server integration
 - **Headless Execution**: Optimized for Claude Code's non-interactive bash environment
-- **Image Generation**: Nano Banana extension for generating images, icons, diagrams, and visual assets via Gemini
 
 ## Prerequisites
 
@@ -219,33 +218,12 @@ The primary skill for invoking Gemini models for coding, reasoning, and research
 - **Skill Path**: `skills/gemini/SKILL.md`
 - **Triggers**: "use gemini", "ask gemini", "gemini cli", "Google AI"
 
-### Nano Banana (Image Generation — CLI Mode)
-
-Generate and edit images using the Nano Banana extension for Gemini CLI. Handles illustrations, icons, diagrams, patterns, thumbnails, and visual assets.
-
-> **Note**: A standalone [nanobanana plugin](../nanobanana/README.md) is also available that runs the MCP server directly without requiring Gemini CLI. Use this CLI-based skill if you already have Gemini CLI installed; otherwise prefer the standalone plugin.
-
-- **Skill Path**: `skills/nanobanana/SKILL.md`
-- **Triggers**: Any image generation request (create, generate, draw, design, edit images)
-- **Extension**: [nanobanana](https://github.com/gemini-cli-extensions/nanobanana)
-- **Default**: Generates 3 images per request
-- **Auth**: API key (default), Vertex AI, or auto-detect
-- **Commands**: `/generate`, `/icon`, `/diagram`, `/pattern`, `/story`, `/edit`, `/restore`, `/nanobanana`
-
-**Prerequisites:**
-```bash
-# Install nanobanana extension
-gemini extensions install https://github.com/gemini-cli-extensions/nanobanana
-
-# Set API key (or configure Vertex AI)
-export GEMINI_API_KEY=your_key
-```
+> **Image generation**: Use the standalone [nanobanana plugin](../nanobanana/README.md) for image generation via MCP server.
 
 ## Documentation
 
 - **skills/gemini/SKILL.md**: Gemini reasoning skill definition
 - **skills/gemini/references/**: CLI reference, command patterns, session workflows, model selection
-- **skills/nanobanana/SKILL.md**: Image generation skill definition
 
 ## Version Compatibility
 
@@ -274,7 +252,7 @@ export GEMINI_API_KEY=your_key
 This plugin follows the cc-dev-tools marketplace structure:
 - Plugin root: `plugins/gemini/`
 - Metadata: `.claude-plugin/plugin.json`
-- Skills: `skills/gemini/SKILL.md`, `skills/nanobanana/SKILL.md`
+- Skills: `skills/gemini/SKILL.md`
 - References: `skills/gemini/references/`
 
 ## License

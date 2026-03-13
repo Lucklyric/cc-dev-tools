@@ -9,5 +9,5 @@
   "homepage": "https://github.com/Lucklyric/cc-dev-tools/tree/main/plugins/gemini",
   "keywords": ["gemini", "ai", "google", "reasoning", "development", "gemini-3", "gemini-2.5"],
   "license": "Apache-2.0",
-  "skills": ["./skills/gemini", "./skills/nanobanana"]
+  "skills": ["./skills/gemini"]
 }

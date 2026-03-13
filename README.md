@@ -50,14 +50,13 @@ codex login
 
 ### Gemini Plugin
 
-Google Gemini 3.1 Pro AI integration through Gemini CLI for research, reasoning, web search, and image generation.
+Google Gemini 3.1 Pro AI integration through Gemini CLI for research, reasoning, and web search.
 
 **Core Features:**
 - **Gemini 3.1 Pro Default**: Uses `gemini-3.1-pro-preview` for ALL tasks (highest capability)
 - **Version-Based Mapping**: User requests like "use 3" automatically map to the latest 3.x model
 - **Session Continuation**: Resume previous conversations with `-r latest`
 - **Web Search Integration**: Built-in web search for research and documentation lookup
-- **Image Generation**: Nano Banana extension for generating images, icons, diagrams, and visual assets
 
 **Quick Start:**
 ```bash
@@ -74,7 +73,7 @@ gemini login
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
 | Version | 1.9.0 |
-| Skills | Gemini (reasoning), Nano Banana (image generation) |
+| Skills | Gemini (reasoning) |
 | Models | Gemini 3.1 Pro, 3 Pro, 2.5 Pro/Flash |
 
 **Full Documentation**: [Gemini Plugin README](plugins/gemini/README.md)
@@ -196,12 +195,9 @@ cc-dev-tools/                          # Marketplace root
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── README.md
-    │   └── skills/
-    │       ├── gemini/                # Reasoning & research skill
-    │       │   ├── SKILL.md
-    │       │   └── references/
-    │       └── nanobanana/            # Image generation skill
-    │           └── SKILL.md
+    │   └── skills/gemini/              # Reasoning & research skill
+    │       ├── SKILL.md
+    │       └── references/
     │
     ├── nanobanana/                    # Standalone image generation (MCP)
     │   ├── .claude-plugin/
