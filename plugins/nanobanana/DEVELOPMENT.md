@@ -8,7 +8,7 @@ This plugin bundles the MCP server from the upstream [gemini-cli-extensions/nano
 |------|-------|
 | Repository | https://github.com/gemini-cli-extensions/nanobanana |
 | MCP Server | `mcp-server/` directory in upstream |
-| Current Version | 1.0.12 |
+| Last Synced Upstream Version | 1.0.12 |
 | License | Apache-2.0 (Google LLC) |
 
 ## Syncing with Upstream
@@ -105,6 +105,15 @@ plugins/nanobanana/
 │   ├── src/                  # TypeScript source (for reference/rebuild)
 │   ├── package.json          # Node.js dependencies
 │   └── .gitignore            # Ignores node_modules/, un-ignores dist/
+├── commands/                 # Claude Code slash commands
+│   ├── generate.md          # /generate — text-to-image
+│   ├── edit.md              # /edit — modify existing image
+│   ├── restore.md           # /restore — enhance/repair photo
+│   ├── icon.md              # /icon — multi-size icon generation
+│   ├── pattern.md           # /pattern — seamless textures
+│   ├── story.md             # /story — sequential narratives
+│   ├── diagram.md           # /diagram — technical diagrams
+│   └── nanobanana.md        # /nanobanana — natural language routing
 ├── skills/nanobanana/
 │   ├── SKILL.md              # Claude-facing skill definition
 │   └── references/
@@ -123,17 +132,20 @@ plugins/nanobanana/
 
 3. **Source included**: TypeScript source is included for transparency and local rebuilds, but the plugin runs from `dist/` only.
 
-4. **Env var forwarding**: `.mcp.json` forwards all 5 API key env vars that the MCP server checks (see `imageGenerator.ts:validateAuthentication`), plus `NANOBANANA_MODEL` for model override.
+4. **Env var inheritance**: `.mcp.json` uses empty `env: {}` so the Node process inherits all parent environment variables. The `${VAR}` syntax requires variables to exist, which would break for users missing some of the 5 API key fallbacks.
 
 5. **`allowed-tools: mcp__nanobanana__*`**: The skill uses a wildcard pattern to match all 7 MCP tools from this server.
+
+6. **Slash commands**: 8 commands in `commands/` mirror the upstream Gemini CLI extension's TOML command files, adapted as Claude Code markdown commands with `$ARGUMENTS` parsing.
 
 ## Adding New Features
 
 If you want to extend the plugin beyond upstream:
 
 1. **New MCP tool**: Add to `mcp-server/src/index.ts` (tool definition + handler), rebuild, update `references/commands.md`
-2. **New skill parameter**: Document in `references/commands.md`, add examples to `SKILL.md`
-3. **New auth method**: Update `imageGenerator.ts:validateAuthentication`, update `.mcp.json` env block, update `references/troubleshooting.md`
+2. **New slash command**: Add markdown file to `commands/`, set `allowed-tools` to the corresponding MCP tool
+3. **New skill parameter**: Document in `references/commands.md`, add examples to `SKILL.md`
+4. **New auth method**: Update `imageGenerator.ts:validateAuthentication`, update `.mcp.json` env block, update `references/troubleshooting.md`
 
 ## Dependencies
 

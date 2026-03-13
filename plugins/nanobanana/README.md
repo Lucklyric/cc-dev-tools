@@ -109,9 +109,22 @@ This plugin bundles the MCP server from [gemini-cli-extensions/nanobanana](https
 - **skills/nanobanana/references/commands.md**: Full tool parameter reference
 - **skills/nanobanana/references/troubleshooting.md**: Auth and error reference
 
+## Slash Commands
+
+| Command | Description |
+|---------|-------------|
+| `/generate` | Generate images from text prompts |
+| `/edit` | Edit an existing image |
+| `/restore` | Restore or enhance a photo |
+| `/icon` | Generate app icons in multiple sizes |
+| `/pattern` | Generate seamless patterns and textures |
+| `/story` | Generate sequential visual narratives |
+| `/diagram` | Generate technical diagrams and flowcharts |
+| `/nanobanana` | Natural language routing (auto-selects best tool) |
+
 ## Version
 
-1.0.0
+1.2.0
 
 ## Author
 

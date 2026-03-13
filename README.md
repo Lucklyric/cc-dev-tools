@@ -107,8 +107,9 @@ export GEMINI_API_KEY=your_key  # Requires Node.js v18+
 | Info | Value |
 |------|-------|
 | Path | [`plugins/nanobanana/`](plugins/nanobanana/) |
-| Version | 1.0.0 |
+| Version | 1.2.0 |
 | Tools | generate_image, edit_image, restore_image, generate_icon, generate_pattern, generate_story, generate_diagram |
+| Commands | /generate, /edit, /restore, /icon, /pattern, /story, /diagram, /nanobanana |
 
 **Full Documentation**: [Nano Banana Plugin README](plugins/nanobanana/README.md)
 
@@ -206,6 +207,7 @@ cc-dev-tools/                          # Marketplace root
     │   ├── .claude-plugin/
     │   │   └── plugin.json
     │   ├── .mcp.json                  # MCP server definition
+    │   ├── commands/                  # Slash commands (/generate, /edit, etc.)
     │   ├── mcp-server/                # Bundled MCP server (Node.js)
     │   ├── README.md
     │   └── skills/nanobanana/
@@ -251,13 +253,13 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.13.0
+**Marketplace**: 2.14.0
 
 | Plugin | Version |
 |--------|---------|
 | Codex | 2.7.0 |
 | Gemini | 1.9.0 |
-| Nano Banana | 1.0.0 |
+| Nano Banana | 1.2.0 |
 | Telegram Notifier | 0.3.0 |
 
 ## Links
