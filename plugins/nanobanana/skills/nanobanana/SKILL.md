@@ -1,6 +1,6 @@
 ---
 name: nanobanana
-version: 1.3.0
+version: 1.4.0
 description: This skill should be used when the user wants to generate, create, make, draw, design, edit, or restore any image or visual content. Trigger phrases include "generate an image", "create an illustration", "make an icon", "draw a diagram", "design a pattern", "edit this photo", "restore a photo", "use nanobanana", "nano banana", "make a thumbnail", "featured image", "visual asset", "graphic", "artwork", "background image", "wallpaper", "texture". Standalone image generation using the Nano Banana MCP server with Gemini image models. No Gemini CLI required.
 allowed-tools: mcp__nanobanana__*
 ---
