@@ -1,7 +1,7 @@
 {
   "name": "nanobanana",
   "description": "Standalone image generation plugin using Nano Banana MCP server. Generates and edits images, icons, diagrams, patterns, and visual assets via Gemini image models. No Gemini CLI dependency required.",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "author": {
     "name": "0xasun"
   },

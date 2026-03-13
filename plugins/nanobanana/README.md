@@ -124,7 +124,7 @@ This plugin bundles the MCP server from [gemini-cli-extensions/nanobanana](https
 
 ## Version
 
-1.2.0
+1.3.0
 
 ## Author
 
