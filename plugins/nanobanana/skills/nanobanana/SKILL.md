@@ -67,7 +67,7 @@ Parameters:
 Tool: edit_image
 Parameters:
   prompt: "change the background to a beach scene"
-  file: "path/to/image.jpg"
+  file: "/absolute/path/to/image.jpg"
 ```
 
 ### Generate App Icons
@@ -99,6 +99,7 @@ For full parameter reference for all 7 tools, see `references/commands.md`.
 
 ## Defaults
 
+- **File paths**: Always resolve file paths to **absolute paths** before passing to any MCP tool. The MCP server runs in a different working directory, so relative paths will fail.
 - **outputCount**: For `generate_image`, always use 3 unless user specifies otherwise. Other tools have their own count semantics (e.g., `generate_icon` uses `sizes`, `generate_story` uses `steps`).
 - **Model**: `gemini-3.1-flash-image-preview` (override via `NANOBANANA_MODEL` env var)
 - **Output**: Images saved to `./nanobanana-output/` in current directory

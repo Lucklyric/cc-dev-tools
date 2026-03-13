@@ -2,7 +2,7 @@
   "mcpServers": {
     "nanobanana": {
       "command": "bash",
-      "args": ["-c", "cd \"${CLAUDE_PLUGIN_ROOT}/mcp-server\" && [ -d node_modules ] || npm install --production --ignore-scripts >&2 && exec node dist/index.js"],
+      "args": ["-c", "[ -d \"${CLAUDE_PLUGIN_ROOT}/mcp-server/node_modules\" ] || npm install --production --ignore-scripts --prefix \"${CLAUDE_PLUGIN_ROOT}/mcp-server\" >&2 && exec node \"${CLAUDE_PLUGIN_ROOT}/mcp-server/dist/index.js\""],
       "env": {}
     }
   }

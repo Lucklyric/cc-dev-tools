@@ -28,8 +28,9 @@ Analyze the user's natural language request and determine the best tool:
 
 1. Parse the natural language request to identify intent and parameters
 2. Select the most specialized tool for the request
-3. Call the tool with appropriate parameters
-4. For `generate_image`, default `outputCount` to 3 unless specified otherwise
+3. If the request references a file, resolve it to an **absolute path** before passing to the MCP tool
+4. Call the tool with appropriate parameters
+5. For `generate_image`, default `outputCount` to 3 unless specified otherwise
 5. After generation, present the result(s) to the user using the Read tool
 
 ## Examples
