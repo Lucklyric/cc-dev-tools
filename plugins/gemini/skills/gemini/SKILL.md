@@ -1,6 +1,6 @@
 ---
 name: gemini
-version: 2.0.0
+version: 2.1.0
 description: This skill should be used when the user wants to invoke Google Gemini CLI for complex reasoning tasks, research, and AI assistance. Trigger phrases include "use gemini", "ask gemini", "run gemini", "call gemini", "gemini cli", "Google AI", "Gemini reasoning", or when users request Google's AI models, need advanced reasoning capabilities, research with web search, or want to continue previous Gemini conversations. Automatically triggers on Gemini-related requests and supports session continuation for iterative development.
 ---
 
@@ -505,7 +505,7 @@ For detailed information, consult these reference files:
 | Subcommand | Required (`exec`) | Not needed |
 | Positional Prompts | Not supported | Preferred |
 | Session Resume | `codex exec resume --last` | `gemini -r latest` |
-| Models | GPT-5.4, GPT-5.4-Fast | Gemini 3.1 Pro, 2.5 Pro/Flash |
+| Models | GPT-5.5, GPT-5.5-Fast | Gemini 3.1 Pro, 2.5 Pro/Flash |
 | Provider | OpenAI (via Codex) | Google |
 
 ---
@@ -520,8 +520,8 @@ For detailed information, consult these reference files:
 - Task benefits from Gemini's strengths
 
 **Use Codex when:**
-- You need GPT-5.4's frontier reasoning capabilities
-- Complex coding tasks with GPT-5.4 (unified model for code and general tasks)
+- You need GPT-5.5's frontier reasoning capabilities
+- Complex coding tasks with GPT-5.5 (unified model for code and general tasks)
 - Code editing with specific Codex optimizations
 - You're already using Codex workflow
 

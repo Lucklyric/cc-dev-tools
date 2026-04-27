@@ -240,8 +240,8 @@ The primary skill for invoking Gemini models for coding, reasoning, and research
 - Codex is unavailable or rate-limited
 
 **Use Codex when:**
-- You need GPT-5.4's frontier reasoning capabilities
-- Complex coding tasks with GPT-5.4
+- You need GPT-5.5's frontier reasoning capabilities
+- Complex coding tasks with GPT-5.5
 
 **Use Claude (native) when:**
 - Simple queries within Claude Code's capabilities

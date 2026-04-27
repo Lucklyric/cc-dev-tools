@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 2.10.0
+version: 2.11.0
 description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or requests complex implementation, architecture design, deep code review, or high-reasoning model assistance. Also triggers on "continue codex"/"resume the codex session" for iterative development.
 ---
 
@@ -22,7 +22,7 @@ Switch to `workspace-write` **only** when the user explicitly says "edit", "modi
 
 Use `gpt-5.5-fast` only when the user explicitly asks for speed ("fast", "quick"). On ChatGPT-account auth, only `gpt-5.5` is callable; `gpt-5.5-fast`, `gpt-5.5-codex`, and `gpt-5.5-pro` require API-key auth.
 
-**Fallback chain**: model `gpt-5.5` → `gpt-5.5-fast` → `gpt-5.4`; effort `xhigh` → `high` → `medium`.
+**Fallback chain**: model `gpt-5.5` → `gpt-5.5-fast`; effort `xhigh` → `high` → `medium`.
 
 ## Canonical commands
 

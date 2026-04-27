@@ -172,7 +172,7 @@ Codex provides:
 **Note**: `gpt-5.5` is the default model for ALL tasks with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
 
 ### Fallback Chain
-- **Primary**: `gpt-5.5` → `gpt-5.5-fast` → `gpt-5.4`
+- **Primary**: `gpt-5.5` → `gpt-5.5-fast`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---

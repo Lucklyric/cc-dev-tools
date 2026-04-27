@@ -29,6 +29,10 @@ Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
 
 **Quick Start:**
 ```bash
+# Install (npm or Homebrew — both are officially recommended)
+npm install -g @openai/codex
+# or: brew install --cask codex
+
 codex --version  # Requires v0.125.0+
 codex login
 ```
@@ -41,7 +45,7 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.10.0 |
+| Version | 2.11.0 |
 | Models | GPT-5.5, GPT-5.5-Fast |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
@@ -72,7 +76,7 @@ gemini login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/gemini/`](plugins/gemini/) |
-| Version | 2.0.0 |
+| Version | 2.1.0 |
 | Skills | Gemini (reasoning) |
 | Models | Gemini 3.1 Pro, 3 Pro, 2.5 Pro/Flash |
 
@@ -249,12 +253,12 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.20.0
+**Marketplace**: 2.22.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.10.0 |
-| Gemini | 2.0.0 |
+| Codex | 2.11.0 |
+| Gemini | 2.1.0 |
 | Nano Banana | 1.4.0 |
 | Telegram Notifier | 0.3.0 |
 

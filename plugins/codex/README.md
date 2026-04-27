@@ -17,20 +17,35 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.5 
 
 ## Prerequisites
 
-1. **Codex CLI** (v0.125.0 or later)
+1. **Codex CLI** (v0.125.0 or later) — install via either of the two officially recommended methods from [`openai/codex`](https://github.com/openai/codex):
+
    ```bash
-   # Install Codex CLI (follow OpenAI's installation instructions)
+   # npm (cross-platform)
+   npm install -g @openai/codex
+
+   # OR Homebrew (macOS)
+   brew install --cask codex
+
+   # Verify
    codex --version  # Should show v0.125.0+
    ```
+
+   To upgrade later, re-run the matching command:
+   ```bash
+   npm install -g @openai/codex@latest      # npm install
+   brew upgrade --cask codex                # Homebrew install
+   ```
+
+   Alternative: download a prebuilt binary from the [latest GitHub release](https://github.com/openai/codex/releases/latest), extract, rename to `codex`, and place on `$PATH`.
 
 2. **Authentication**
    ```bash
    codex login
    ```
-   Authenticate with your OpenAI account (requires API access)
+   ChatGPT-account auth supports `gpt-5.5` only. For `gpt-5.5-fast`/`gpt-5.5-codex`/`gpt-5.5-pro`, log in with an OpenAI API key (`codex logout && codex login --api-key <key>`).
 
 3. **API Access**
-   - OpenAI API key with GPT-5.5 access
+   - OpenAI API key (or ChatGPT plan with GPT-5.5 access)
    - Codex CLI API access enabled
 
 ## Installation
@@ -153,7 +168,7 @@ codex exec -m gpt-5.5 -s danger-full-access "Complex task"
 | GPT-5.5-Fast | Quick tasks (on demand) | read-only / workspace-write | high |
 
 ### Fallback Chain
-- **Primary**: `gpt-5.5` → `gpt-5.5-fast` → `gpt-5.4`
+- **Primary**: `gpt-5.5` → `gpt-5.5-fast`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ## Troubleshooting
@@ -261,4 +276,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-2.10.0
+2.11.0

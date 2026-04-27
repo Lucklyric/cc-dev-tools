@@ -21,9 +21,16 @@ To fix: [Concrete remediation action]
 ```
 Error: Codex CLI not found
 
-To fix: Install Codex CLI and ensure it is available in PATH
+To fix: Install via either of the two officially recommended methods —
+  npm install -g @openai/codex
+  brew install --cask codex   (macOS)
 
-Check installation: codex --version
+To upgrade an existing install:
+  npm install -g @openai/codex@latest
+  brew upgrade --cask codex
+
+Verify: codex --version  (require v0.125.0+)
+Source of truth: https://github.com/openai/codex
 ```
 
 ### Authentication Required
