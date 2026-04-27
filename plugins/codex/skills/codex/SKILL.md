@@ -1,512 +1,151 @@
 ---
 name: codex
-version: 2.7.0
-description: This skill should be used when the user wants to invoke Codex CLI for complex coding tasks requiring high reasoning capabilities. Trigger phrases include "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or when users request complex implementation challenges, advanced reasoning, architecture design, or high-reasoning model assistance. Automatically triggers on codex-related requests and supports session continuation for iterative development.
+version: 2.10.0
+description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or requests complex implementation, architecture design, deep code review, or high-reasoning model assistance. Also triggers on "continue codex"/"resume the codex session" for iterative development.
 ---
 
 # Codex: High-Reasoning AI Assistant for Claude Code
 
----
+Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model. Always invoke via `codex exec` (Claude Code's bash environment is non-interactive).
 
-## DEFAULT MODEL: GPT-5.4 with Read-Only Default
+## Defaults (apply unless the user overrides)
 
-**GPT-5.4 is the default model for ALL tasks. Sandbox is `read-only` by default - only use `workspace-write` when user explicitly requests file editing.**
+| Parameter | Default | CLI flag |
+|-----------|---------|----------|
+| Model | `gpt-5.5` | `-m gpt-5.5` |
+| Sandbox | `read-only` | `-s read-only` |
+| Reasoning effort | `xhigh` | `-c model_reasoning_effort=xhigh` |
+| Network access (with `workspace-write`) | enabled | `-c sandbox_workspace_write.network_access=true` |
+| Web search | built-in on supported models (no flag) | — |
 
-| Model | Use Case | Reasoning Effort |
-|-------|----------|-----------------|
-| `gpt-5.4` | ALL tasks (default) | `xhigh` |
-| `gpt-5.4-fast` | On-demand when user requests speed | `high` (default) |
+Switch to `workspace-write` **only** when the user explicitly says "edit", "modify", "save", "write changes", "fix", "refactor", etc. When switching, always include the `network_access=true` config so package managers (`npm`/`pip`/`cargo`), `git fetch`, and HTTP calls work.
 
-- **`gpt-5.4`**: OpenAI's most capable frontier model - unified for both code and general tasks
-- **`gpt-5.4-fast`**: Faster variant for speed-sensitive tasks (use ONLY when user explicitly requests "fast", "quick", or "speed")
-- **Sandbox default**: Always `read-only` unless user explicitly requests editing
-- **Explicit editing**: Only when user says "edit", "modify", "write changes", etc., use `workspace-write`
-- Always use `-c model_reasoning_effort=xhigh` for maximum capability
+Use `gpt-5.5-fast` only when the user explicitly asks for speed ("fast", "quick"). On ChatGPT-account auth, only `gpt-5.5` is callable; `gpt-5.5-fast`, `gpt-5.5-codex`, and `gpt-5.5-pro` require API-key auth.
+
+**Fallback chain**: model `gpt-5.5` → `gpt-5.5-fast` → `gpt-5.4`; effort `xhigh` → `high` → `medium`.
+
+## Canonical commands
 
 ```bash
-# Default (read-only)
-codex exec -m gpt-5.4 -s read-only \
+# Read-only reasoning / review (default)
+codex exec -m gpt-5.5 -s read-only \
   -c model_reasoning_effort=xhigh \
-  "analyze this function implementation"
+  "<prompt>"
 
-# With explicit edit request
-codex exec -m gpt-5.4 -s workspace-write \
+# Edit / implement (explicit edit request from the user)
+codex exec -m gpt-5.5 -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  "edit this file to add the feature"
+  -c sandbox_workspace_write.network_access=true \
+  "<prompt>"
 
-# Fast mode (on demand only)
-codex exec -m gpt-5.4-fast -s read-only \
-  "quick analysis of this function"
+# Fast variant (only when user requests speed)
+codex exec -m gpt-5.5-fast -s read-only "<prompt>"
 ```
 
-### Model Fallback Chain
+For more directories: add `--add-dir /path` (repeatable) or `-c 'sandbox_workspace_write.writable_roots=["/p1","/p2"]'`.
 
-If the primary model is unavailable, fallback gracefully:
-1. `gpt-5.4` → `gpt-5.4-fast` → `gpt-5.4`
-2. **Reasoning effort**: `xhigh` → `high` → `medium`
+## CRITICAL: Always use `codex exec`
 
----
+| Correct | Wrong |
+|---------|-------|
+| `codex exec -m gpt-5.5 "prompt"` | `codex -m gpt-5.5 "prompt"` |
+| `codex exec resume --last` | `codex resume --last` |
 
-## CRITICAL: Always Use `codex exec`
+Plain `codex` is interactive-only and fails with "stdout is not a terminal" in Claude Code's bash. The same applies to `codex fork` and `codex --search` — interactive only. See `references/cli-features.md` for the full interactive-vs-exec flag table.
 
-**MUST USE**: `codex exec` for ALL Codex CLI invocations in Claude Code.
+## Choosing sandbox
 
-**NEVER USE**: `codex` (interactive mode) - will fail with "stdout is not a terminal"
-**ALWAYS USE**: `codex exec` (non-interactive mode)
+- **`read-only`** (default): analysis, review, design, explanation — anything without an explicit edit request.
+- **`workspace-write`**: only when the user explicitly asks to edit/modify/save/fix files. Always pair with `-c sandbox_workspace_write.network_access=true`.
+- **`danger-full-access`**: never default to this; require explicit user request.
 
-**Examples:**
-- `codex exec -m gpt-5.4 "prompt"` (CORRECT)
-- `codex -m gpt-5.4 "prompt"` (WRONG - will fail)
-- `codex exec resume --last` (CORRECT)
-- `codex resume --last` (WRONG - will fail)
+## Configuration overrides
 
-**Why?** Claude Code's bash environment is non-terminal/non-interactive. Only `codex exec` works in this environment.
+Pass any of these as `-c key=value`:
 
----
+- `model_reasoning_effort`: `none|minimal|low|medium|high|xhigh` — skill default `xhigh`.
+- `model_verbosity`: `low|medium|high` — default `medium`.
+- `sandbox_workspace_write.network_access`: `true|false` — skill default `true` whenever sandbox is `workspace-write`.
+- `sandbox_workspace_write.writable_roots`: JSON array of extra writable dirs.
+- `approval_policy`: `untrusted|on-failure|on-request|never` — required because `-a/--ask-for-approval` is interactive-only. Use `--full-auto` as a shortcut for `workspace-write` + `on-request`.
 
-## IMPORTANT: Interactive vs Exec Mode Flags
+Full key reference: `references/codex-config.md`.
 
-**Some Codex CLI flags are ONLY available in interactive mode, NOT in `codex exec`.**
+## Session continuation: new vs. resume
 
-| Flag | Interactive `codex` | `codex exec` | Alternative for exec |
-|------|---------------------|--------------|---------------------|
-| `--search` | ✅ Available | ❌ NOT available | Web search is now built-in (no flag needed) |
-| `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `--full-auto` or `-c approval_policy=...` |
-| `--add-dir` | ✅ Available | ✅ Available | N/A |
-| `--full-auto` | ✅ Available | ✅ Available | N/A |
+Decide before every invocation. **Default to a new session.**
 
-**⚠️ Web Search Note (v0.114.0+)**: The `web_search_request` feature flag is **deprecated**. Web search is now built-in when the model supports it. No `--enable` flag is needed in exec mode.
+**Resume previous** (`codex exec resume --last` or `codex exec resume <uuid> "prompt"`) when any of:
+- User uses continuation verbs ("continue", "resume", "keep going") or back-references ("that", "where we left off")
+- Incremental modifier right after Codex output ("now also…", "and add…")
+- Same artifact/topic as the last Codex turn
 
-**For approval control in exec mode**:
-```bash
-# CORRECT - works in codex exec
-codex exec --full-auto "task"
-codex exec -c approval_policy=on-request "task"
+**Start fresh** when any of:
+- Reset words ("new", "fresh", "from scratch")
+- Topic shift to an unrelated file/task
+- This is the first Codex call in the conversation
 
-# WRONG - -a only works in interactive mode
-codex -a on-request "task"
-```
+When ambiguous, prefer **new** and tell the user: "Starting a fresh Codex session — say 'continue' if you wanted to resume the previous one."
 
----
+### Picking `--last` vs explicit UUID
 
-## Trigger Examples
+Every `codex exec` prints `session id: <uuid>` near the top — that line stays in Claude Code's transcript. Use it.
 
-This skill activates when users say phrases like:
-- "Use codex to analyze this architecture"
-- "Ask codex about this design decision"
-- "Run codex on this problem"
-- "Call codex for help with this implementation"
-- "I need GPT-5 reasoning for this task"
-- "Get OpenAI's high-reasoning model on this"
-- "Continue with codex" or "Resume the codex session"
-- "Codex, help me with..." or simply "Codex"
+- Use `--last` when only one Codex session has run in this conversation, or the user clearly means the most recent one.
+- Use the explicit UUID when multiple Codex sessions are in play and the user names a specific prior task ("the auth one"). Pull the UUID from the matching `session id:` line earlier in the transcript.
+- If the referenced session predates this conversation (no UUID in transcript), either run `--last` and verify, or ask the user for the UUID. **Never invent or guess UUIDs.**
 
-## When to Use This Skill
+Full decision rules, signal lists, and a continuation-vs-new lookup table: `references/session-workflows.md`.
 
-This skill should be invoked when:
-- User explicitly mentions "Codex" or requests Codex assistance
-- User needs help with complex coding tasks, algorithms, or architecture
-- User requests "high reasoning" or "advanced implementation" help
-- User needs complex problem-solving or architectural design
-- User wants to continue a previous Codex conversation
-
-## How It Works
-
-### Detecting New Codex Requests
-
-When a user makes a request, determine sandbox based on explicit edit request:
-
-**Step 1: Model Selection**
-- **Default**: `gpt-5.4` for ALL tasks (code and general)
-- **Fast mode**: `gpt-5.4-fast` ONLY when user explicitly requests speed
-
-**Step 2: Determine Sandbox (Edit Permission)**
-- **Default**: `read-only` - safe for all tasks unless user explicitly requests editing
-- **Explicit edit request**: `workspace-write` - ONLY when user explicitly says to edit/modify/write files
-
-**Read-only examples**: "Analyze this function", "Design a queue", "Explain this algorithm"
-**Edit examples**: "Edit this file to fix the bug", "Modify the function", "Update the README"
-
-**⚠️ Important**: Use `workspace-write` ONLY when user says "edit", "modify", "write changes", "save", etc.
-
-### Bash CLI Command Structure
-
-See the [DEFAULT MODEL](#default-model-task-based-model-selection-with-read-only-default) section above for complete command templates. Key points:
-
-- Always use `codex exec` (non-interactive mode required)
-- Web search is built-in (no flag needed as of v0.114.0)
-- See `references/command-patterns.md` for additional patterns
-
-### Model Selection Logic
-
-**Model**: `gpt-5.4` for ALL tasks (unified model, no task-based selection needed)
-- `gpt-5.4-fast` ONLY when user explicitly requests speed/fast mode
-
-**Sandbox**:
-- **`read-only` (DEFAULT)**: Analysis, review, explanation, any task without explicit edit request
-- **`workspace-write`**: ONLY when user explicitly says "edit", "modify", "write changes", "save"
-
-**Fallback**: `gpt-5.4` → `gpt-5.4-fast` → `gpt-5.4`. See fallback chain in DEFAULT MODEL section.
-
-### Default Configuration
-
-All Codex invocations use these defaults unless user specifies otherwise:
-
-| Parameter | Default Value | CLI Flag | Notes |
-|-----------|---------------|----------|-------|
-| Model | `gpt-5.4` | `-m gpt-5.4` | For ALL tasks (default) |
-| Model (fast) | `gpt-5.4-fast` | `-m gpt-5.4-fast` | Only when user requests speed |
-| Sandbox (default) | `read-only` | `-s read-only` | Safe default for ALL tasks |
-| Sandbox (explicit edit) | `workspace-write` | `-s workspace-write` | Only when user explicitly requests editing |
-| Reasoning Effort | `xhigh` | `-c model_reasoning_effort=xhigh` | Maximum reasoning capability |
-| Verbosity | `medium` | `-c model_verbosity=medium` | Balanced output detail |
-| Web Search | `enabled` | `--search` (interactive) | Access to up-to-date information (see note below) |
-
-### CLI Flags Reference
-
-**Codex CLI Version**: 0.114.0+
-
-**See**: `references/cli-features.md` for the complete CLI flags table and feature documentation.
-
-**Key flags for this skill**:
-- `-m, --model` - Model selection (`gpt-5.4`, `gpt-5.4-fast`)
-- `-s, --sandbox` - Sandbox mode (`read-only`, `workspace-write`)
-- `-c, --config` - Config overrides (e.g., `model_reasoning_effort=xhigh`)
-- `--enable` / `--disable` - Feature toggles (e.g., `multi_agent`)
-
-### Configuration Parameters
-
-Pass these as `-c key=value`:
-
-- `model_reasoning_effort`: `none`, `minimal`, `low`, `medium`, `high`, `xhigh`
-  - **CLI default**: `high` - The Codex CLI defaults to high reasoning
-  - **Skill default**: `xhigh` - This skill explicitly uses xhigh for maximum capability
-  - **`xhigh`**: Extra-high reasoning for maximum capability
-  - Use `xhigh` for complex architectural refactoring, long-horizon tasks, or when quality is more important than speed
-- `model_verbosity`: `low`, `medium`, `high` (default: `medium`)
-- `model_reasoning_summary`: `auto`, `concise`, `detailed`, `none` (default: `auto`)
-- `sandbox_workspace_write.writable_roots`: JSON array of additional writable directories (e.g., `["/path1","/path2"]`)
-- `approval_policy`: `untrusted`, `on-failure`, `on-request`, `never` (approval behavior)
-
-**Additional Writable Directories**:
-
-Use `--add-dir` flag (preferred) or config:
-```bash
-# Using --add-dir for multiple directories
-codex exec --add-dir /path1 --add-dir /path2 "task"
-
-# Alternative - config approach
-codex exec -c 'sandbox_workspace_write.writable_roots=["/path1","/path2"]' "task"
-```
-
-### Model Selection Guide
-
-**Available Models**:
-- `gpt-5.4` - ALL tasks (default, highest capability)
-- `gpt-5.4-fast` - Speed-sensitive tasks (on demand only)
-
-**Default**: `gpt-5.4` with `xhigh` reasoning effort for all tasks.
-
-## Session Continuation
-
-### Detecting Continuation Requests
-
-When user indicates they want to continue a previous Codex conversation:
-- Keywords: "continue", "resume", "keep going", "add to that"
-- Follow-up context referencing previous Codex work
-- Explicit request like "continue where we left off"
-
-### Resuming Sessions
-
-For continuation requests, use the `codex resume` command:
-
-#### Resume Most Recent Session (Recommended)
+## Quick examples
 
 ```bash
-codex exec resume --last
-```
-
-This automatically continues the most recent Codex session with all previous context maintained.
-
-#### Resume Specific Session
-
-```bash
-codex exec resume <session-id>
-```
-
-Resume a specific session by providing its UUID. Get session IDs from previous Codex output or by running `codex exec resume --last` to see the most recent session.
-
-**Note**: The interactive session picker (`codex resume` without arguments) is NOT available in non-interactive/Claude Code environments. Always use `--last` or provide explicit session ID.
-
-### Forking Sessions (Interactive Only)
-
-The `codex fork` command creates a new session from a previous one, allowing exploration of different directions without affecting the original session.
-
-```bash
-# Fork the most recent session (interactive terminal only)
-codex fork --last
-
-# Fork a specific session by ID (interactive terminal only)
-codex fork <session-id>
-```
-
-**⚠️ Important**: `codex fork` is an **interactive-only** command. It is NOT available under `codex exec` and will fail with "stdin is not a terminal" in Claude Code's non-interactive environment.
-
-**Workaround for Claude Code**: To achieve similar functionality, use `codex exec resume --last` with a prompt that indicates you want to explore an alternative approach. The session history will be preserved.
-
-**Note**: Unlike `resume` which continues the same session, `fork` creates a new independent session with the same history as a starting point.
-
-### Decision Logic: New vs. Continue
-
-**Use `codex exec -m ... "<prompt>"`** when:
-- User makes a new, independent request
-- No reference to previous Codex work
-- User explicitly wants a "fresh" or "new" session
-
-**Use `codex exec resume --last`** when:
-- User indicates continuation ("continue", "resume", "add to that")
-- Follow-up question building on previous Codex conversation
-- Iterative development on same task
-- User wants to explore alternatives (provide new direction in prompt)
-
-### Session History Management
-
-- Codex CLI automatically saves session history
-- No manual session ID tracking needed
-- Sessions persist across Claude Code restarts
-- Use `codex exec resume --last` to access most recent session
-- Use `codex exec resume <session-id>` for specific sessions
-
-## Error Handling
-
-### Simple Error Response Strategy
-
-When errors occur, return clear, actionable messages without complex diagnostics:
-
-**Error Message Format:**
-```
-Error: [Clear description of what went wrong]
-
-To fix: [Concrete remediation action]
-
-[Optional: Specific command example]
-```
-
-### Common Errors
-
-#### Command Not Found
-
-```
-Error: Codex CLI not found
-
-To fix: Install Codex CLI and ensure it's available in your PATH
-
-Check installation: codex --version
-```
-
-#### Authentication Required
-
-```
-Error: Not authenticated with Codex
-
-To fix: Run 'codex login' to authenticate
-
-After authentication, try your request again.
-```
-
-#### Invalid Configuration
-
-```
-Error: Invalid model specified
-
-To fix:
-- Use 'gpt-5.4' for all tasks
-- Use 'gpt-5.4-fast' for speed-sensitive tasks
-
-Example: codex exec -m gpt-5.4 -s workspace-write -c model_reasoning_effort=xhigh "implement feature"
-Example (fast): codex exec -m gpt-5.4-fast -s read-only "quick analysis"
-```
-
-### Troubleshooting
-
-**First Steps for Any Issues:**
-1. Check Codex CLI built-in help: `codex --help`, `codex exec --help`, `codex exec resume --help`
-2. Consult official documentation: [https://github.com/openai/codex/tree/main/docs](https://github.com/openai/codex/tree/main/docs)
-3. Verify skill resources in `references/` directory
-
-**Note**: Commands like `codex --help`, `codex --version`, `codex login`, and `codex logout` work without the `exec` subcommand. The `exec` requirement only applies to task execution.
-
-**Skill not being invoked?**
-- Check that request matches trigger keywords (Codex, complex coding, high reasoning, etc.)
-- Explicitly mention "Codex" in your request
-- Try: "Use Codex to help me with..."
-
-**Session not resuming?**
-- Verify you have a previous Codex session (check command output for session IDs)
-- Try: `codex exec resume --last` to resume most recent session
-- If no history exists, start a new session first
-
-**"stdout is not a terminal" error?**
-- Always use `codex exec` instead of plain `codex` in Claude Code
-- Claude Code's bash environment is non-interactive/non-terminal
-
-**Errors during execution?**
-- Codex CLI errors are passed through directly
-- Check Codex CLI logs for detailed diagnostics
-- Verify working directory permissions if using workspace-write
-- Check official Codex docs for latest updates and known issues
-
-## Examples
-
-### Code Analysis (Read-Only)
-```bash
-codex exec -m gpt-5.4 -s read-only \
+# Analyze a file (read-only)
+codex exec -m gpt-5.5 -s read-only \
   -c model_reasoning_effort=xhigh \
-  "Analyze this function implementation"
-```
+  "Analyze @src/auth.ts for security issues"
 
-### Code Editing (Explicit Request)
-```bash
-codex exec -m gpt-5.4 -s workspace-write \
+# Implement with edits + network (run installers, fetch deps)
+codex exec -m gpt-5.5 -s workspace-write \
   -c model_reasoning_effort=xhigh \
-  "Edit this file to implement the feature"
+  -c sandbox_workspace_write.network_access=true \
+  "Edit @src/queue.py to add thread-safety and run the tests"
+
+# Resume the most recent session
+codex exec resume --last "now also add error handling"
+
+# Review uncommitted changes
+codex exec review --uncommitted "Focus on security"
 ```
 
-### Session Continuation
-```bash
-codex exec resume --last
-```
+More patterns by use case: `references/examples.md` and `references/command-patterns.md`.
 
-**See**: `references/examples.md` for more examples including web search, file context, and code review patterns.
+## File context passing
 
----
+Pass file paths to Codex; do not embed file contents in the prompt.
 
-## Code Review Subcommand (v0.71.0+)
+- `-C /path` — set working directory.
+- `--add-dir /path` — additional readable/writable directory (repeatable).
+- `@path/to/file` — explicit file reference inside the prompt.
 
-The `codex review` subcommand provides non-interactive code review capabilities:
+Details, multi-directory examples, and resolution rules: `references/file-context.md`.
 
-```bash
-# Review uncommitted changes (staged, unstaged, untracked)
-codex review --uncommitted
+## Errors and troubleshooting
 
-# Review changes against a base branch
-codex review --base main
+For "command not found", "not authenticated", "model not supported on ChatGPT account", "stdout is not a terminal", network failures in `workspace-write`, and skill-not-triggering issues, see `references/troubleshooting.md`.
 
-# Review a specific commit
-codex review --commit abc123
+Quick reminders:
+- `codex --help`, `codex --version`, `codex login`, `codex logout` work without `exec`.
+- ChatGPT-account auth supports only `gpt-5.5`. For `gpt-5.5-fast`/`-codex`/`-pro`, use API-key auth.
 
-# Review with custom instructions
-codex review --uncommitted "Focus on security vulnerabilities"
+## Reference index
 
-# Non-interactive via exec
-codex exec review --uncommitted
-```
-
-**Review Options**:
-| Flag | Description |
-|------|-------------|
-| `--uncommitted` | Review staged, unstaged, and untracked changes |
-| `--base <BRANCH>` | Review changes against the given base branch |
-| `--commit <SHA>` | Review the changes introduced by a commit |
-| `--title <TITLE>` | Optional commit title for review summary |
-
----
-
-## Apply Command (v0.98.0+)
-
-The `codex apply` command applies the latest diff produced by the Codex agent as a `git apply` to your local working tree:
-
-```bash
-# Apply the latest diff from Codex
-codex apply
-```
-
-This is useful when Codex generates code changes in read-only mode and you want to apply those changes to your local files.
-
----
-
-## CLI Features Reference
-
-For detailed CLI feature documentation, see `references/cli-features.md`.
-
-**Quick Reference** - Common features:
-- Web search is built-in (no flag needed as of v0.114.0)
-- `-i, --image` - Attach images to prompts
-- `--add-dir` - Add writable directories
-- `--full-auto` - Low-friction workspace-write mode
-- `--json` - JSONL output for programmatic processing
-
----
-
-## File Context Passing
-
-**IMPORTANT**: Pass file paths to Codex CLI instead of embedding file content in prompts. This enables Codex to read files autonomously.
-
-**Quick reference**:
-- Use `-C /path` to set working directory
-- Use `--add-dir /path` for additional directories
-- Use `@path/to/file` syntax for explicit file references
-
-```bash
-# Example: analyze file with explicit @ syntax
-codex exec -m gpt-5.4 -s read-only \
-  "Analyze @src/auth.ts and compare with @src/session.ts"
-
-# Example: multi-directory analysis
-codex exec -m gpt-5.4 -s read-only \
-  --add-dir /shared/libs \
-  "Review how auth module uses shared utilities"
-```
-
-**See**: `references/file-context.md` for complete file context documentation.
-
----
-
-## Best Practices
-
-### 1. Use Descriptive Requests
-
-**Good**: "Help me implement a thread-safe queue with priority support in Python"
-**Vague**: "Code help"
-
-Clear, specific requests get better results from high-reasoning models.
-
-### 2. Indicate Continuation Clearly
-
-**Good**: "Continue with that queue implementation - add unit tests"
-**Unclear**: "Add tests" (might start new session)
-
-Explicit continuation keywords help the skill choose the right command.
-
-### 3. Specify Permissions When Needed
-
-**Good**: "Refactor this code (allow file writing)"
-**Risky**: Assuming permissions without specifying
-
-Make your intent clear when you need workspace-write permissions.
-
-### 4. Leverage High Reasoning
-
-The skill defaults to high reasoning effort - perfect for:
-- Complex algorithms
-- Architecture design
-- Performance optimization
-- Security reviews
-
-## Reference Documentation
-
-For detailed information, consult these reference files:
-
-### Core References
-- **`references/file-context.md`** - File and directory context passing guide
-- **`references/examples.md`** - Complete command examples by use case
-- **`references/cli-features.md`** - Feature flags and CLI options
-
-### Workflow References
-- **`references/command-patterns.md`** - Common codex exec usage patterns
-- **`references/session-workflows.md`** - Session continuation and resume workflows
-- **`references/advanced-patterns.md`** - Complex configuration and flag combinations
-
-### CLI References
-- **`references/codex-help.md`** - Codex CLI command reference
-- **`references/codex-config.md`** - Full configuration options
+- `references/session-workflows.md` — continuation decision rules, session-ID tracking, fork workaround, multi-turn examples.
+- `references/cli-features.md` — full CLI flag table, interactive-vs-exec differences, `codex review` and `codex apply`, feature flags.
+- `references/codex-config.md` — every `-c` key with type and default.
+- `references/codex-help.md` — raw `--help` output for `codex`, `codex exec`, `codex review`, `codex exec resume`, etc.
+- `references/file-context.md` — passing files, directories, and the `@` syntax.
+- `references/examples.md` — full examples by use case (analysis, edit, web search, code review).
+- `references/command-patterns.md` — common `codex exec` invocation patterns.
+- `references/advanced-patterns.md` — combined flag patterns, profiles, approval policy, multi-phase workflows.
+- `references/troubleshooting.md` — error catalog and fixes.

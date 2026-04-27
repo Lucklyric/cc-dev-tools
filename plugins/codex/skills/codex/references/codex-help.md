@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.114.0
+**Version**: 0.125.0
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -387,15 +387,15 @@ Options:
           Print help
 ```
 
-## Model Support (v0.114.0)
+## Model Support (v0.125.0)
 
 **Available Models**:
-- `gpt-5.4` - Frontier reasoning model for all tasks (default)
-- `gpt-5.4-fast` - Speed-optimized variant for quick tasks (on demand)
+- `gpt-5.5` - Frontier reasoning model for all tasks (default)
+- `gpt-5.5-fast` - Speed-optimized variant for quick tasks (on demand)
 
-**Reasoning Effort Levels** (all supported by gpt-5.4):
+**Reasoning Effort Levels** (all supported by gpt-5.5):
 - `none` - No extended reasoning
 - `low` - Minimal reasoning
 - `medium` - Balanced reasoning
-- `high` - High reasoning (default for gpt-5.4-fast)
-- `xhigh` - Extra-high reasoning for maximum capability (default for gpt-5.4)
+- `high` - High reasoning (default for gpt-5.5-fast)
+- `xhigh` - Extra-high reasoning for maximum capability (default for gpt-5.5)

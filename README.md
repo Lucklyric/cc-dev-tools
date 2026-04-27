@@ -10,7 +10,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 | Plugin | Description | Type |
 |--------|-------------|------|
-| [Codex](#codex-plugin) | OpenAI GPT-5.4 integration for frontier reasoning tasks | Skill |
+| [Codex](#codex-plugin) | OpenAI GPT-5.5 integration for frontier reasoning tasks | Skill |
 | [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
 | [Nano Banana](#nano-banana-plugin) | Standalone image generation via MCP (no Gemini CLI needed) | MCP + Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
@@ -19,17 +19,17 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 ### Codex Plugin
 
-Frontier AI assistant through OpenAI Codex CLI (GPT-5.4) integration.
+Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
 
 **Core Features:**
-- **Frontier Reasoning**: GPT-5.4 with xhigh reasoning effort for maximum capability
-- **Fast Mode**: `gpt-5.4-fast` available on demand for speed-sensitive tasks
+- **Frontier Reasoning**: GPT-5.5 with xhigh reasoning effort for maximum capability
+- **Fast Mode**: `gpt-5.5-fast` available on demand for speed-sensitive tasks
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only by default, workspace-write for code editing
 
 **Quick Start:**
 ```bash
-codex --version  # Requires v0.114.0+
+codex --version  # Requires v0.125.0+
 codex login
 ```
 
@@ -41,8 +41,8 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.7.0 |
-| Models | GPT-5.4, GPT-5.4-Fast |
+| Version | 2.10.0 |
+| Models | GPT-5.5, GPT-5.5-Fast |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 
@@ -249,11 +249,11 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.17.0
+**Marketplace**: 2.20.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.7.0 |
+| Codex | 2.10.0 |
 | Gemini | 2.0.0 |
 | Nano Banana | 1.4.0 |
 | Telegram Notifier | 0.3.0 |

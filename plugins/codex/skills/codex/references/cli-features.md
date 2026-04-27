@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.114.0+
+**Codex CLI Version**: 0.125.0+
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -8,7 +8,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.4`, `gpt-5.4-fast` | Model selection |
+| `-m, --model` | `gpt-5.5`, `gpt-5.5-fast` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=xhigh`) |
 | `-C, --cd` | directory path | Working directory |
@@ -90,11 +90,11 @@ codex exec --color never "Run in CI/CD pipeline"
 
 ## Web Search
 
-**Note (v0.114.0+)**: The `web_search_request` feature flag is **deprecated**. Web search is now built-in when the model supports it. No `--enable` flag is needed.
+**Note (v0.125.0+)**: The `web_search_request` feature flag is **deprecated**. Web search is now built-in when the model supports it. No `--enable` flag is needed.
 
 ```bash
-# v0.114.0+ - web search is automatic, no flag needed
-codex exec -m gpt-5.4 "research latest patterns"
+# v0.125.0+ - web search is automatic, no flag needed
+codex exec -m gpt-5.5 "research latest patterns"
 
 # Interactive mode still supports --search flag
 codex --search "research topic"
@@ -160,3 +160,70 @@ Write the final agent message to a file:
 ```bash
 codex exec -o result.txt "generate summary"
 ```
+
+---
+
+## Interactive vs Exec Mode Flags
+
+Some Codex CLI flags are ONLY available in interactive `codex` mode, NOT in `codex exec`.
+
+| Flag | Interactive `codex` | `codex exec` | Alternative for exec |
+|------|---------------------|--------------|---------------------|
+| `--search` | ✅ Available | ❌ NOT available | Web search is built-in (no flag needed) |
+| `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `--full-auto` or `-c approval_policy=...` |
+| `--add-dir` | ✅ Available | ✅ Available | N/A |
+| `--full-auto` | ✅ Available | ✅ Available | N/A |
+
+For approval control in exec mode:
+
+```bash
+# CORRECT - works in codex exec
+codex exec --full-auto "task"
+codex exec -c approval_policy=on-request "task"
+
+# WRONG - -a only works in interactive mode
+codex -a on-request "task"
+```
+
+---
+
+## Code Review Subcommand (v0.71.0+)
+
+The `codex review` subcommand provides non-interactive code review capabilities:
+
+```bash
+# Review uncommitted changes (staged, unstaged, untracked)
+codex review --uncommitted
+
+# Review changes against a base branch
+codex review --base main
+
+# Review a specific commit
+codex review --commit abc123
+
+# Review with custom instructions
+codex review --uncommitted "Focus on security vulnerabilities"
+
+# Non-interactive via exec
+codex exec review --uncommitted
+```
+
+| Flag | Description |
+|------|-------------|
+| `--uncommitted` | Review staged, unstaged, and untracked changes |
+| `--base <BRANCH>` | Review changes against the given base branch |
+| `--commit <SHA>` | Review the changes introduced by a commit |
+| `--title <TITLE>` | Optional commit title for review summary |
+
+---
+
+## Apply Command (v0.98.0+)
+
+The `codex apply` command applies the latest diff produced by the Codex agent as a `git apply` to the local working tree:
+
+```bash
+# Apply the latest diff from Codex
+codex apply
+```
+
+Useful when Codex generates changes in read-only mode and the user wants to apply them locally.
