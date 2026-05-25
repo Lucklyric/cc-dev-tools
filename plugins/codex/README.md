@@ -6,6 +6,16 @@ OpenAI Codex (GPT-5.5) integration for Claude Code, providing high-reasoning cap
 
 This plugin enables Claude Code users to invoke OpenAI's Codex CLI with GPT-5.5 models for advanced reasoning, complex implementations, and architectural design. It provides intelligent model selection, session continuation, and safe defaults for seamless integration.
 
+## Default mode: tmux session (v3.0.0+)
+
+By default, codex calls run inside a long-lived attachable tmux session named `cc-codex`. Each codex instance lives in its own window. Attach with:
+
+```bash
+tmux attach -t cc-codex
+```
+
+A `codex exec` escape hatch remains for one-shot calls. See `skills/codex/references/tmux-mode.md` for the full workflow.
+
 ## Features
 
 - **High-Reasoning Capabilities**: GPT-5.5 with xhigh reasoning effort for maximum capability
@@ -276,4 +286,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-2.11.0
+3.0.0
