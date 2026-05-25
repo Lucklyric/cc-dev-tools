@@ -107,7 +107,7 @@ wait_for_ready() {
                 return 6
             fi
             # Window exists but buffer not yet populated; keep polling.
-            sleep "$(echo "scale=3; $poll_ms/1000" | bc)"
+            sleep 0.5
             elapsed=$(( elapsed + poll_ms ))
             continue
         fi
@@ -124,7 +124,7 @@ wait_for_ready() {
                 return 0
             fi
         fi
-        sleep "$(echo "scale=3; $poll_ms/1000" | bc)"
+        sleep 0.5
         elapsed=$(( elapsed + poll_ms ))
     done
 
