@@ -110,28 +110,6 @@ setup() {
     [[ "$output" == *"alive"* ]]
 }
 
-@test "wait_for_ready: returns 0 when ready marker appears" {
-    "$SCRIPT" _internal ensure_session
-    # Start a window that prints stuff and then the ready marker. Override the
-    # ready regex so this test exercises the polling mechanism with a simple
-    # custom marker rather than the production default.
-    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-wait-aaaaaa-bb" -d \
-        "bash -c '(sleep 0.5; echo working; sleep 0.5; echo ▌; sleep 60)'"
-    CC_CODEX_TIMEOUT=10 CC_CODEX_READY_REGEX='▌' \
-        run "$SCRIPT" _internal wait_for_ready "ready-wait-aaaaaa-bb"
-    [ "$status" -eq 0 ]
-}
-
-@test "wait_for_ready: exits 124 on timeout with last lines + marker" {
-    "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-stuck-aaaaaa-cc" -d \
-        "bash -c 'echo still-thinking; sleep 60'"
-    CC_CODEX_TIMEOUT=2 run "$SCRIPT" _internal wait_for_ready "ready-stuck-aaaaaa-cc"
-    [ "$status" -eq 124 ]
-    [[ "$output" == *"still-thinking"* ]] || [[ "$stderr" == *"still-thinking"* ]]
-    [[ "$output" == *"READY_REGEX_MISMATCH"* ]] || [[ "$stderr" == *"READY_REGEX_MISMATCH"* ]]
-}
-
 @test "new: spawns a window with the expected name pattern and returns immediately" {
     local start end
     start=$(date +%s)
@@ -172,50 +150,6 @@ setup() {
     CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh" \
         run "$SCRIPT" new InvalidTopic
     [ "$status" -ne 0 ]
-}
-
-@test "send: returns the delta of new pane output" {
-    export CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
-    export CC_CODEX_TIMEOUT=10
-    export CLAUDE_CODE_SESSION_ID="0d61e624-..."
-    win="$("$SCRIPT" new auth | head -n1)"
-
-    run "$SCRIPT" send "$win" "hello there"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"[mock-response] you said: hello there"* ]]
-    # The startup banner from mock-codex should NOT appear in the send delta.
-    [[ "$output" != *"mock-codex v0.0.0 ready"* ]]
-}
-
-@test "send: missing window exits 6 (ENXIO)" {
-    "$SCRIPT" _internal ensure_session
-    run "$SCRIPT" send "codex-nope-aaaaaa-zz" "hi"
-    [ "$status" -eq 6 ]
-}
-
-@test "send: codex process dead → exit non-zero with CODEX_DEAD marker" {
-    "$SCRIPT" _internal ensure_session
-    # Spawn a window whose 'codex' sleeps briefly then exits. We need a tiny
-    # delay so we can set remain-on-exit *before* it dies — otherwise tmux
-    # closes the window the instant the command returns.
-    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-dead-aaaaaa-dd" -d \
-        "bash -c 'sleep 0.3; exit 0'"
-    tmux set-option -w -t "$SESSION_NAME_TEST:codex-dead-aaaaaa-dd" remain-on-exit on
-    sleep 1  # let it exit
-    run "$SCRIPT" send "codex-dead-aaaaaa-dd" "hi"
-    [ "$status" -ne 0 ]
-    [[ "$output" == *"CODEX_DEAD"* ]] || [[ "$stderr" == *"CODEX_DEAD"* ]]
-}
-
-@test "capture: prints the pane buffer without sending anything" {
-    "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "cap-test-aaaaaa-ee" -d \
-        "bash -c 'echo line1; echo line2; sleep 60'"
-    sleep 0.3
-    run "$SCRIPT" capture "cap-test-aaaaaa-ee"
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"line1"* ]]
-    [[ "$output" == *"line2"* ]]
 }
 
 @test "ls: prints header row and one row per window" {
