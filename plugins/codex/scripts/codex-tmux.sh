@@ -494,7 +494,8 @@ Subcommands:
 
 Environment:
   CC_CODEX_SESSION_NAME (default: cc-codex)
-  CC_CODEX_READY_REGEX  (default: ▌)
+  CC_CODEX_READY_REGEX  (default: gpt-5\.5.*(xhigh|high|medium|low))
+  CC_CODEX_LOCK_DIR     (default: $HOME/.cache/cc-codex/locks)
   CC_CODEX_TIMEOUT      (default: 600)
   CC_CODEX_BIN          (default: codex)
 EOF

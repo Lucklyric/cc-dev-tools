@@ -78,7 +78,7 @@ Windows persist across Claude Code restarts. After a restart, `ls --mine` return
 
 ### Ready timeout / `READY_REGEX_MISMATCH`
 
-The script polls `tmux capture-pane` looking for a configurable ready marker (default `▌`). If codex's TUI changes upstream, the regex may no longer match and `send` will time out (exit 124) with the marker `READY_REGEX_MISMATCH` on stderr.
+The script polls `tmux capture-pane` looking for a configurable ready regex. The default matches codex 0.133's status line — `gpt-5\.5.*(xhigh|high|medium|low)` — which appears whenever codex is waiting for input. If codex's TUI changes upstream, the regex may no longer match and `send` will time out (exit 124) with the marker `READY_REGEX_MISMATCH` on stderr.
 
 Fix by overriding the regex:
 
