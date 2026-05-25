@@ -18,6 +18,21 @@ A `codex exec` escape hatch remains for one-shot calls. See `skills/codex/refere
 
 v3.1.0 splits responsibilities: the helper script handles lifecycle (spawn / list / kill), and the codex skill itself drives interaction via tmux commands. See `skills/codex/references/tmux-mode.md` for the interaction recipes.
 
+### Helper script subcommands
+
+The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes lifecycle-only subcommands:
+
+| Subcommand | Purpose |
+|---|---|
+| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn a new codex window. Returns the window name immediately; does NOT wait for codex's TUI to be ready. |
+| `ls [--mine]` | List codex windows with state (`alive` / `dead` / `unknown`). `--mine` filters to the current Claude session. |
+| `attach <window>` | Print the tmux attach command (Claude Code's bash is non-interactive). |
+| `rename <old> <new-topic>` | Replace the topic portion; preserves the `<claude6>-<rand2>` suffix. |
+| `kill <window>` / `kill --orphaned` | Remove a window or all windows whose codex process has exited. |
+| `exec [flags...] <prompt>` | One-shot escape hatch using `codex exec` (no tmux). |
+
+In v3.1.0 the `send` and `capture` subcommands were removed; they now print a migration error (exit 64) pointing at the recipe catalog. Drive interaction via `tmux send-keys` / `tmux capture-pane` per the recipes in `skills/codex/references/tmux-mode.md`.
+
 ## Features
 
 - **High-Reasoning Capabilities**: GPT-5.5 with xhigh reasoning effort for maximum capability
@@ -228,11 +243,16 @@ If you encounter rate limits, check your OpenAI API usage dashboard. The plugin 
 ## Documentation
 
 - **SKILL.md**: Complete skill definition and usage guide
+- **references/tmux-mode.md**: Canonical tmux-mode recipe catalog (v3.1.0 default workflow)
 - **references/codex-help.md**: Full CLI reference
-- **references/command-patterns.md**: Common command templates
-- **references/session-workflows.md**: Multi-turn conversation patterns
-- **references/advanced-patterns.md**: Advanced usage patterns
+- **references/cli-features.md**: CLI flag table, interactive-vs-exec differences
 - **references/codex-config.md**: Configuration options
+- **references/file-context.md**: Passing files, directories, and the `@` syntax
+- **references/command-patterns.md**: Legacy `exec`-mode templates (kept for escape-hatch reference)
+- **references/session-workflows.md**: Legacy `exec`-mode session-continuation patterns
+- **references/advanced-patterns.md**: Legacy `exec`-mode advanced flag combinations
+- **references/examples.md**: Legacy `exec`-mode examples by use case
+- **references/troubleshooting.md**: Error catalog and fixes
 
 ## Version Compatibility
 
@@ -288,4 +308,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.0.0
+3.2.0
