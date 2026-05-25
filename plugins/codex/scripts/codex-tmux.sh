@@ -507,10 +507,13 @@ main() {
         exit 2
     fi
 
-    local cmd="$1"
+    # Note: named `subcmd` (not `cmd`) to avoid shellcheck SC2128 — `cmd_exec`
+    # uses a local array variable `cmd`, and shellcheck does not track
+    # function-local scopes precisely.
+    local subcmd="$1"
     shift || true
 
-    case "$cmd" in
+    case "$subcmd" in
         -h|--help|help)
             usage
             ;;
@@ -539,7 +542,7 @@ main() {
             esac
             ;;
         *)
-            echo "codex-tmux: unknown subcommand '$cmd'" >&2
+            echo "codex-tmux: unknown subcommand '$subcmd'" >&2
             usage >&2
             exit 2
             ;;
