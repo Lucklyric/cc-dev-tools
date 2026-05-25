@@ -62,3 +62,34 @@ SCRIPT="${BATS_TEST_DIRNAME}/../scripts/codex-tmux.sh"
     [ "$status" -eq 0 ]
     [[ "$output" =~ ^codex-auth-0d61e6-[a-z0-9]{2}$ ]]
 }
+
+# Tear down any test sessions between tests.
+teardown() {
+    tmux kill-session -t "$SESSION_NAME_TEST" 2>/dev/null || true
+}
+
+setup() {
+    SESSION_NAME_TEST="cc-codex-test-$$"
+    export CC_CODEX_SESSION_NAME="$SESSION_NAME_TEST"
+}
+
+@test "ensure_session: lazy-creates the named tmux session" {
+    run "$SCRIPT" _internal ensure_session
+    [ "$status" -eq 0 ]
+    tmux has-session -t "$SESSION_NAME_TEST"
+}
+
+@test "ensure_session: is idempotent (does not error if already exists)" {
+    "$SCRIPT" _internal ensure_session
+    run "$SCRIPT" _internal ensure_session
+    [ "$status" -eq 0 ]
+}
+
+@test "window_exists: returns true for live window, false otherwise" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-test-aaaaaa-xy" -d
+    run "$SCRIPT" _internal window_exists "codex-test-aaaaaa-xy"
+    [ "$status" -eq 0 ]
+    run "$SCRIPT" _internal window_exists "codex-nope-aaaaaa-zz"
+    [ "$status" -ne 0 ]
+}

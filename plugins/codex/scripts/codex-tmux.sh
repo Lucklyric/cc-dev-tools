@@ -44,6 +44,38 @@ compose_window_name() {
     printf 'codex-%s-%s-%s' "$topic" "$(compute_claude6)" "$(rand_suffix)"
 }
 
+# ---------- tmux primitives ----------
+
+ensure_tmux_or_die() {
+    if ! command -v tmux >/dev/null 2>&1; then
+        echo "codex-tmux: 'tmux' is not installed. Install with: brew install tmux" >&2
+        exit 127
+    fi
+}
+
+ensure_session() {
+    ensure_tmux_or_die
+    if ! tmux has-session -t "$SESSION_NAME" 2>/dev/null; then
+        # Create detached, with a placeholder first window we'll never use.
+        tmux new-session -d -s "$SESSION_NAME" -n "_placeholder" -x 200 -y 50
+        # Optionally: set the placeholder to do nothing useful.
+        tmux send-keys -t "$SESSION_NAME:_placeholder" "echo 'cc-codex placeholder — do not use'" Enter
+    fi
+}
+
+window_exists() {
+    local window="$1"
+    ensure_tmux_or_die
+    tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null \
+        | grep -Fxq "$window"
+}
+
+window_pane_pid() {
+    # Print the pid of the first pane in the named window.
+    local window="$1"
+    tmux list-panes -t "$SESSION_NAME:$window" -F '#{pane_pid}' 2>/dev/null | head -n1
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -110,6 +142,9 @@ main() {
                 validate_topic) validate_topic "$@" ;;
                 rand_suffix) rand_suffix; echo ;;
                 compose_window_name) compose_window_name "$@" ;;
+                ensure_session) ensure_session ;;
+                window_exists) window_exists "$@" ;;
+                window_pane_pid) window_pane_pid "$@" ;;
                 *) echo "codex-tmux: unknown _internal subcommand '$sub'" >&2; exit 2 ;;
             esac
             ;;
