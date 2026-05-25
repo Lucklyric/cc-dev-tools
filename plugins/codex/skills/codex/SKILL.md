@@ -1,151 +1,117 @@
 ---
 name: codex
-version: 2.11.0
+version: 3.0.0
 description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or requests complex implementation, architecture design, deep code review, or high-reasoning model assistance. Also triggers on "continue codex"/"resume the codex session" for iterative development.
 ---
 
 # Codex: High-Reasoning AI Assistant for Claude Code
 
-Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model. Always invoke via `codex exec` (Claude Code's bash environment is non-interactive).
+Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model.
 
-## Defaults (apply unless the user overrides)
+**Default mode is now tmux.** Codex runs in a long-lived attachable tmux session so you can watch, intervene, and iterate. A `codex exec` escape hatch remains for genuine one-shots.
 
-| Parameter | Default | CLI flag |
-|-----------|---------|----------|
-| Model | `gpt-5.5` | `-m gpt-5.5` |
-| Sandbox | `read-only` | `-s read-only` |
-| Reasoning effort | `xhigh` | `-c model_reasoning_effort=xhigh` |
-| Network access (with `workspace-write`) | enabled | `-c sandbox_workspace_write.network_access=true` |
-| Web search | built-in on supported models (no flag) | — |
+## When to use tmux mode vs `exec`
 
-Switch to `workspace-write` **only** when the user explicitly says "edit", "modify", "save", "write changes", "fix", "refactor", etc. When switching, always include the `network_access=true` config so package managers (`npm`/`pip`/`cargo`), `git fetch`, and HTTP calls work.
+| Use **tmux** (default) when | Use **`exec`** escape hatch when |
+|---|---|
+| The user asks any analysis, design, or implementation that may need follow-up. | The user explicitly says "quick", "one-line", "just", "no session", "don't spawn", "fire and forget". |
+| The user uses continuation verbs ("continue", "resume", "now also…"). | The user requests `codex review` or `codex apply` (always one-shot). |
+| The user references files with `@` and expects iterative refinement. | A hook or automation calls codex with no follow-up planned. |
+| The first codex call in a conversation, when intent is unclear. | A short standalone summary the user clearly does not intend to iterate on. |
+
+When in doubt, default to tmux mode.
+
+## Topic naming protocol
+
+Every `new` call needs a 2–15 char lowercase slug. Derive it from the user's request:
+
+1. Identify the primary content noun or verb (e.g., `auth`, `refactor`, `tests`, `migration`).
+2. Lowercase it; strip non-`[a-z0-9-]` characters.
+3. Truncate to 15 chars.
+4. If shorter than 2 chars or no content word is identifiable, default to `task`.
+
+Examples:
+- "analyze auth.ts" → `auth`
+- "refactor the queue" → `refactor`
+- "review the test suite" → `tests`
+- "do that thing" → `task`
+
+Window names then become `codex-<topic>-<claude6>-<rand2>` (e.g., `codex-auth-0d61e6-x7`). The full reference is in `references/tmux-mode.md`.
+
+## Canonical commands
+
+```bash
+# Spawn a new codex window (returns window name + attach hint).
+WIN=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh new <topic> --cwd "$PWD" | head -n1)
+
+# Send a prompt; returns the delta when codex is idle.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh send "$WIN" "<prompt>"
+
+# Inspect pane without sending.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh capture "$WIN"
+
+# List sessions for the current conversation.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
+
+# One-shot escape hatch.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "<prompt>"
+```
+
+The helper script lives at `plugins/codex/scripts/codex-tmux.sh` (path resolved via `$CLAUDE_PLUGIN_ROOT`). Never call `tmux` directly from the skill — always go through the helper.
+
+## Choosing the right window across turns
+
+- **First codex call of the conversation** → `new <topic>`. Save the returned window name.
+- **Continuation ("now also…", "continue")** → `send` to the most recent matching window (`ls --mine`).
+- **Parallel topic** → `new` a second window with a distinct topic.
+- **Reference to a prior conversation's window** → `ls` (no `--mine`), match by topic + cwd, confirm with the user before resuming.
+
+## Sandbox and approval policy
+
+| User intent | Flags |
+|---|---|
+| Default (read-only analysis) | `new <topic>` (uses `--read-only`, `approval_policy=on-request`) |
+| Explicit edit request | `new <topic> --full-auto` (uses `workspace-write` + `on-request`; user approves writes via attach) |
+| One-shot edit (no tmux) | `exec -s workspace-write -c sandbox_workspace_write.network_access=true "<prompt>"` |
+
+The skill still defaults to read-only sandbox; switch to `--full-auto` only when the user explicitly says "edit", "modify", "save", "fix", "refactor", etc.
+
+## Model and reasoning effort
+
+Defaults: model `gpt-5.5`, reasoning effort `xhigh`. Both apply in tmux mode (via codex flags on `new`) and in `exec` mode (via the script's default flag injection).
 
 Use `gpt-5.5-fast` only when the user explicitly asks for speed ("fast", "quick"). On ChatGPT-account auth, only `gpt-5.5` is callable; `gpt-5.5-fast`, `gpt-5.5-codex`, and `gpt-5.5-pro` require API-key auth.
 
 **Fallback chain**: model `gpt-5.5` → `gpt-5.5-fast`; effort `xhigh` → `high` → `medium`.
 
-## Canonical commands
-
-```bash
-# Read-only reasoning / review (default)
-codex exec -m gpt-5.5 -s read-only \
-  -c model_reasoning_effort=xhigh \
-  "<prompt>"
-
-# Edit / implement (explicit edit request from the user)
-codex exec -m gpt-5.5 -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  -c sandbox_workspace_write.network_access=true \
-  "<prompt>"
-
-# Fast variant (only when user requests speed)
-codex exec -m gpt-5.5-fast -s read-only "<prompt>"
-```
-
-For more directories: add `--add-dir /path` (repeatable) or `-c 'sandbox_workspace_write.writable_roots=["/p1","/p2"]'`.
-
-## CRITICAL: Always use `codex exec`
-
-| Correct | Wrong |
-|---------|-------|
-| `codex exec -m gpt-5.5 "prompt"` | `codex -m gpt-5.5 "prompt"` |
-| `codex exec resume --last` | `codex resume --last` |
-
-Plain `codex` is interactive-only and fails with "stdout is not a terminal" in Claude Code's bash. The same applies to `codex fork` and `codex --search` — interactive only. See `references/cli-features.md` for the full interactive-vs-exec flag table.
-
-## Choosing sandbox
-
-- **`read-only`** (default): analysis, review, design, explanation — anything without an explicit edit request.
-- **`workspace-write`**: only when the user explicitly asks to edit/modify/save/fix files. Always pair with `-c sandbox_workspace_write.network_access=true`.
-- **`danger-full-access`**: never default to this; require explicit user request.
-
-## Configuration overrides
-
-Pass any of these as `-c key=value`:
-
-- `model_reasoning_effort`: `none|minimal|low|medium|high|xhigh` — skill default `xhigh`.
-- `model_verbosity`: `low|medium|high` — default `medium`.
-- `sandbox_workspace_write.network_access`: `true|false` — skill default `true` whenever sandbox is `workspace-write`.
-- `sandbox_workspace_write.writable_roots`: JSON array of extra writable dirs.
-- `approval_policy`: `untrusted|on-failure|on-request|never` — required because `-a/--ask-for-approval` is interactive-only. Use `--full-auto` as a shortcut for `workspace-write` + `on-request`.
-
-Full key reference: `references/codex-config.md`.
-
-## Session continuation: new vs. resume
-
-Decide before every invocation. **Default to a new session.**
-
-**Resume previous** (`codex exec resume --last` or `codex exec resume <uuid> "prompt"`) when any of:
-- User uses continuation verbs ("continue", "resume", "keep going") or back-references ("that", "where we left off")
-- Incremental modifier right after Codex output ("now also…", "and add…")
-- Same artifact/topic as the last Codex turn
-
-**Start fresh** when any of:
-- Reset words ("new", "fresh", "from scratch")
-- Topic shift to an unrelated file/task
-- This is the first Codex call in the conversation
-
-When ambiguous, prefer **new** and tell the user: "Starting a fresh Codex session — say 'continue' if you wanted to resume the previous one."
-
-### Picking `--last` vs explicit UUID
-
-Every `codex exec` prints `session id: <uuid>` near the top — that line stays in Claude Code's transcript. Use it.
-
-- Use `--last` when only one Codex session has run in this conversation, or the user clearly means the most recent one.
-- Use the explicit UUID when multiple Codex sessions are in play and the user names a specific prior task ("the auth one"). Pull the UUID from the matching `session id:` line earlier in the transcript.
-- If the referenced session predates this conversation (no UUID in transcript), either run `--last` and verify, or ask the user for the UUID. **Never invent or guess UUIDs.**
-
-Full decision rules, signal lists, and a continuation-vs-new lookup table: `references/session-workflows.md`.
-
-## Quick examples
-
-```bash
-# Analyze a file (read-only)
-codex exec -m gpt-5.5 -s read-only \
-  -c model_reasoning_effort=xhigh \
-  "Analyze @src/auth.ts for security issues"
-
-# Implement with edits + network (run installers, fetch deps)
-codex exec -m gpt-5.5 -s workspace-write \
-  -c model_reasoning_effort=xhigh \
-  -c sandbox_workspace_write.network_access=true \
-  "Edit @src/queue.py to add thread-safety and run the tests"
-
-# Resume the most recent session
-codex exec resume --last "now also add error handling"
-
-# Review uncommitted changes
-codex exec review --uncommitted "Focus on security"
-```
-
-More patterns by use case: `references/examples.md` and `references/command-patterns.md`.
-
 ## File context passing
 
-Pass file paths to Codex; do not embed file contents in the prompt.
+Pass file paths to codex; do not embed file contents in the prompt.
 
-- `-C /path` — set working directory.
-- `--add-dir /path` — additional readable/writable directory (repeatable).
-- `@path/to/file` — explicit file reference inside the prompt.
+- `@path/to/file` — explicit file reference inside the prompt (works in both modes).
+- `--cwd /path` on `new` — set working directory for the codex window.
+- `--add-dir /path` on `exec` — additional readable/writable directory (one-shot mode only).
 
-Details, multi-directory examples, and resolution rules: `references/file-context.md`.
+Details and resolution rules: `references/file-context.md`.
 
-## Errors and troubleshooting
+## Surfacing failures to the user
 
-For "command not found", "not authenticated", "model not supported on ChatGPT account", "stdout is not a terminal", network failures in `workspace-write`, and skill-not-triggering issues, see `references/troubleshooting.md`.
+The helper script fails loudly (non-zero exit + stderr marker). When it fails, surface the output verbatim. Common markers:
 
-Quick reminders:
-- `codex --help`, `codex --version`, `codex login`, `codex logout` work without `exec`.
-- ChatGPT-account auth supports only `gpt-5.5`. For `gpt-5.5-fast`/`-codex`/`-pro`, use API-key auth.
+- `CODEX_DEAD` — codex process in the window exited. Offer to spawn fresh.
+- `READY_REGEX_MISMATCH` — ready detection timed out. Tell the user about `CC_CODEX_READY_REGEX`.
+- `EAGAIN` — lock contention on `send`. Usually means a parallel call; retry or report.
+- `ENXIO` — window doesn't exist anymore. Suggest spawning new or running `ls`.
 
 ## Reference index
 
-- `references/session-workflows.md` — continuation decision rules, session-ID tracking, fork workaround, multi-turn examples.
-- `references/cli-features.md` — full CLI flag table, interactive-vs-exec differences, `codex review` and `codex apply`, feature flags.
+- `references/tmux-mode.md` — **NEW** — full tmux workflow, subcommand reference, troubleshooting, migration note.
+- `references/session-workflows.md` — continuation decision rules for `exec` mode, session-ID tracking.
+- `references/cli-features.md` — CLI flag table, interactive-vs-exec differences, `codex review` and `codex apply`.
 - `references/codex-config.md` — every `-c` key with type and default.
-- `references/codex-help.md` — raw `--help` output for `codex`, `codex exec`, `codex review`, `codex exec resume`, etc.
+- `references/codex-help.md` — raw `--help` output.
 - `references/file-context.md` — passing files, directories, and the `@` syntax.
-- `references/examples.md` — full examples by use case (analysis, edit, web search, code review).
-- `references/command-patterns.md` — common `codex exec` invocation patterns.
-- `references/advanced-patterns.md` — combined flag patterns, profiles, approval policy, multi-phase workflows.
+- `references/examples.md` — full examples by use case.
+- `references/command-patterns.md` — common invocation patterns (both modes).
+- `references/advanced-patterns.md` — combined flag patterns, profiles, multi-phase workflows.
 - `references/troubleshooting.md` — error catalog and fixes.
