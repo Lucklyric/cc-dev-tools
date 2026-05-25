@@ -283,7 +283,7 @@ cmd_send() {
         # consider stabilization. Otherwise the status line that was already
         # present in baseline would let wait_for_ready return immediately,
         # before codex has even started responding.
-        local activity_timeout=30
+        local activity_timeout="${CC_CODEX_ACTIVITY_TIMEOUT:-30}"
         local activity_elapsed=0
         while (( activity_elapsed < activity_timeout * 1000 )); do
             if [[ "$(capture_pane "$window")" != "$baseline" ]]; then
@@ -331,7 +331,10 @@ cmd_capture() {
     capture_pane "$window" "$lines"
 }
 
-# Compute the state of a window: idle | busy | dead | unknown
+# Compute the state of a window: idle | busy | dead | unknown.
+# `unknown` is returned when (a) the window doesn't exist, or (b) tmux cannot
+# return pane state within ~1s (rare, indicates tmux is overloaded or the
+# window vanished mid-call).
 window_state() {
     local window="$1"
     if ! window_exists "$window"; then
@@ -342,9 +345,15 @@ window_state() {
         echo "dead"
         return
     fi
-    # Check ready regex against bottom of pane.
+    # Check ready regex against the pane buffer. If capture comes back empty
+    # in the window-exists case, treat that as `unknown` (tmux briefly
+    # unresponsive or window vanished between checks).
     local buf
     buf="$(capture_pane "$window" 50)"
+    if [[ -z "$buf" ]]; then
+        echo "unknown"
+        return
+    fi
     if echo "$buf" | grep -qE "$READY_REGEX"; then
         echo "idle"
     else
@@ -446,8 +455,8 @@ cmd_exec() {
     local has_m=0 has_s=0 has_effort=0
     for a in "$@"; do
         case "$a" in
-            -m|--model) has_m=1 ;;
-            -s|--sandbox) has_s=1 ;;
+            -m|--model|-m=*|--model=*) has_m=1 ;;
+            -s|--sandbox|-s=*|--sandbox=*) has_s=1 ;;
             model_reasoning_effort=*|*model_reasoning_effort=*) has_effort=1 ;;
         esac
     done
@@ -493,11 +502,12 @@ Subcommands:
       Run codex exec one-shot outside tmux (escape hatch).
 
 Environment:
-  CC_CODEX_SESSION_NAME (default: cc-codex)
-  CC_CODEX_READY_REGEX  (default: gpt-5\.5.*(xhigh|high|medium|low))
-  CC_CODEX_LOCK_DIR     (default: $HOME/.cache/cc-codex/locks)
-  CC_CODEX_TIMEOUT      (default: 600)
-  CC_CODEX_BIN          (default: codex)
+  CC_CODEX_SESSION_NAME     (default: cc-codex)
+  CC_CODEX_READY_REGEX      (default: gpt-5\.5.*(xhigh|high|medium|low))
+  CC_CODEX_LOCK_DIR         (default: $HOME/.cache/cc-codex/locks)
+  CC_CODEX_TIMEOUT          (default: 600 — send/wait_for_ready timeout in seconds)
+  CC_CODEX_ACTIVITY_TIMEOUT (default: 30 — seconds to wait for codex to start responding after a send)
+  CC_CODEX_BIN              (default: codex)
 EOF
 }
 
