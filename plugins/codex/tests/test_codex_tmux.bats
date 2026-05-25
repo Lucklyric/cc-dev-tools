@@ -94,15 +94,14 @@ setup() {
     [ "$status" -ne 0 ]
 }
 
-@test "capture_pane: prints the full pane buffer" {
+@test "ls: STATE is 'alive' for windows with live codex process" {
     "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-test-aaaaaa-aa" -d \
-        "bash -c 'echo hello; echo ▌; sleep 60'"
-    sleep 0.5
-    run "$SCRIPT" _internal capture_pane "ready-test-aaaaaa-aa"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-live-aaaaaa-aa" -d "sleep 60"
+    sleep 0.3
+    run "$SCRIPT" ls
     [ "$status" -eq 0 ]
-    [[ "$output" == *"hello"* ]]
-    [[ "$output" == *"▌"* ]]
+    [[ "$output" == *"codex-live-aaaaaa-aa"* ]]
+    [[ "$output" == *"alive"* ]]
 }
 
 @test "wait_for_ready: returns 0 when ready marker appears" {

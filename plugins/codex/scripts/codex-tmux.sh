@@ -5,9 +5,6 @@ set -euo pipefail
 
 # ---------- Constants (overridable via env) ----------
 readonly SESSION_NAME="${CC_CODEX_SESSION_NAME:-cc-codex}"
-readonly READY_REGEX_DEFAULT='gpt-5\.5.*(xhigh|high|medium|low)'
-READY_REGEX="${CC_CODEX_READY_REGEX:-$READY_REGEX_DEFAULT}"
-readonly DEFAULT_TIMEOUT="${CC_CODEX_TIMEOUT:-600}"
 readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
 
 # ---------- Pure helpers (no tmux, no codex) ----------
@@ -73,14 +70,6 @@ window_pane_pid() {
     # Print the pid of the first pane in the named window.
     local window="$1"
     tmux list-panes -t "$SESSION_NAME:$window" -F '#{pane_pid}' 2>/dev/null | head -n1
-}
-
-# ---------- Ready-state polling ----------
-
-capture_pane() {
-    local window="$1"
-    local lines="${2:-200}"
-    tmux capture-pane -t "$SESSION_NAME:$window" -p -S -"$lines" 2>/dev/null
 }
 
 # ---------- Subcommands ----------
@@ -160,33 +149,18 @@ window_codex_alive() {
     kill -0 "$pane_pid" 2>/dev/null || pgrep -P "$pane_pid" >/dev/null
 }
 
-# Compute the state of a window: idle | busy | dead | unknown.
-# `unknown` is returned when (a) the window doesn't exist, or (b) tmux cannot
-# return pane state within ~1s (rare, indicates tmux is overloaded or the
-# window vanished mid-call).
+# Compute the state of a window: alive | dead | unknown.
+# Determined entirely from tmux/process state (no pane buffer parsing).
 window_state() {
     local window="$1"
     if ! window_exists "$window"; then
         echo "unknown"
         return
     fi
-    if ! window_codex_alive "$window"; then
-        echo "dead"
-        return
-    fi
-    # Check ready regex against the pane buffer. If capture comes back empty
-    # in the window-exists case, treat that as `unknown` (tmux briefly
-    # unresponsive or window vanished between checks).
-    local buf
-    buf="$(capture_pane "$window" 50)"
-    if [[ -z "$buf" ]]; then
-        echo "unknown"
-        return
-    fi
-    if echo "$buf" | grep -qE "$READY_REGEX"; then
-        echo "idle"
+    if window_codex_alive "$window"; then
+        echo "alive"
     else
-        echo "busy"
+        echo "dead"
     fi
 }
 
@@ -332,10 +306,6 @@ Subcommands:
 
 Environment:
   CC_CODEX_SESSION_NAME     (default: cc-codex)
-  CC_CODEX_READY_REGEX      (default: gpt-5\.5.*(xhigh|high|medium|low))
-  CC_CODEX_LOCK_DIR         (default: $HOME/.cache/cc-codex/locks)
-  CC_CODEX_TIMEOUT          (default: 600 — send/wait_for_ready timeout in seconds)
-  CC_CODEX_ACTIVITY_TIMEOUT (default: 30 — seconds to wait for codex to start responding after a send)
   CC_CODEX_BIN              (default: codex)
 EOF
 }
@@ -390,7 +360,6 @@ EOF
                 ensure_session) ensure_session ;;
                 window_exists) window_exists "$@" ;;
                 window_pane_pid) window_pane_pid "$@" ;;
-                capture_pane) capture_pane "$@" ;;
                 *) echo "codex-tmux: unknown _internal subcommand '$sub'" >&2; exit 2 ;;
             esac
             ;;
