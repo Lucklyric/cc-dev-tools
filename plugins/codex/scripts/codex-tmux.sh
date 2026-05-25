@@ -415,6 +415,27 @@ cmd_kill() {
     tmux kill-window -t "$SESSION_NAME:$window"
 }
 
+cmd_exec() {
+    # Pass through all args to `codex exec`, but inject defaults if the caller
+    # didn't specify them.
+    local has_m=0 has_s=0 has_effort=0
+    for a in "$@"; do
+        case "$a" in
+            -m|--model) has_m=1 ;;
+            -s|--sandbox) has_s=1 ;;
+            model_reasoning_effort=*|*model_reasoning_effort=*) has_effort=1 ;;
+        esac
+    done
+
+    local cmd=( "$CODEX_BIN" exec )
+    (( has_m )) || cmd+=( -m gpt-5.5 )
+    (( has_s )) || cmd+=( -s read-only )
+    (( has_effort )) || cmd+=( -c model_reasoning_effort=xhigh )
+    cmd+=( "$@" )
+
+    exec "${cmd[@]}"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -475,11 +496,7 @@ main() {
         attach) cmd_attach "$@" ;;
         rename) cmd_rename "$@" ;;
         kill) cmd_kill "$@" ;;
-        exec)
-            # Subcommand implementations are added in later tasks.
-            echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
-            exit 99
-            ;;
+        exec) cmd_exec "$@" ;;
         _internal)
             local sub="${1:-}"
             shift || true

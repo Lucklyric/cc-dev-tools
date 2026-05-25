@@ -306,3 +306,26 @@ setup() {
     ! tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
         | grep -Fxq "codex-dead-aaaaaa-bb"
 }
+
+@test "exec: applies skill defaults when no overrides given" {
+    CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-exec.sh" \
+        run "$SCRIPT" exec "hello"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"exec"* ]]
+    [[ "$output" == *"-m"* ]]
+    [[ "$output" == *"gpt-5.5"* ]]
+    [[ "$output" == *"-s"* ]]
+    [[ "$output" == *"read-only"* ]]
+    [[ "$output" == *"model_reasoning_effort=xhigh"* ]]
+    [[ "$output" == *"hello"* ]]
+}
+
+@test "exec: forwards arbitrary flags to codex exec" {
+    CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-exec.sh" \
+        run "$SCRIPT" exec -s workspace-write --add-dir /tmp "edit @foo.ts"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"workspace-write"* ]]
+    [[ "$output" == *"--add-dir"* ]]
+    [[ "$output" == *"/tmp"* ]]
+    [[ "$output" == *"edit @foo.ts"* ]]
+}
