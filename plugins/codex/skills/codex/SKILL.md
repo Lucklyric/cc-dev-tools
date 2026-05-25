@@ -1,6 +1,6 @@
 ---
 name: codex
-version: 3.0.0
+version: 3.1.0
 description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", "GPT-5 reasoning", "OpenAI reasoning", or requests complex implementation, architecture design, deep code review, or high-reasoning model assistance. Also triggers on "continue codex"/"resume the codex session" for iterative development.
 ---
 
@@ -8,7 +8,7 @@ description: This skill should be used when the user asks to "use codex", "ask c
 
 Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model.
 
-**Default mode is now tmux.** Codex runs in a long-lived attachable tmux session so you can watch, intervene, and iterate. A `codex exec` escape hatch remains for genuine one-shots.
+**Default mode is tmux.** Codex runs in a long-lived attachable tmux session so you can watch, intervene, and iterate. The helper script handles lifecycle (spawn / list / kill) and Claude drives the interaction layer directly with `tmux send-keys` and `tmux capture-pane`. A `codex exec` escape hatch remains for genuine one-shots.
 
 ## When to use tmux mode vs `exec`
 
@@ -36,33 +36,86 @@ Examples:
 - "review the test suite" → `tests`
 - "do that thing" → `task`
 
-Window names then become `codex-<topic>-<claude6>-<rand2>` (e.g., `codex-auth-0d61e6-x7`). The full reference is in `references/tmux-mode.md`.
+Window names become `codex-<topic>-<claude6>-<rand2>` (e.g., `codex-auth-0d61e6-x7`). Full naming rules: `references/tmux-mode.md`.
 
-## Canonical commands
+## Lifecycle one-liners (helper script)
+
+The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` handles lifecycle only. It does NOT manage interaction.
 
 ```bash
-# Spawn a new codex window (returns window name + attach hint).
+# Spawn a new codex window. Returns immediately — does not wait for codex to be ready.
 WIN=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh new <topic> --cwd "$PWD" | head -n1)
-
-# Send a prompt; returns the delta when codex is idle.
-$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh send "$WIN" "<prompt>"
-
-# Inspect pane without sending.
-$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh capture "$WIN"
 
 # List sessions for the current conversation.
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
 
-# One-shot escape hatch.
+# Print attach command for the user.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh attach "$WIN"
+
+# Rename topic; preserves claude6+rand2 suffix.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh rename "$WIN" "newtopic"
+
+# Kill a specific window, or clean up all dead-codex windows.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh kill "$WIN"
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh kill --orphaned
+
+# One-shot escape hatch (no tmux).
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "<prompt>"
 ```
 
-The helper script lives at `plugins/codex/scripts/codex-tmux.sh` (path resolved via `$CLAUDE_PLUGIN_ROOT`). Never call `tmux` directly from the skill — always go through the helper.
+The script keeps `send` and `capture` as recognized keywords ONLY to print a migration error pointing at the recipes below. **Drive interaction yourself via raw tmux commands.**
+
+## Interaction one-liners
+
+Each line is the short form. Full recipes with calibration notes live in `references/tmux-mode.md`.
+
+```bash
+# After spawning, wait for codex to be input-ready (status line appears).
+IDLE_REGEX='gpt-5\.5.*(xhigh|high|medium|low)'
+while ! tmux capture-pane -t cc-codex:$WIN -p -S -200 | grep -qE "$IDLE_REGEX"; do sleep 0.5; done
+
+# Send a short prompt (≤500 chars, single line).
+tmux send-keys -t cc-codex:$WIN -l -- "<prompt>"
+sleep 0.3
+tmux send-keys -t cc-codex:$WIN Enter
+
+# Send a long / multi-line / code-block prompt via tmp file.
+PROMPT_FILE=$(mktemp -t cc-codex-prompt.XXXXXX.md)
+printf '%s\n' "<the full prompt>" > "$PROMPT_FILE"
+tmux send-keys -t cc-codex:$WIN -l -- "Read @${PROMPT_FILE} and follow its instructions."
+sleep 0.3
+tmux send-keys -t cc-codex:$WIN Enter
+
+# Take a baseline before sending; capture afterward for delta extraction.
+BASELINE=$(tmux capture-pane -t cc-codex:$WIN -p -S -200)
+# ...send...detect-idle...
+AFTER=$(tmux capture-pane -t cc-codex:$WIN -p -S -200)
+
+# Capture more scrollback when the response is long.
+tmux capture-pane -t cc-codex:$WIN -p -S -1000
+
+# Handle a hooks-review prompt (first-ever codex run, one-time).
+tmux send-keys -t cc-codex:$WIN "2" Enter
+```
+
+See `references/tmux-mode.md` for the full recipes including the activity-wait loop, stability check, delta computation, copy-mode navigation, and per-version regex calibration.
+
+## Choosing the right recipe
+
+| Situation | Recipe |
+|---|---|
+| Prompt < ~500 chars, single line | `short-inline-prompt` |
+| Multi-line prompt, code blocks, > ~1KB | `tmp-file-prompt` |
+| Need to know "is codex done" | `detect-idle` |
+| Reading the latest response | `extract-delta` |
+| Response > ~200 lines | `incremental-capture` |
+| Response > tmux `history-limit` (~2000 lines) | `copy-mode-navigation` (rare) |
+| Codex shows a non-response prompt | `handle-interruption` |
 
 ## Choosing the right window across turns
 
-- **First codex call of the conversation** → `new <topic>`. Save the returned window name.
-- **Continuation ("now also…", "continue")** → `send` to the most recent matching window (`ls --mine`).
+- **First codex call of the conversation** → `new <topic>`. Save the returned window name. Then run the idle-wait loop before the first send.
+- **Continuation ("now also…", "continue")** → drive `send-keys` on the most recent matching window (`ls --mine`).
 - **Parallel topic** → `new` a second window with a distinct topic.
 - **Reference to a prior conversation's window** → `ls` (no `--mine`), match by topic + cwd, confirm with the user before resuming.
 
@@ -96,16 +149,17 @@ Details and resolution rules: `references/file-context.md`.
 
 ## Surfacing failures to the user
 
-The helper script fails loudly (non-zero exit + stderr marker). When it fails, surface the output verbatim. Common markers:
+The helper script fails loudly (non-zero exit + stderr) for lifecycle errors. When it fails, surface the output verbatim. Common markers in the script:
 
 - `CODEX_DEAD` — codex process in the window exited. Offer to spawn fresh.
-- `READY_REGEX_MISMATCH` — ready detection timed out. Tell the user about `CC_CODEX_READY_REGEX`.
-- `EAGAIN` — lock contention on `send`. Usually means a parallel call; retry or report.
-- `ENXIO` — window doesn't exist anymore. Suggest spawning new or running `ls`.
+- Window-not-found errors from `ls`, `kill`, `attach`, `rename` — surface the message.
+- v3.1.0 migration errors from `send`/`capture` — exit 64. Switch to the skill recipes.
+
+Interaction errors (codex hung, regex doesn't match, unexpected TUI prompt) are now Claude's responsibility to detect from `capture-pane` output and either recover (see the `handle-interruption` recipe) or escalate to the user.
 
 ## Reference index
 
-- `references/tmux-mode.md` — **NEW** — full tmux workflow, subcommand reference, troubleshooting, migration note.
+- `references/tmux-mode.md` — **canonical** — full recipe catalog, scrollback semantics, troubleshooting, v3.0.0 migration table.
 - `references/session-workflows.md` — continuation decision rules for `exec` mode, session-ID tracking.
 - `references/cli-features.md` — CLI flag table, interactive-vs-exec differences, `codex review` and `codex apply`.
 - `references/codex-config.md` — every `-c` key with type and default.
