@@ -76,6 +76,69 @@ window_pane_pid() {
     tmux list-panes -t "$SESSION_NAME:$window" -F '#{pane_pid}' 2>/dev/null | head -n1
 }
 
+# ---------- Ready-state polling ----------
+
+capture_pane() {
+    local window="$1"
+    local lines="${2:-200}"
+    tmux capture-pane -t "$SESSION_NAME:$window" -p -S -"$lines" 2>/dev/null
+}
+
+# wait_for_ready <window> [timeout]
+# Blocks until the bottom of the pane matches READY_REGEX AND the buffer has
+# been stable (unchanged) for two consecutive 500ms polls.
+# Exit codes: 0 ready, 124 timeout (with last 20 lines + READY_REGEX_MISMATCH on stderr).
+wait_for_ready() {
+    local window="$1"
+    local timeout="${2:-$DEFAULT_TIMEOUT}"
+    local poll_ms=500
+    local stable_required=2
+    local prev_capture=""
+    local stable_count=0
+    local elapsed=0
+    local capture
+
+    while (( elapsed < timeout * 1000 )); do
+        capture="$(capture_pane "$window")"
+        if [[ -z "$capture" ]]; then
+            # Buffer is empty — check if window still exists before giving up.
+            if ! window_exists "$window"; then
+                echo "codex-tmux: window '$window' has no pane buffer (ENXIO)" >&2
+                return 6
+            fi
+            # Window exists but buffer not yet populated; keep polling.
+            sleep "$(echo "scale=3; $poll_ms/1000" | bc)"
+            elapsed=$(( elapsed + poll_ms ))
+            continue
+        fi
+        # Did it stabilize?
+        if [[ "$capture" == "$prev_capture" ]]; then
+            stable_count=$(( stable_count + 1 ))
+        else
+            stable_count=0
+        fi
+        prev_capture="$capture"
+        # Ready marker present at/near bottom?
+        if echo "$capture" | tail -n5 | grep -qE "$READY_REGEX"; then
+            if (( stable_count >= stable_required )); then
+                return 0
+            fi
+        fi
+        sleep "$(echo "scale=3; $poll_ms/1000" | bc)"
+        elapsed=$(( elapsed + poll_ms ))
+    done
+
+    # Timeout
+    {
+        echo "codex-tmux: timeout after ${timeout}s waiting for ready prompt"
+        echo "Marker: READY_REGEX_MISMATCH"
+        echo "Override the ready regex with: export CC_CODEX_READY_REGEX='...'"
+        echo "Last 20 lines of pane:"
+        echo "$capture" | tail -n20 | sed 's/^/  | /'
+    } >&2
+    return 124
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -145,6 +208,8 @@ main() {
                 ensure_session) ensure_session ;;
                 window_exists) window_exists "$@" ;;
                 window_pane_pid) window_pane_pid "$@" ;;
+                capture_pane) capture_pane "$@" ;;
+                wait_for_ready) wait_for_ready "$@" "${CC_CODEX_TIMEOUT:-$DEFAULT_TIMEOUT}" ;;
                 *) echo "codex-tmux: unknown _internal subcommand '$sub'" >&2; exit 2 ;;
             esac
             ;;

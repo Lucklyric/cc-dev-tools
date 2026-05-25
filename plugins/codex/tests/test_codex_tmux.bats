@@ -93,3 +93,33 @@ setup() {
     run "$SCRIPT" _internal window_exists "codex-nope-aaaaaa-zz"
     [ "$status" -ne 0 ]
 }
+
+@test "capture_pane: prints the full pane buffer" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-test-aaaaaa-aa" -d \
+        "bash -c 'echo hello; echo ▌; sleep 60'"
+    sleep 0.5
+    run "$SCRIPT" _internal capture_pane "ready-test-aaaaaa-aa"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"hello"* ]]
+    [[ "$output" == *"▌"* ]]
+}
+
+@test "wait_for_ready: returns 0 when ready marker appears" {
+    "$SCRIPT" _internal ensure_session
+    # Start a window that prints stuff and then the ready marker
+    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-wait-aaaaaa-bb" -d \
+        "bash -c '(sleep 0.5; echo working; sleep 0.5; echo ▌; sleep 60)'"
+    CC_CODEX_TIMEOUT=10 run "$SCRIPT" _internal wait_for_ready "ready-wait-aaaaaa-bb"
+    [ "$status" -eq 0 ]
+}
+
+@test "wait_for_ready: exits 124 on timeout with last lines + marker" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "ready-stuck-aaaaaa-cc" -d \
+        "bash -c 'echo still-thinking; sleep 60'"
+    CC_CODEX_TIMEOUT=2 run "$SCRIPT" _internal wait_for_ready "ready-stuck-aaaaaa-cc"
+    [ "$status" -eq 124 ]
+    [[ "$output" == *"still-thinking"* ]] || [[ "$stderr" == *"still-thinking"* ]]
+    [[ "$output" == *"READY_REGEX_MISMATCH"* ]] || [[ "$stderr" == *"READY_REGEX_MISMATCH"* ]]
+}
