@@ -6,6 +6,7 @@ set -euo pipefail
 
 echo "mock-codex v0.0.0 ready"
 echo "Type a message or /exit to quit"
+printf "▌ \n"
 
 while IFS= read -r line; do
     if [[ "$line" == "/exit" ]]; then
