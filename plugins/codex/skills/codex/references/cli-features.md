@@ -235,3 +235,5 @@ Before v3.0.0, interactive-only flags (`--search`, `-a/--ask-for-approval`) were
 As of v3.0.0, the default `new` flow launches interactive `codex` inside a tmux pane, which provides a PTY. All interactive flags now work; pass them via `new`'s codex-args pass-through (when implemented in a future minor version) or by attaching to the window and using codex's slash commands directly.
 
 For now, the recommended pattern for needing `--search` is to attach to the window and use codex's `/search` slash command interactively. The `-a` flag is superseded by `approval_policy=on-request` set automatically by `new`.
+
+As of v3.1.0, interactive flags like `--search` are still reachable through the tmux pane; see `references/tmux-mode.md` for the `handle-interruption` recipe and direct codex slash commands.

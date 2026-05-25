@@ -16,6 +16,8 @@ tmux attach -t cc-codex
 
 A `codex exec` escape hatch remains for one-shot calls. See `skills/codex/references/tmux-mode.md` for the full workflow.
 
+v3.1.0 splits responsibilities: the helper script handles lifecycle (spawn / list / kill), and the codex skill itself drives interaction via tmux commands. See `skills/codex/references/tmux-mode.md` for the interaction recipes.
+
 ## Features
 
 - **High-Reasoning Capabilities**: GPT-5.5 with xhigh reasoning effort for maximum capability
