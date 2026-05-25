@@ -250,3 +250,18 @@ setup() {
     [[ "$output" == *"codex-dead-aaaaaa-aa"* ]]
     [[ "$output" == *"dead"* ]]
 }
+
+@test "attach: prints the tmux attach command without execing it" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-att-aaaaaa-aa" -d "sleep 60"
+    run "$SCRIPT" attach "codex-att-aaaaaa-aa"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tmux attach -t $SESSION_NAME_TEST"* ]]
+    [[ "$output" == *"select-window -t codex-att-aaaaaa-aa"* ]]
+}
+
+@test "attach: missing window exits 6" {
+    "$SCRIPT" _internal ensure_session
+    run "$SCRIPT" attach "codex-nope-aaaaaa-zz"
+    [ "$status" -eq 6 ]
+}

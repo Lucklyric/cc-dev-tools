@@ -360,6 +360,14 @@ cmd_ls() {
     done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
 }
 
+cmd_attach() {
+    local window="$1"
+    [[ -z "$window" ]] && { echo "codex-tmux attach: window required" >&2; return 2; }
+    ensure_session
+    window_exists "$window" || { echo "codex-tmux attach: window '$window' not found" >&2; return 6; }
+    echo "tmux attach -t $SESSION_NAME \\; select-window -t $window"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -417,7 +425,8 @@ main() {
         send) cmd_send "$@" ;;
         capture) cmd_capture "$@" ;;
         ls) cmd_ls "$@" ;;
-        attach|rename|kill|exec)
+        attach) cmd_attach "$@" ;;
+        rename|kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99
