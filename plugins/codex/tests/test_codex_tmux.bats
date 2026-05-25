@@ -163,3 +163,36 @@ setup() {
         run "$SCRIPT" new InvalidTopic
     [ "$status" -ne 0 ]
 }
+
+@test "send: returns the delta of new pane output" {
+    export CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
+    export CC_CODEX_TIMEOUT=10
+    export CLAUDE_CODE_SESSION_ID="0d61e624-..."
+    win="$("$SCRIPT" new auth | head -n1)"
+
+    run "$SCRIPT" send "$win" "hello there"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"[mock-response] you said: hello there"* ]]
+    # The startup banner from mock-codex should NOT appear in the send delta.
+    [[ "$output" != *"mock-codex v0.0.0 ready"* ]]
+}
+
+@test "send: missing window exits 6 (ENXIO)" {
+    "$SCRIPT" _internal ensure_session
+    run "$SCRIPT" send "codex-nope-aaaaaa-zz" "hi"
+    [ "$status" -eq 6 ]
+}
+
+@test "send: codex process dead → exit non-zero with CODEX_DEAD marker" {
+    "$SCRIPT" _internal ensure_session
+    # Spawn a window whose 'codex' sleeps briefly then exits. We need a tiny
+    # delay so we can set remain-on-exit *before* it dies — otherwise tmux
+    # closes the window the instant the command returns.
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-dead-aaaaaa-dd" -d \
+        "bash -c 'sleep 0.3; exit 0'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-dead-aaaaaa-dd" remain-on-exit on
+    sleep 1  # let it exit
+    run "$SCRIPT" send "codex-dead-aaaaaa-dd" "hi"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *"CODEX_DEAD"* ]] || [[ "$stderr" == *"CODEX_DEAD"* ]]
+}

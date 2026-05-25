@@ -211,6 +211,86 @@ cmd_new() {
     echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
 }
 
+# Detect whether the codex process inside a window is still alive.
+window_codex_alive() {
+    local window="$1"
+    local pane_pid
+    pane_pid="$(window_pane_pid "$window")"
+    [[ -z "$pane_pid" ]] && return 1
+    # Check if the pane process itself is still running.
+    # Also accept if it has live children (nested shell case).
+    kill -0 "$pane_pid" 2>/dev/null || pgrep -P "$pane_pid" >/dev/null
+}
+
+cmd_send() {
+    local window=""
+    local prompt=""
+    local timeout="$DEFAULT_TIMEOUT"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --timeout) timeout="$2"; shift 2 ;;
+            -*) echo "codex-tmux send: unknown flag '$1'" >&2; return 2 ;;
+            *)
+                if [[ -z "$window" ]]; then window="$1"
+                elif [[ -z "$prompt" ]]; then prompt="$1"
+                else echo "codex-tmux send: too many positional args" >&2; return 2
+                fi
+                shift ;;
+        esac
+    done
+
+    [[ -z "$window" || -z "$prompt" ]] && { echo "codex-tmux send: window and prompt required" >&2; return 2; }
+    ensure_session
+
+    if ! window_exists "$window"; then
+        echo "codex-tmux send: window '$window' not found (ENXIO)" >&2
+        return 6
+    fi
+    if ! window_codex_alive "$window"; then
+        echo "codex-tmux send: codex process in '$window' has exited — marker: CODEX_DEAD" >&2
+        return 1
+    fi
+
+    mkdir -p "$LOCK_DIR"
+    local lockfile="$LOCK_DIR/$window.lock"
+
+    # Acquire lock FIRST so the baseline reflects the pane AFTER any in-flight
+    # send finishes (otherwise the next send's delta would include both runs).
+    # Wrap in a subshell so fd 9 is scoped here; bash 3.2 lacks {var}>file.
+    (
+        flock -w "$timeout" 9 || {
+            echo "codex-tmux send: lock contention on '$window' (EAGAIN)" >&2
+            exit 11
+        }
+
+        # Now safe to snapshot the baseline.
+        local baseline
+        baseline="$(capture_pane "$window")"
+
+        # Send the prompt literally, then Enter.
+        tmux send-keys -t "$SESSION_NAME:$window" -l -- "$prompt"
+        tmux send-keys -t "$SESSION_NAME:$window" Enter
+
+        # Wait for ready.
+        if ! wait_for_ready "$window" "$timeout"; then
+            exit 124
+        fi
+
+        # Compute delta: capture again, diff against baseline.
+        local after
+        after="$(capture_pane "$window")"
+
+        # Print only new lines (those past the baseline length).
+        local base_count after_count
+        base_count="$(printf '%s\n' "$baseline" | wc -l)"
+        after_count="$(printf '%s\n' "$after" | wc -l)"
+        if (( after_count > base_count )); then
+            printf '%s\n' "$after" | tail -n "$(( after_count - base_count ))"
+        fi
+    ) 9>"$lockfile"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -265,7 +345,8 @@ main() {
             usage
             ;;
         new) cmd_new "$@" ;;
-        send|capture|ls|attach|rename|kill|exec)
+        send) cmd_send "$@" ;;
+        capture|ls|attach|rename|kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99
