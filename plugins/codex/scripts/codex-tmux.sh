@@ -11,6 +11,39 @@ readonly DEFAULT_TIMEOUT="${CC_CODEX_TIMEOUT:-600}"
 readonly LOCK_DIR="${CC_CODEX_LOCK_DIR:-$HOME/.cache/cc-codex/locks}"
 readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
 
+# ---------- Pure helpers (no tmux, no codex) ----------
+
+compute_claude6() {
+    if [[ -n "${CLAUDE_CODE_SESSION_ID:-}" ]]; then
+        printf '%s' "${CLAUDE_CODE_SESSION_ID:0:6}"
+        return
+    fi
+    # Fallback: deterministic for the duration of a parent shell session.
+    printf '%s' "$PPID:$PWD" | shasum -a 256 | cut -c1-6
+}
+
+validate_topic() {
+    local topic="$1"
+    if [[ ! "$topic" =~ ^[a-z0-9-]{2,15}$ ]]; then
+        echo "codex-tmux: invalid topic '$topic' (must be 2-15 chars, [a-z0-9-])" >&2
+        return 1
+    fi
+}
+
+rand_suffix() {
+    # Two random chars from [a-z0-9].
+    local chars='abcdefghijklmnopqrstuvwxyz0123456789'
+    printf '%s%s' \
+        "${chars:RANDOM%36:1}" \
+        "${chars:RANDOM%36:1}"
+}
+
+compose_window_name() {
+    local topic="$1"
+    validate_topic "$topic" || return 1
+    printf 'codex-%s-%s-%s' "$topic" "$(compute_claude6)" "$(rand_suffix)"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -68,6 +101,17 @@ main() {
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99
+            ;;
+        _internal)
+            local sub="${1:-}"
+            shift || true
+            case "$sub" in
+                claude6) compute_claude6; echo ;;
+                validate_topic) validate_topic "$@" ;;
+                rand_suffix) rand_suffix; echo ;;
+                compose_window_name) compose_window_name "$@" ;;
+                *) echo "codex-tmux: unknown _internal subcommand '$sub'" >&2; exit 2 ;;
+            esac
             ;;
         *)
             echo "codex-tmux: unknown subcommand '$cmd'" >&2
