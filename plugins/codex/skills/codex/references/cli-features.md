@@ -227,3 +227,11 @@ codex apply
 ```
 
 Useful when Codex generates changes in read-only mode and the user wants to apply them locally.
+
+## Interactive flags reachable via tmux mode (v3.0.0+)
+
+Before v3.0.0, interactive-only flags (`--search`, `-a/--ask-for-approval`) were unreachable because `codex exec` is non-interactive and plain `codex` fails in Claude Code's bash (`stdout is not a terminal`).
+
+As of v3.0.0, the default `new` flow launches interactive `codex` inside a tmux pane, which provides a PTY. All interactive flags now work; pass them via `new`'s codex-args pass-through (when implemented in a future minor version) or by attaching to the window and using codex's slash commands directly.
+
+For now, the recommended pattern for needing `--search` is to attach to the window and use codex's `/search` slash command interactively. The `-a` flag is superseded by `approval_policy=on-request` set automatically by `new`.
