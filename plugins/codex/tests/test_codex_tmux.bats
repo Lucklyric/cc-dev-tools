@@ -196,3 +196,14 @@ setup() {
     [ "$status" -ne 0 ]
     [[ "$output" == *"CODEX_DEAD"* ]] || [[ "$stderr" == *"CODEX_DEAD"* ]]
 }
+
+@test "capture: prints the pane buffer without sending anything" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "cap-test-aaaaaa-ee" -d \
+        "bash -c 'echo line1; echo line2; sleep 60'"
+    sleep 0.3
+    run "$SCRIPT" capture "cap-test-aaaaaa-ee"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"line1"* ]]
+    [[ "$output" == *"line2"* ]]
+}

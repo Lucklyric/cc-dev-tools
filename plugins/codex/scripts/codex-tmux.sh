@@ -291,6 +291,21 @@ cmd_send() {
     ) 9>"$lockfile"
 }
 
+cmd_capture() {
+    local window=""
+    local lines=200
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --lines) lines="$2"; shift 2 ;;
+            *) window="$1"; shift ;;
+        esac
+    done
+    [[ -z "$window" ]] && { echo "codex-tmux capture: window required" >&2; return 2; }
+    ensure_session
+    window_exists "$window" || { echo "codex-tmux capture: window '$window' not found" >&2; return 6; }
+    capture_pane "$window" "$lines"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -346,7 +361,8 @@ main() {
             ;;
         new) cmd_new "$@" ;;
         send) cmd_send "$@" ;;
-        capture|ls|attach|rename|kill|exec)
+        capture) cmd_capture "$@" ;;
+        ls|attach|rename|kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99
