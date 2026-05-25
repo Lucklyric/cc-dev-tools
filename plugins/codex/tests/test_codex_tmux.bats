@@ -265,3 +265,20 @@ setup() {
     run "$SCRIPT" attach "codex-nope-aaaaaa-zz"
     [ "$status" -eq 6 ]
 }
+
+@test "rename: replaces only the topic portion, keeps suffix" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-old-aaaaaa-aa" -d "sleep 60"
+    run "$SCRIPT" rename "codex-old-aaaaaa-aa" "newtopic"
+    [ "$status" -eq 0 ]
+    [[ "$output" == "codex-newtopic-aaaaaa-aa" ]]
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-newtopic-aaaaaa-aa"
+}
+
+@test "rename: invalid new topic exits non-zero" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-old-aaaaaa-aa" -d "sleep 60"
+    run "$SCRIPT" rename "codex-old-aaaaaa-aa" "BadTopic"
+    [ "$status" -ne 0 ]
+}

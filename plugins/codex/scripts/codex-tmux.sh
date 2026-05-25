@@ -368,6 +368,30 @@ cmd_attach() {
     echo "tmux attach -t $SESSION_NAME \\; select-window -t $window"
 }
 
+cmd_rename() {
+    local old="$1"
+    local new_topic="$2"
+    [[ -z "$old" || -z "$new_topic" ]] && {
+        echo "codex-tmux rename: old-window and new-topic required" >&2; return 2; }
+    validate_topic "$new_topic" || return 2
+    ensure_session
+    window_exists "$old" || { echo "codex-tmux rename: window '$old' not found" >&2; return 6; }
+
+    # Pattern: codex-<topic>-<claude6>-<rand2>
+    # Preserve the trailing '-<claude6>-<rand2>'.
+    if [[ ! "$old" =~ ^codex-[a-z0-9-]+-([a-z0-9]{6})-([a-z0-9]{2})$ ]]; then
+        echo "codex-tmux rename: window '$old' does not follow naming convention" >&2
+        return 2
+    fi
+    local claude6="${BASH_REMATCH[1]}"
+    local rand2="${BASH_REMATCH[2]}"
+    local new_name="codex-${new_topic}-${claude6}-${rand2}"
+
+    tmux rename-window -t "$SESSION_NAME:$old" "$new_name"
+    tmux set-option -w -t "$SESSION_NAME:$new_name" '@cc_codex_topic' "$new_topic"
+    echo "$new_name"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -426,7 +450,8 @@ main() {
         capture) cmd_capture "$@" ;;
         ls) cmd_ls "$@" ;;
         attach) cmd_attach "$@" ;;
-        rename|kill|exec)
+        rename) cmd_rename "$@" ;;
+        kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99
