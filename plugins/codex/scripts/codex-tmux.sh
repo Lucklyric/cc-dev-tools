@@ -8,7 +8,6 @@ readonly SESSION_NAME="${CC_CODEX_SESSION_NAME:-cc-codex}"
 readonly READY_REGEX_DEFAULT='gpt-5\.5.*(xhigh|high|medium|low)'
 READY_REGEX="${CC_CODEX_READY_REGEX:-$READY_REGEX_DEFAULT}"
 readonly DEFAULT_TIMEOUT="${CC_CODEX_TIMEOUT:-600}"
-readonly LOCK_DIR="${CC_CODEX_LOCK_DIR:-$HOME/.cache/cc-codex/locks}"
 readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
 
 # ---------- Pure helpers (no tmux, no codex) ----------
@@ -84,64 +83,6 @@ capture_pane() {
     tmux capture-pane -t "$SESSION_NAME:$window" -p -S -"$lines" 2>/dev/null
 }
 
-# wait_for_ready <window> [timeout]
-# Blocks until the bottom of the pane matches READY_REGEX AND the buffer has
-# been stable (unchanged) for two consecutive 500ms polls.
-# Exit codes: 0 ready, 124 timeout (with last 20 lines + READY_REGEX_MISMATCH on stderr).
-wait_for_ready() {
-    local window="$1"
-    local timeout="${2:-$DEFAULT_TIMEOUT}"
-    local poll_ms=500
-    local stable_required=2
-    local prev_capture=""
-    local stable_count=0
-    local elapsed=0
-    local capture
-
-    while (( elapsed < timeout * 1000 )); do
-        capture="$(capture_pane "$window")"
-        if [[ -z "$capture" ]]; then
-            # Buffer is empty — check if window still exists before giving up.
-            if ! window_exists "$window"; then
-                echo "codex-tmux: window '$window' has no pane buffer (ENXIO)" >&2
-                return 6
-            fi
-            # Window exists but buffer not yet populated; keep polling.
-            sleep 0.5
-            elapsed=$(( elapsed + poll_ms ))
-            continue
-        fi
-        # Did it stabilize?
-        if [[ "$capture" == "$prev_capture" ]]; then
-            stable_count=$(( stable_count + 1 ))
-        else
-            stable_count=0
-        fi
-        prev_capture="$capture"
-        # Ready marker present at/near bottom?
-        # Scan the whole capture, not just the bottom — codex's TUI puts its
-        # idle status line in the middle of a tall pane with blank trailing
-        # rows, so a tail-only check would miss it.
-        if echo "$capture" | grep -qE "$READY_REGEX"; then
-            if (( stable_count >= stable_required )); then
-                return 0
-            fi
-        fi
-        sleep 0.5
-        elapsed=$(( elapsed + poll_ms ))
-    done
-
-    # Timeout
-    {
-        echo "codex-tmux: timeout after ${timeout}s waiting for ready prompt"
-        echo "Marker: READY_REGEX_MISMATCH"
-        echo "Override the ready regex with: export CC_CODEX_READY_REGEX='...'"
-        echo "Last 20 lines of pane:"
-        echo "$capture" | tail -n20 | sed 's/^/  | /'
-    } >&2
-    return 124
-}
-
 # ---------- Subcommands ----------
 
 cmd_new() {
@@ -203,12 +144,6 @@ cmd_new() {
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_topic' "$topic"
 
-    # Wait for codex to be ready.
-    if ! wait_for_ready "$window" "$DEFAULT_TIMEOUT"; then
-        echo "codex-tmux new: codex did not become ready in time (window left in place for diagnosis)" >&2
-        return 124
-    fi
-
     # Output: window name on stdout line 1, attach hint on line 2.
     echo "$window"
     echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
@@ -223,112 +158,6 @@ window_codex_alive() {
     # Check if the pane process itself is still running.
     # Also accept if it has live children (nested shell case).
     kill -0 "$pane_pid" 2>/dev/null || pgrep -P "$pane_pid" >/dev/null
-}
-
-cmd_send() {
-    local window=""
-    local prompt=""
-    local timeout="$DEFAULT_TIMEOUT"
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --timeout) timeout="$2"; shift 2 ;;
-            -*) echo "codex-tmux send: unknown flag '$1'" >&2; return 2 ;;
-            *)
-                if [[ -z "$window" ]]; then window="$1"
-                elif [[ -z "$prompt" ]]; then prompt="$1"
-                else echo "codex-tmux send: too many positional args" >&2; return 2
-                fi
-                shift ;;
-        esac
-    done
-
-    [[ -z "$window" || -z "$prompt" ]] && { echo "codex-tmux send: window and prompt required" >&2; return 2; }
-    ensure_session
-
-    if ! window_exists "$window"; then
-        echo "codex-tmux send: window '$window' not found (ENXIO)" >&2
-        return 6
-    fi
-    if ! window_codex_alive "$window"; then
-        echo "codex-tmux send: codex process in '$window' has exited — marker: CODEX_DEAD" >&2
-        return 1
-    fi
-
-    mkdir -p "$LOCK_DIR"
-    local lockfile="$LOCK_DIR/$window.lock"
-
-    # Acquire lock FIRST so the baseline reflects the pane AFTER any in-flight
-    # send finishes (otherwise the next send's delta would include both runs).
-    # Wrap in a subshell so fd 9 is scoped here; bash 3.2 lacks {var}>file.
-    (
-        flock -w "$timeout" 9 || {
-            echo "codex-tmux send: lock contention on '$window' (EAGAIN)" >&2
-            exit 11
-        }
-
-        # Now safe to snapshot the baseline.
-        local baseline
-        baseline="$(capture_pane "$window")"
-
-        # Send the prompt literally. Give the TUI a moment to register the
-        # input before pressing Enter; without the brief pause, codex's TUI
-        # sometimes treats the Enter as part of the typing burst and does not
-        # submit on the first try.
-        tmux send-keys -t "$SESSION_NAME:$window" -l -- "$prompt"
-        sleep 0.3
-        tmux send-keys -t "$SESSION_NAME:$window" Enter
-
-        # Wait for activity: the pane must DIFFER from baseline before we
-        # consider stabilization. Otherwise the status line that was already
-        # present in baseline would let wait_for_ready return immediately,
-        # before codex has even started responding.
-        local activity_timeout="${CC_CODEX_ACTIVITY_TIMEOUT:-30}"
-        local activity_elapsed=0
-        while (( activity_elapsed < activity_timeout * 1000 )); do
-            if [[ "$(capture_pane "$window")" != "$baseline" ]]; then
-                break
-            fi
-            sleep 0.5
-            activity_elapsed=$(( activity_elapsed + 500 ))
-        done
-        if (( activity_elapsed >= activity_timeout * 1000 )); then
-            echo "codex-tmux send: no activity within ${activity_timeout}s — codex may not have accepted the prompt" >&2
-            exit 1
-        fi
-
-        # Wait for ready now that activity has been observed.
-        if ! wait_for_ready "$window" "$timeout"; then
-            exit 124
-        fi
-
-        # Compute delta: capture again, diff against baseline.
-        local after
-        after="$(capture_pane "$window")"
-
-        # Print only new lines (those past the baseline length).
-        local base_count after_count
-        base_count="$(printf '%s\n' "$baseline" | wc -l)"
-        after_count="$(printf '%s\n' "$after" | wc -l)"
-        if (( after_count > base_count )); then
-            printf '%s\n' "$after" | tail -n "$(( after_count - base_count ))"
-        fi
-    ) 9>"$lockfile"
-}
-
-cmd_capture() {
-    local window=""
-    local lines=200
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --lines) lines="$2"; shift 2 ;;
-            *) window="$1"; shift ;;
-        esac
-    done
-    [[ -z "$window" ]] && { echo "codex-tmux capture: window required" >&2; return 2; }
-    ensure_session
-    window_exists "$window" || { echo "codex-tmux capture: window '$window' not found" >&2; return 6; }
-    capture_pane "$window" "$lines"
 }
 
 # Compute the state of a window: idle | busy | dead | unknown.
@@ -529,8 +358,22 @@ main() {
             usage
             ;;
         new) cmd_new "$@" ;;
-        send) cmd_send "$@" ;;
-        capture) cmd_capture "$@" ;;
+        send|capture)
+            cat <<EOF >&2
+codex-tmux: '$subcmd' was removed in v3.1.0.
+
+Interaction is now driven by the codex skill directly. See:
+  plugins/codex/skills/codex/references/tmux-mode.md  (recipes)
+
+Quick replacements:
+  send    → tmux send-keys -t $SESSION_NAME:<window> -l -- "<prompt>"
+            sleep 0.3
+            tmux send-keys -t $SESSION_NAME:<window> Enter
+            (then capture-pane and read the delta yourself)
+  capture → tmux capture-pane -t $SESSION_NAME:<window> -p
+EOF
+            exit 64
+            ;;
         ls) cmd_ls "$@" ;;
         attach) cmd_attach "$@" ;;
         rename) cmd_rename "$@" ;;
@@ -548,7 +391,6 @@ main() {
                 window_exists) window_exists "$@" ;;
                 window_pane_pid) window_pane_pid "$@" ;;
                 capture_pane) capture_pane "$@" ;;
-                wait_for_ready) wait_for_ready "$@" "${CC_CODEX_TIMEOUT:-$DEFAULT_TIMEOUT}" ;;
                 *) echo "codex-tmux: unknown _internal subcommand '$sub'" >&2; exit 2 ;;
             esac
             ;;

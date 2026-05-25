@@ -375,3 +375,17 @@ setup() {
     run "$SCRIPT" ls
     [ "$status" -eq 0 ]
 }
+
+@test "send: removed in v3.1.0 — prints migration error and exits 64" {
+    run "$SCRIPT" send some-window "hello"
+    [ "$status" -eq 64 ]
+    [[ "$output" == *"removed in v3.1.0"* ]] || [[ "$stderr" == *"removed in v3.1.0"* ]]
+    [[ "$output" == *"tmux send-keys"* ]] || [[ "$stderr" == *"tmux send-keys"* ]]
+}
+
+@test "capture: removed in v3.1.0 — prints migration error and exits 64" {
+    run "$SCRIPT" capture some-window
+    [ "$status" -eq 64 ]
+    [[ "$output" == *"removed in v3.1.0"* ]] || [[ "$stderr" == *"removed in v3.1.0"* ]]
+    [[ "$output" == *"tmux capture-pane"* ]] || [[ "$stderr" == *"tmux capture-pane"* ]]
+}
