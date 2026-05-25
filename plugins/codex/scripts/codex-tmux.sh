@@ -392,6 +392,29 @@ cmd_rename() {
     echo "$new_name"
 }
 
+cmd_kill() {
+    if [[ "${1:-}" == "--orphaned" ]]; then
+        ensure_session
+        local removed=0
+        while IFS= read -r win; do
+            [[ "$win" == "_placeholder" ]] && continue
+            [[ "$win" != codex-* ]] && continue
+            if [[ "$(window_state "$win")" == "dead" ]]; then
+                tmux kill-window -t "$SESSION_NAME:$win"
+                removed=$(( removed + 1 ))
+            fi
+        done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
+        echo "removed $removed orphan window(s)"
+        return 0
+    fi
+
+    local window="$1"
+    [[ -z "$window" ]] && { echo "codex-tmux kill: window or --orphaned required" >&2; return 2; }
+    ensure_session
+    window_exists "$window" || { echo "codex-tmux kill: window '$window' not found" >&2; return 6; }
+    tmux kill-window -t "$SESSION_NAME:$window"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -451,7 +474,8 @@ main() {
         ls) cmd_ls "$@" ;;
         attach) cmd_attach "$@" ;;
         rename) cmd_rename "$@" ;;
-        kill|exec)
+        kill) cmd_kill "$@" ;;
+        exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99

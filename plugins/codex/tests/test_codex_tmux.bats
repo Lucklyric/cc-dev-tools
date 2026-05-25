@@ -282,3 +282,27 @@ setup() {
     run "$SCRIPT" rename "codex-old-aaaaaa-aa" "BadTopic"
     [ "$status" -ne 0 ]
 }
+
+@test "kill: removes a single named window" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-kill-aaaaaa-aa" -d "sleep 60"
+    run "$SCRIPT" kill "codex-kill-aaaaaa-aa"
+    [ "$status" -eq 0 ]
+    ! tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-kill-aaaaaa-aa"
+}
+
+@test "kill --orphaned: removes only dead codex windows" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-alive-aaaaaa-aa" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-dead-aaaaaa-bb" -d \
+        "bash -c 'sleep 0.3; exit 0'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-dead-aaaaaa-bb" remain-on-exit on
+    sleep 1
+    run "$SCRIPT" kill --orphaned
+    [ "$status" -eq 0 ]
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-alive-aaaaaa-aa"
+    ! tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-dead-aaaaaa-bb"
+}
