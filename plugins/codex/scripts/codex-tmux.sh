@@ -306,6 +306,60 @@ cmd_capture() {
     capture_pane "$window" "$lines"
 }
 
+# Compute the state of a window: idle | busy | dead | unknown
+window_state() {
+    local window="$1"
+    if ! window_exists "$window"; then
+        echo "unknown"
+        return
+    fi
+    if ! window_codex_alive "$window"; then
+        echo "dead"
+        return
+    fi
+    # Check ready regex against bottom of pane.
+    local buf
+    buf="$(capture_pane "$window" 50)"
+    if echo "$buf" | tail -n5 | grep -qE "$READY_REGEX"; then
+        echo "idle"
+    else
+        echo "busy"
+    fi
+}
+
+cmd_ls() {
+    local mine_only=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --mine) mine_only=1; shift ;;
+            *) echo "codex-tmux ls: unknown arg '$1'" >&2; return 2 ;;
+        esac
+    done
+
+    ensure_session
+    local my_token=""
+    if (( mine_only )); then
+        my_token="$(compute_claude6)"
+    fi
+
+    printf '%-32s %-12s %-7s %-30s %s\n' "WINDOW" "TOPIC" "STATE" "CWD" "CREATED"
+    while IFS= read -r win; do
+        # Skip the internal placeholder window.
+        [[ "$win" == "_placeholder" ]] && continue
+        # Only codex- prefixed windows.
+        [[ "$win" != codex-* ]] && continue
+        if (( mine_only )) && [[ "$win" != *"-$my_token-"* ]]; then
+            continue
+        fi
+        local topic cwd created state
+        topic="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_topic' 2>/dev/null)"
+        cwd="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_cwd' 2>/dev/null)"
+        created="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_created' 2>/dev/null)"
+        state="$(window_state "$win")"
+        printf '%-32s %-12s %-7s %-30s %s\n' "$win" "${topic:--}" "$state" "${cwd:--}" "${created:--}"
+    done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -362,7 +416,8 @@ main() {
         new) cmd_new "$@" ;;
         send) cmd_send "$@" ;;
         capture) cmd_capture "$@" ;;
-        ls|attach|rename|kill|exec)
+        ls) cmd_ls "$@" ;;
+        attach|rename|kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99

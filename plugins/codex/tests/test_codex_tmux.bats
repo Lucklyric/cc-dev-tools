@@ -207,3 +207,46 @@ setup() {
     [[ "$output" == *"line1"* ]]
     [[ "$output" == *"line2"* ]]
 }
+
+@test "ls: prints header row and one row per window" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-foo-aaaaaa-aa" -d \
+        "bash -c 'echo ▌; sleep 60'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-foo-aaaaaa-aa" '@cc_codex_cwd' "/tmp/foo"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-foo-aaaaaa-aa" '@cc_codex_created' "2026-05-24T10:00:00+0000"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-foo-aaaaaa-aa" '@cc_codex_topic' "foo"
+    sleep 0.4
+    run "$SCRIPT" ls
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"WINDOW"* ]]
+    [[ "$output" == *"TOPIC"* ]]
+    [[ "$output" == *"STATE"* ]]
+    [[ "$output" == *"codex-foo-aaaaaa-aa"* ]]
+    [[ "$output" == *"foo"* ]]
+    [[ "$output" == *"/tmp/foo"* ]]
+}
+
+@test "ls --mine: filters by current CLAUDE_CODE_SESSION_ID claude6 prefix" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-foo-aaaaaa-aa" -d \
+        "bash -c 'echo ▌; sleep 60'"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-bar-bbbbbb-bb" -d \
+        "bash -c 'echo ▌; sleep 60'"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" ls --mine
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"codex-foo-aaaaaa-aa"* ]]
+    [[ "$output" != *"codex-bar-bbbbbb-bb"* ]]
+}
+
+@test "ls: STATE is 'dead' for windows whose codex exited" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-dead-aaaaaa-aa" -d \
+        "bash -c 'sleep 0.3; exit 0'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-dead-aaaaaa-aa" remain-on-exit on
+    sleep 1
+    run "$SCRIPT" ls
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"codex-dead-aaaaaa-aa"* ]]
+    [[ "$output" == *"dead"* ]]
+}
