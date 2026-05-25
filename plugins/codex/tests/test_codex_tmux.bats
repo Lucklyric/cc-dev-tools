@@ -14,6 +14,12 @@ SCRIPT="${BATS_TEST_DIRNAME}/../scripts/codex-tmux.sh"
     [[ "$output" == *"exec"* ]]
 }
 
+@test "script: --help notes that send/capture were removed in v3.1.0" {
+    run "$SCRIPT" --help
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Removed in v3.1.0"* ]]
+}
+
 @test "script: unknown subcommand exits 2" {
     run "$SCRIPT" not-a-real-command
     [ "$status" -eq 2 ]

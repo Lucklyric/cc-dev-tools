@@ -283,11 +283,9 @@ Subcommands:
       Create a new codex window in the cc-codex tmux session.
       Prints the full window name on stdout plus an attach hint.
 
-  send <window> <prompt> [--timeout SECS]
-      Send a prompt to a window, wait for codex to be idle, return the delta.
-
-  capture <window> [--lines N]
-      Print the current pane buffer for inspection (does not send anything).
+  send | capture
+      Removed in v3.1.0 — see references/tmux-mode.md for the skill recipes
+      that replace them.
 
   ls [--mine]
       List codex windows. --mine filters to the current Claude session id.
@@ -305,8 +303,8 @@ Subcommands:
       Run codex exec one-shot outside tmux (escape hatch).
 
 Environment:
-  CC_CODEX_SESSION_NAME     (default: cc-codex)
-  CC_CODEX_BIN              (default: codex)
+  CC_CODEX_SESSION_NAME (default: cc-codex)
+  CC_CODEX_BIN          (default: codex)
 EOF
 }
 
