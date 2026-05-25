@@ -5,7 +5,7 @@ set -euo pipefail
 
 # ---------- Constants (overridable via env) ----------
 readonly SESSION_NAME="${CC_CODEX_SESSION_NAME:-cc-codex}"
-readonly READY_REGEX_DEFAULT='▌'
+readonly READY_REGEX_DEFAULT='gpt-5\.5.*(xhigh|high|medium|low)'
 READY_REGEX="${CC_CODEX_READY_REGEX:-$READY_REGEX_DEFAULT}"
 readonly DEFAULT_TIMEOUT="${CC_CODEX_TIMEOUT:-600}"
 readonly LOCK_DIR="${CC_CODEX_LOCK_DIR:-$HOME/.cache/cc-codex/locks}"
@@ -119,7 +119,10 @@ wait_for_ready() {
         fi
         prev_capture="$capture"
         # Ready marker present at/near bottom?
-        if echo "$capture" | tail -n5 | grep -qE "$READY_REGEX"; then
+        # Scan the whole capture, not just the bottom — codex's TUI puts its
+        # idle status line in the middle of a tall pane with blank trailing
+        # rows, so a tail-only check would miss it.
+        if echo "$capture" | grep -qE "$READY_REGEX"; then
             if (( stable_count >= stable_required )); then
                 return 0
             fi
@@ -268,11 +271,33 @@ cmd_send() {
         local baseline
         baseline="$(capture_pane "$window")"
 
-        # Send the prompt literally, then Enter.
+        # Send the prompt literally. Give the TUI a moment to register the
+        # input before pressing Enter; without the brief pause, codex's TUI
+        # sometimes treats the Enter as part of the typing burst and does not
+        # submit on the first try.
         tmux send-keys -t "$SESSION_NAME:$window" -l -- "$prompt"
+        sleep 0.3
         tmux send-keys -t "$SESSION_NAME:$window" Enter
 
-        # Wait for ready.
+        # Wait for activity: the pane must DIFFER from baseline before we
+        # consider stabilization. Otherwise the status line that was already
+        # present in baseline would let wait_for_ready return immediately,
+        # before codex has even started responding.
+        local activity_timeout=30
+        local activity_elapsed=0
+        while (( activity_elapsed < activity_timeout * 1000 )); do
+            if [[ "$(capture_pane "$window")" != "$baseline" ]]; then
+                break
+            fi
+            sleep 0.5
+            activity_elapsed=$(( activity_elapsed + 500 ))
+        done
+        if (( activity_elapsed >= activity_timeout * 1000 )); then
+            echo "codex-tmux send: no activity within ${activity_timeout}s — codex may not have accepted the prompt" >&2
+            exit 1
+        fi
+
+        # Wait for ready now that activity has been observed.
         if ! wait_for_ready "$window" "$timeout"; then
             exit 124
         fi
@@ -320,7 +345,7 @@ window_state() {
     # Check ready regex against bottom of pane.
     local buf
     buf="$(capture_pane "$window" 50)"
-    if echo "$buf" | tail -n5 | grep -qE "$READY_REGEX"; then
+    if echo "$buf" | grep -qE "$READY_REGEX"; then
         echo "idle"
     else
         echo "busy"

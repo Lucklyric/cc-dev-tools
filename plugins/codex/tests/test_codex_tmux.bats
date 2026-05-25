@@ -107,10 +107,13 @@ setup() {
 
 @test "wait_for_ready: returns 0 when ready marker appears" {
     "$SCRIPT" _internal ensure_session
-    # Start a window that prints stuff and then the ready marker
+    # Start a window that prints stuff and then the ready marker. Override the
+    # ready regex so this test exercises the polling mechanism with a simple
+    # custom marker rather than the production default.
     tmux new-window -t "$SESSION_NAME_TEST" -n "ready-wait-aaaaaa-bb" -d \
         "bash -c '(sleep 0.5; echo working; sleep 0.5; echo ▌; sleep 60)'"
-    CC_CODEX_TIMEOUT=10 run "$SCRIPT" _internal wait_for_ready "ready-wait-aaaaaa-bb"
+    CC_CODEX_TIMEOUT=10 CC_CODEX_READY_REGEX='▌' \
+        run "$SCRIPT" _internal wait_for_ready "ready-wait-aaaaaa-bb"
     [ "$status" -eq 0 ]
 }
 
