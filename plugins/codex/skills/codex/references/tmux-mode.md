@@ -20,7 +20,7 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes these l
 | `ls [--mine]` | List windows. State is `alive` / `dead` / `unknown` based on tmux + process inspection (no pane parsing). |
 | `attach <window>` | Print the tmux attach command (the script does not exec it; Claude Code's bash is non-interactive). |
 | `rename <old> <new-topic>` | Replace topic only; preserves the `<claude6>-<rand2>` suffix. |
-| `kill <window>` / `kill --orphaned` | Remove a window or all dead-codex windows. |
+| `kill <window>` / `kill --mine` / `kill --orphaned` | Remove a window, all of the current Claude session's windows, or all dead-codex windows. |
 | `exec [flags...] <prompt>` | One-shot escape hatch using `codex exec` (no tmux). |
 
 Window naming stays `codex-<topic>-<claude6>-<rand2>` (see `SKILL.md` for the topic-slug rules).
@@ -46,47 +46,56 @@ The 0.3s pause matters: without it, codex's TUI sometimes treats the Enter as pa
 
 Use when the prompt is > 500 chars, multi-line, contains code blocks, or contains characters that are tedious to send-key.
 
-```bash
-# 1) Write the prompt to a tmp file.
-PROMPT_FILE=$(mktemp -t cc-codex-prompt.XXXXXX.md)
-cat > "$PROMPT_FILE" <<'PROMPT_EOF'
-<the full prompt, possibly multi-line, code blocks, etc.>
-PROMPT_EOF
+The robust pattern is to use Claude's `Write` tool (not a shell heredoc) for the prompt body, so no quoting or delimiter-collision concerns matter. The shell only sends a short inline reference.
 
-# 2) Send a short inline message that points codex at the file.
+```bash
+# 1) Compute a tmp path (do NOT write via heredoc — use the Write tool).
+PROMPT_FILE=$(mktemp -t cc-codex-prompt.XXXXXX.md)
+
+# 2) From Claude: invoke the Write tool with file_path=$PROMPT_FILE and the
+#    full prompt body as `content`. This handles arbitrary content (code
+#    blocks, nested heredocs, quotes, multi-line, etc.) without escaping.
+
+# 3) Send a short inline message that points codex at the file.
 tmux send-keys -t cc-codex:<window> -l -- "Read @${PROMPT_FILE} and follow its instructions."
 sleep 0.3
 tmux send-keys -t cc-codex:<window> Enter
 
-# 3) After capturing the response (recipe extract-delta), best-effort clean up:
+# 4) After capturing the response (recipe extract-delta), best-effort clean up:
 rm -f "$PROMPT_FILE"
 ```
 
 Codex's `@file` syntax loads the file in-context, so `send-keys` does not have to stream the prompt body. The file should be readable by the codex process; `mktemp` defaults are fine. Cleanup is best-effort: codex re-reads the file only on explicit reference, so once the response is captured, removal is safe.
 
+Why not a heredoc? `cat > file <<'PROMPT_EOF' ... PROMPT_EOF` silently truncates if the prompt body itself contains the literal `PROMPT_EOF` line (e.g. when asking codex to review shell scripts that demonstrate nested heredocs). The Write-tool path has no such collision.
+
 ### Recipe: `detect-idle`
 
-After a `send`, poll the pane to know when codex is idle and ready for the next prompt.
+This is the **recheck strategy**. There is no auto-notification when codex finishes a turn — Claude must actively poll the pane. The recipe is two phases run in order: activity-wait, then stability.
+
+**Why two phases:** codex's status line (`gpt-5.5 xhigh · /path`) is present *both* before a prompt is sent and after the response completes. A naive stability-only loop will exit immediately on the pre-send pane and treat the prompt as already complete (false positive). The activity-wait phase fixes this by requiring the pane to first **differ** from a baseline taken before the send.
+
+**Calibration.** Run `tmux capture-pane -t cc-codex:<window> -p | tail -5` while codex is idle to see what your CLI version puts near the bottom. For codex 0.133, the status line looks like `gpt-5.5 xhigh · /path/to/cwd`, so the default `IDLE_REGEX` below matches `gpt-5.5` plus any effort level. Update the regex if your codex version uses a different status line.
 
 ```bash
-# Poll capture-pane every 500ms. Codex is idle when:
-#   (a) the pane content has stopped changing for 2 consecutive polls, AND
-#   (b) the bottom of the pane shows codex's status line (e.g., contains the
-#       model+effort string for the current codex CLI release).
-#
-# Calibration: run `tmux capture-pane -t cc-codex:<window> -p | tail -5` to
-# see what your codex CLI version puts at the bottom when idle. For
-# codex 0.133, the status line looks like:
-#     gpt-5.5 xhigh · /path/to/cwd
-#
-# So a reasonable IDLE_REGEX is: 'gpt-5\.5.*xhigh' (or include all effort
-# levels: 'gpt-5\.5.*(xhigh|high|medium|low)').
-
 IDLE_REGEX='gpt-5\.5.*(xhigh|high|medium|low)'
+
+# --- Phase 0: take baseline BEFORE sending the prompt ------------------------
+BASELINE=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+
+# ...send prompt with short-inline-prompt or tmp-file-prompt recipe...
+
+# --- Phase 1: activity-wait — pane must first differ from baseline ----------
+ACTIVITY_DEADLINE=$(( $(date +%s) + 30 ))   # codex usually starts within 5s
+while (( $(date +%s) < ACTIVITY_DEADLINE )); do
+    [[ "$(tmux capture-pane -t cc-codex:<window> -p -S -200)" != "$BASELINE" ]] && break
+    sleep 0.5
+done
+
+# --- Phase 2: stability — pane unchanged for 2 polls AND idle regex matches -
 PREV=""
 STABLE=0
-DEADLINE=$(( $(date +%s) + 600 ))   # 10-minute upper bound
-
+DEADLINE=$(( $(date +%s) + 600 ))   # 10-minute upper bound for the response
 while (( $(date +%s) < DEADLINE )); do
     BUF=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
     if [[ "$BUF" == "$PREV" ]] && echo "$BUF" | grep -qE "$IDLE_REGEX"; then
@@ -100,19 +109,7 @@ while (( $(date +%s) < DEADLINE )); do
 done
 ```
 
-Important: after sending a prompt, wait for the pane to first **differ** from its pre-send baseline before starting stability counting. Otherwise the still-present status line will let the loop exit before codex has even started responding. Sketch:
-
-```bash
-BASELINE=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
-# ...send prompt...
-# Wait for activity (pane differs from baseline) before stability checks.
-ACTIVITY_DEADLINE=$(( $(date +%s) + 30 ))
-while (( $(date +%s) < ACTIVITY_DEADLINE )); do
-    [[ "$(tmux capture-pane -t cc-codex:<window> -p -S -200)" != "$BASELINE" ]] && break
-    sleep 0.5
-done
-# Now run the stability loop above.
-```
+Common pitfalls: skipping Phase 0/1 produces the false positive described above; setting `ACTIVITY_DEADLINE` too low aborts before codex's TUI redraws (slow machines need 10–30s); setting `DEADLINE` too low truncates long reasoning chains (xhigh effort can take several minutes for hard problems).
 
 ### Recipe: `extract-delta`
 
@@ -172,7 +169,63 @@ tmux send-keys -t cc-codex:<window> q
 
 This is rarely needed in practice — most codex responses fit within a 2000-line scrollback. Reach for it only when `incremental-capture` returned a truncated buffer.
 
-### Recipe: `handle-interruption`
+### Recipe: `cancel-in-flight`
+
+Use when the user changes their mind mid-response ("stop, ask it X instead" / "never mind, cancel that"). Codex's TUI binds `Esc` to cancel the current generation; we drive that key, then wait for idle, then send the new prompt.
+
+```bash
+# Cancel the in-flight generation.
+tmux send-keys -t cc-codex:<window> Escape
+
+# Wait for codex to settle back to idle before sending anything new.
+# Use a fresh baseline because Esc itself may not produce visible activity.
+BASELINE=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+PREV=""; STABLE=0; DEADLINE=$(( $(date +%s) + 30 ))
+while (( $(date +%s) < DEADLINE )); do
+    BUF=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+    if [[ "$BUF" == "$PREV" ]] && echo "$BUF" | grep -qE 'gpt-5\.5.*(xhigh|high|medium|low)'; then
+        STABLE=$(( STABLE + 1 )); (( STABLE >= 2 )) && break
+    else STABLE=0; fi
+    PREV="$BUF"; sleep 0.5
+done
+
+# Now send the replacement prompt via short-inline-prompt or tmp-file-prompt.
+```
+
+If `Escape` does not cancel (rare — codex stuck in a tool call), fall back to `tmux send-keys -t cc-codex:<window> C-c`. As a last resort, `codex-tmux.sh kill <window>` and respawn with `new`.
+
+### Recipe: `reuse-existing-window`
+
+Use when:
+- The Claude conversation was resumed and `$CLAUDE_CODE_SESSION_ID` rolled — `ls --mine` returns nothing, but the user is referring to a prior codex window.
+- The user asks to "continue the earlier discussion" or "go back to the auth window".
+- After `kill --orphaned` cleaned up dead windows and you need to confirm what's left.
+
+```bash
+# 1) List everything (no --mine filter) and skip the header.
+codex-tmux.sh ls | awk 'NR>1 && $1!="WINDOW"'
+
+# Output columns: WINDOW  TOPIC  STATE  CWD  CREATED
+# Example:
+#   codex-auth-0d61e6-x7  auth  alive  /Users/asun/codes/myproj  2026-05-24T23:01:34-0700
+
+# 2) Match by topic + cwd. Confirm with the user before resuming.
+WIN=$(codex-tmux.sh ls \
+    | awk -v topic="auth" -v cwd="$PWD" '$2==topic && $4==cwd && $3=="alive" {print $1; exit}')
+
+# 3) If WIN is empty, the window is dead, gone, or in a different cwd.
+#    Either spawn fresh with `new <topic> --cwd "$PWD"` and pass prior
+#    context inline, or attach to a `dead` window first to read scrollback:
+codex-tmux.sh ls | awk '$2=="auth" && $3=="dead" {print $1}'
+# A dead window still holds the conversation scrollback (remain-on-exit is
+# on). Read it via `tmux capture-pane -t cc-codex:$WIN -p -S -2000`, then
+# `kill` it and spawn fresh with the salvaged context.
+
+# 4) Once WIN is confirmed and alive, just drive it like a normal window:
+#    short-inline-prompt / detect-idle / extract-delta.
+```
+
+Why the `claude6` token isn't enough: it's the first 6 chars of the *current* `$CLAUDE_CODE_SESSION_ID`. If the conversation was resumed in a new Claude session, every prior window will have a different claude6 token and `--mine` will miss them. Topic + cwd is the stable cross-session match.
 
 Codex sometimes shows interactive prompts that need acknowledgement before the main response can continue.
 
@@ -191,11 +244,13 @@ After any interruption, re-run `detect-idle` to wait for the status line to reap
 |---|---|
 | Prompt < ~500 chars, single line | `short-inline-prompt` |
 | Multi-line prompt, code blocks, > ~1KB | `tmp-file-prompt` |
-| Need to know "is codex done" | `detect-idle` |
+| Need to know "is codex done" (the recheck strategy) | `detect-idle` |
 | Reading the latest response | `extract-delta` |
 | Response > ~200 lines | `incremental-capture` |
 | Response > tmux `history-limit` (~2000 lines) | `copy-mode-navigation` (rare) |
+| User says "stop / cancel / never mind" mid-response | `cancel-in-flight` |
 | Codex shows a non-response prompt | `handle-interruption` |
+| Conversation resumed, session-id rolled, want to reuse prior window | `reuse-existing-window` |
 
 ## Tmux scrollback semantics
 

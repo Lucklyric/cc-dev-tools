@@ -1,5 +1,7 @@
 # Codex Examples
 
+> **LEGACY — `exec`-mode only.** Since v3.1.0 the default codex workflow is tmux mode (see `tmux-mode.md`). The examples below show `codex exec` one-shot patterns that remain useful as an escape hatch when the user explicitly says "quick", "one-line", "no session", or when the call is genuinely fire-and-forget.
+
 Complete examples showing common Codex invocation patterns.
 
 ## Code Tasks (Read-Only Default)

@@ -1,5 +1,7 @@
 # Session Continuation Examples
 
+> **LEGACY — `exec`-mode only.** Since v3.1.0, the default codex workflow is tmux mode (see `tmux-mode.md`). The patterns below apply only when the user explicitly opts into the `exec` escape hatch (one-shot, no follow-up). For continuation across turns in tmux mode, drive `tmux send-keys` against the most recent matching window from `codex-tmux.sh ls --mine` — no `--last` flag needed because the codex process stays alive in the window.
+
 ---
 
 ## ⚠️ CRITICAL: Always Use `codex exec`

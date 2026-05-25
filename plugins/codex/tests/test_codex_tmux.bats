@@ -236,6 +236,32 @@ setup() {
         | grep -Fxq "codex-kill-aaaaaa-aa"
 }
 
+@test "kill --mine: removes only windows matching the current claude6 prefix" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-foo-aaaaaa-aa" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-bar-bbbbbb-bb" -d "sleep 60"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" kill --mine
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"removed 1"* ]]
+    [[ "$output" == *"aaaaaa"* ]]
+    ! tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-foo-aaaaaa-aa"
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-bar-bbbbbb-bb"
+}
+
+@test "kill --mine: reports 0 when no windows match the current session" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-other-bbbbbb-bb" -d "sleep 60"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" kill --mine
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"removed 0"* ]]
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "codex-other-bbbbbb-bb"
+}
+
 @test "kill --orphaned: removes only dead codex windows" {
     "$SCRIPT" _internal ensure_session
     tmux new-window -t "$SESSION_NAME_TEST" -n "codex-alive-aaaaaa-aa" -d "sleep 60"

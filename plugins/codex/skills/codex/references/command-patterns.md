@@ -1,5 +1,7 @@
 # Basic Usage Examples
 
+> **LEGACY — `exec`-mode only.** Since v3.1.0 the default codex workflow is tmux mode (see `tmux-mode.md`). The templates below cover `codex exec` one-shots; reach for them via `codex-tmux.sh exec ...` when the user opts into the escape hatch.
+
 ---
 
 ## ⚠️ CRITICAL: Always Use `codex exec`

@@ -245,8 +245,23 @@ cmd_kill() {
         return 0
     fi
 
+    if [[ "${1:-}" == "--mine" ]]; then
+        ensure_session
+        local my_token removed=0
+        my_token="$(compute_claude6)"
+        while IFS= read -r win; do
+            [[ "$win" == "_placeholder" ]] && continue
+            [[ "$win" != codex-* ]] && continue
+            [[ "$win" != *"-$my_token-"* ]] && continue
+            tmux kill-window -t "$SESSION_NAME:$win"
+            removed=$(( removed + 1 ))
+        done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
+        echo "removed $removed window(s) for claude6=$my_token"
+        return 0
+    fi
+
     local window="$1"
-    [[ -z "$window" ]] && { echo "codex-tmux kill: window or --orphaned required" >&2; return 2; }
+    [[ -z "$window" ]] && { echo "codex-tmux kill: window, --mine, or --orphaned required" >&2; return 2; }
     ensure_session
     window_exists "$window" || { echo "codex-tmux kill: window '$window' not found" >&2; return 6; }
     tmux kill-window -t "$SESSION_NAME:$window"
@@ -296,8 +311,10 @@ Subcommands:
   rename <old-window> <new-topic>
       Rename a window's topic portion; preserves the suffix.
 
-  kill <window> | kill --orphaned
-      Kill a specific window, or all windows whose codex process has exited.
+  kill <window> | kill --mine | kill --orphaned
+      Kill a specific window, or all windows for the current Claude session
+      (--mine, matched by claude6 prefix), or all windows whose codex
+      process has exited (--orphaned).
 
   exec [codex-exec flags...] <prompt>
       Run codex exec one-shot outside tmux (escape hatch).

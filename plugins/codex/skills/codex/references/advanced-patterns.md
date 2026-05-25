@@ -1,5 +1,7 @@
 # Advanced Configuration Examples
 
+> **LEGACY — `exec`-mode only.** Since v3.1.0 the default codex workflow is tmux mode (see `tmux-mode.md`). The advanced flag combinations below apply to `codex exec` one-shots. In tmux mode, pass model / sandbox / reasoning-effort flags to `codex-tmux.sh new <topic> ...` instead.
+
 ---
 
 ## ⚠️ CRITICAL: Always Use `codex exec`

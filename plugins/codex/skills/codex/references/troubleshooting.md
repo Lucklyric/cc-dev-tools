@@ -1,5 +1,7 @@
 # Codex Skill — Errors and Troubleshooting
 
+> **Scope.** This catalog focuses on `codex exec` (one-shot / legacy) failure modes. For tmux-mode operational issues (`detect-idle` false-positives, ready-regex calibration, scrollback limits, hung TUI), see `tmux-mode.md` § Troubleshooting.
+
 Reference for diagnosing problems when invoking Codex CLI from Claude Code.
 
 ## Error Response Strategy
