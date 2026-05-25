@@ -139,6 +139,78 @@ wait_for_ready() {
     return 124
 }
 
+# ---------- Subcommands ----------
+
+cmd_new() {
+    local topic=""
+    local cwd="$PWD"
+    local sandbox="read-only"
+    local approval="on-request"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --cwd) cwd="$2"; shift 2 ;;
+            --full-auto) sandbox="workspace-write"; shift ;;
+            --read-only) sandbox="read-only"; shift ;;
+            -*) echo "codex-tmux new: unknown flag '$1'" >&2; return 2 ;;
+            *) topic="$1"; shift ;;
+        esac
+    done
+
+    if [[ -z "$topic" ]]; then
+        echo "codex-tmux new: topic required (e.g., 'codex-tmux.sh new auth')" >&2
+        return 2
+    fi
+    validate_topic "$topic" || return 2
+
+    ensure_session
+
+    # Compose unique window name (retry once on extremely unlikely collision).
+    local window
+    window="$(compose_window_name "$topic")"
+    if window_exists "$window"; then
+        window="$(compose_window_name "$topic")"
+        if window_exists "$window"; then
+            echo "codex-tmux new: name collision for topic '$topic' (retry failed)" >&2
+            return 17
+        fi
+    fi
+
+    # Build the codex command with network access if writing.
+    local codex_cmd=(
+        "$CODEX_BIN"
+        -c "approval_policy=$approval"
+        -c "model_reasoning_effort=xhigh"
+        -s "$sandbox"
+    )
+    if [[ "$sandbox" == "workspace-write" ]]; then
+        codex_cmd+=( -c "sandbox_workspace_write.network_access=true" )
+    fi
+
+    # Spawn the window detached.
+    tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
+        "${codex_cmd[@]}"
+
+    # CRITICAL: keep the window alive after codex exits (per FR-014) so the user
+    # can attach and read the exit message. Must be set ASAP after new-window.
+    tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit on
+
+    # Record metadata as per-window user options.
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd"
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')"
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_topic' "$topic"
+
+    # Wait for codex to be ready.
+    if ! wait_for_ready "$window" "$DEFAULT_TIMEOUT"; then
+        echo "codex-tmux new: codex did not become ready in time (window left in place for diagnosis)" >&2
+        return 124
+    fi
+
+    # Output: window name on stdout line 1, attach hint on line 2.
+    echo "$window"
+    echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
+}
+
 # ---------- Usage ----------
 usage() {
     cat <<'EOF'
@@ -192,7 +264,8 @@ main() {
         -h|--help|help)
             usage
             ;;
-        new|send|capture|ls|attach|rename|kill|exec)
+        new) cmd_new "$@" ;;
+        send|capture|ls|attach|rename|kill|exec)
             # Subcommand implementations are added in later tasks.
             echo "codex-tmux: subcommand '$cmd' not yet implemented" >&2
             exit 99

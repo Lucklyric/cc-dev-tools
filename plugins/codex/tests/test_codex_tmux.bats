@@ -123,3 +123,43 @@ setup() {
     [[ "$output" == *"still-thinking"* ]] || [[ "$stderr" == *"still-thinking"* ]]
     [[ "$output" == *"READY_REGEX_MISMATCH"* ]] || [[ "$stderr" == *"READY_REGEX_MISMATCH"* ]]
 }
+
+@test "new: spawns a window with the expected name pattern" {
+    CLAUDE_CODE_SESSION_ID="0d61e624-..." \
+        CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh" \
+        CC_CODEX_TIMEOUT=10 \
+        run "$SCRIPT" new auth
+    [ "$status" -eq 0 ]
+    [[ "$output" =~ codex-auth-0d61e6-[a-z0-9]{2} ]]
+    local win
+    win="$(echo "$output" | grep -oE 'codex-auth-0d61e6-[a-z0-9]{2}' | head -n1)"
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' | grep -Fxq "$win"
+}
+
+@test "new: prints the attach hint on stdout" {
+    CLAUDE_CODE_SESSION_ID="0d61e624-..." \
+        CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh" \
+        CC_CODEX_TIMEOUT=10 \
+        run "$SCRIPT" new auth
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"tmux attach -t $SESSION_NAME_TEST"* ]]
+    [[ "$output" == *"select-window -t codex-auth-"* ]]
+}
+
+@test "new: records cwd and created tmux user options" {
+    CLAUDE_CODE_SESSION_ID="0d61e624-..." \
+        CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh" \
+        CC_CODEX_TIMEOUT=10 \
+        run "$SCRIPT" new auth --cwd /tmp/test-cwd
+    [ "$status" -eq 0 ]
+    local win
+    win="$(echo "$output" | grep -oE 'codex-auth-0d61e6-[a-z0-9]{2}' | head -n1)"
+    [ "$(tmux show-option -wqv -t "$SESSION_NAME_TEST:$win" '@cc_codex_cwd')" = "/tmp/test-cwd" ]
+    [ -n "$(tmux show-option -wqv -t "$SESSION_NAME_TEST:$win" '@cc_codex_created')" ]
+}
+
+@test "new: invalid topic exits non-zero" {
+    CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex.sh" \
+        run "$SCRIPT" new InvalidTopic
+    [ "$status" -ne 0 ]
+}
