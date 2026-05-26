@@ -164,6 +164,61 @@ window_state() {
     fi
 }
 
+cmd_find() {
+    # Locate codex windows matching a topic (and optionally a cwd) within the
+    # current Claude session's claude6 namespace. Prints one match per line in
+    # the form "<window>\t<state>\t<cwd>". Exits 0 if any matches were printed,
+    # 1 otherwise.
+    local topic=""
+    local cwd_filter=""
+    local include_dead=0
+    local any_session=0
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --cwd) cwd_filter="$2"; shift 2 ;;
+            --include-dead) include_dead=1; shift ;;
+            --any-session) any_session=1; shift ;;
+            -*) echo "codex-tmux find: unknown flag '$1'" >&2; return 2 ;;
+            *) topic="$1"; shift ;;
+        esac
+    done
+
+    [[ -z "$topic" ]] && { echo "codex-tmux find: <topic> required" >&2; return 2; }
+    validate_topic "$topic" || return 2
+
+    ensure_session
+    local my_token=""
+    (( any_session )) || my_token="$(compute_claude6)"
+
+    local found=0
+    while IFS= read -r win; do
+        [[ "$win" == "_placeholder" ]] && continue
+        [[ "$win" != codex-* ]] && continue
+        # Filter by current claude6 unless --any-session.
+        if [[ -n "$my_token" && "$win" != *"-$my_token-"* ]]; then
+            continue
+        fi
+        local win_topic win_cwd state
+        win_topic="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_topic' 2>/dev/null)"
+        [[ "$win_topic" != "$topic" ]] && continue
+        if [[ -n "$cwd_filter" ]]; then
+            win_cwd="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_cwd' 2>/dev/null)"
+            [[ "$win_cwd" != "$cwd_filter" ]] && continue
+        else
+            win_cwd="$(tmux show-option -wqv -t "$SESSION_NAME:$win" '@cc_codex_cwd' 2>/dev/null)"
+        fi
+        state="$(window_state "$win")"
+        if (( ! include_dead )) && [[ "$state" != "alive" ]]; then
+            continue
+        fi
+        printf '%s\t%s\t%s\n' "$win" "$state" "${win_cwd:--}"
+        found=$(( found + 1 ))
+    done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
+
+    (( found > 0 ))
+}
+
 cmd_ls() {
     local mine_only=0
     while [[ $# -gt 0 ]]; do
@@ -305,6 +360,12 @@ Subcommands:
   ls [--mine]
       List codex windows. --mine filters to the current Claude session id.
 
+  find <topic> [--cwd DIR] [--include-dead] [--any-session]
+      Look up matching codex windows in the current Claude session's
+      claude6 namespace. Prints "<window>\t<state>\t<cwd>" lines for
+      matches; exits 0 if anything matched, 1 otherwise. Use BEFORE
+      `new` to decide whether to reuse an existing window.
+
   attach <window>
       Print the shell command the user can run to attach to a window.
 
@@ -360,6 +421,7 @@ EOF
             exit 64
             ;;
         ls) cmd_ls "$@" ;;
+        find) cmd_find "$@" ;;
         attach) cmd_attach "$@" ;;
         rename) cmd_rename "$@" ;;
         kill) cmd_kill "$@" ;;

@@ -26,6 +26,7 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes lifecyc
 |---|---|
 | `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn a new codex window. Returns the window name immediately; does NOT wait for codex's TUI to be ready. |
 | `ls [--mine]` | List codex windows with state (`alive` / `dead` / `unknown`). `--mine` filters to the current Claude session. |
+| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching windows in the current Claude session's `claude6` namespace. Exit 0 + one match per line, or exit 1 if none. Call this BEFORE `new` so codex windows aren't duplicated across turns. |
 | `attach <window>` | Print the tmux attach command (Claude Code's bash is non-interactive). |
 | `rename <old> <new-topic>` | Replace the topic portion; preserves the `<claude6>-<rand2>` suffix. |
 | `kill <window>` / `kill --orphaned` | Remove a window or all windows whose codex process has exited. |
@@ -308,4 +309,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.2.0
+3.3.0

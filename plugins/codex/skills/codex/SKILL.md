@@ -42,7 +42,14 @@ Window names become `codex-<topic>-<claude6>-<rand2>` (e.g., `codex-auth-0d61e6-
 The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` handles lifecycle only. It does NOT manage interaction.
 
 ```bash
-# Spawn a new codex window. Returns immediately — does not wait for codex to be ready.
+# ALWAYS look first: is there already a window for this task in this cwd?
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh find <topic> --cwd "$PWD"
+# Exit 0 + one line per match (tab-separated: window, state, cwd).
+# Exit 1 + no output → no match, safe to spawn.
+
+# Spawn a new codex window (use only after `find` returned no match,
+# or the user explicitly asked for a fresh window). Returns immediately
+# — does not wait for codex to be ready.
 WIN=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh new <topic> --cwd "$PWD" | head -n1)
 
 # List sessions for the current conversation.
@@ -140,22 +147,57 @@ See `references/tmux-mode.md` for the full recipes including the activity-wait l
 | Codex shows a non-response prompt | `handle-interruption` |
 | Resuming after the session id rolled or windows were killed | `reuse-existing-window` |
 
-## Choosing the right window across turns
+## Choosing the right window — mandatory pre-spawn workflow
 
-- **First codex call of the conversation** → `new <topic>`. Save the returned window name. Then run the idle-wait loop before the first send.
-- **Continuation ("now also…", "continue")** → drive `send-keys` on the most recent matching window (`ls --mine`).
-- **Parallel topic** → `new` a second window with a distinct topic.
-- **Reference to a prior conversation's window or after `kill --orphaned`** → use the `reuse-existing-window` recipe in `tmux-mode.md`. `ls` (no `--mine`) lists everything; match by topic + cwd, confirm with the user before resuming. If the window is `dead`, scrollback is still readable (codex process exited but `remain-on-exit` keeps the window); if the window is gone, spawn fresh with `new` and pass prior context inline.
+**Before every `new`, ALWAYS run `find` first.** This is non-negotiable — otherwise codex windows accumulate across turns and the user is left with junk to clean up. The script makes the check cheap (single command, machine-readable output):
 
-### Cleaning up windows
+```bash
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh find <topic> --cwd "$PWD"
+```
+
+Read the output, then decide based on **task context + the user's explicit intent**:
+
+| What you observe | What the user said | Action |
+|---|---|---|
+| Alive window with matching topic + cwd | Anything except "fresh"/"new window"/"new session" | **Reuse** — drive `send-keys` against this window. Skip `new`. |
+| Alive window with matching topic + cwd | "fresh window", "spawn a new one", "new session", "start over" | Spawn fresh with `new`. Optionally kill the old window first if the user said "start over". |
+| Dead window with matching topic + cwd | User wants to continue this task | Read its scrollback for context (`tmux capture-pane -p -S -2000`), then `kill` it and spawn fresh with the salvaged context inline. |
+| No matching window | Anything | Spawn with `new`. |
+| Multiple matching windows (rare) | — | Pick the most recently created (last in `find` output); ask the user if it's ambiguous. |
+| Window for *different* topic, same cwd | New sub-task | Spawn a separate window — don't multiplex topics in one TUI. |
+| Window for *same* topic, different cwd | Different repo | Spawn fresh — `find --cwd "$PWD"` already filters this out, so just `new`. |
+
+**Topic naming is part of the contract**: when you derive a topic slug per the rules in the "Topic naming protocol" section above, you're also choosing what `find` will match later. Use stable, content-derived slugs (`auth`, `tests`, `migration`) — not transient ones like `taskN` or timestamps.
+
+### Cross-session references
+
+If the user references a window from a prior Claude conversation ("go back to yesterday's auth window"), `find` won't return it (different `claude6` token). Use `find <topic> --any-session` to widen the search, then confirm with the user before resuming. Full recipe in `tmux-mode.md` § `reuse-existing-window`.
+
+## End-of-conversation cleanup
+
+At natural breakpoints — user says "we're done", "thanks that's it", "wrap up", or the codex task is clearly complete — offer to tidy up:
+
+```bash
+# How many windows are mine, and are any dead?
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
+```
+
+| Situation | Offer the user |
+|---|---|
+| Only one alive window, still useful | Leave it. They can resume it next session via `find --any-session`. |
+| Multiple windows, some dead | "Want me to run `kill --orphaned` to clear the finished ones?" |
+| Multiple windows, all stale | "Want me to run `kill --mine` to clear all this session's windows?" |
+| User explicitly says "clean up" / "kill all" | Run `kill --mine` and report what was removed. |
+
+**Never kill silently.** Always tell the user which windows you're about to remove and wait for confirmation, unless they explicitly said "kill all of them". Killing destroys scrollback irreversibly.
+
+### Cleanup commands reference
 
 | Goal | Command |
 |---|---|
 | Remove one window | `codex-tmux.sh kill <window>` |
 | Remove this Claude session's windows (alive or dead) | `codex-tmux.sh kill --mine` |
 | Remove only dead-codex windows (any session) | `codex-tmux.sh kill --orphaned` |
-
-Killing destroys scrollback. If you might need the conversation later, prefer `kill --orphaned` and leave alive windows in place — they can be reused via the `reuse-existing-window` recipe.
 
 ## Sandbox and approval policy
 

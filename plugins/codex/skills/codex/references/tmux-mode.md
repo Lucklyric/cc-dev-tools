@@ -18,6 +18,7 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes these l
 |---|---|
 | `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn a new codex window. Returns immediately — does NOT wait for codex's TUI to be ready. |
 | `ls [--mine]` | List windows. State is `alive` / `dead` / `unknown` based on tmux + process inspection (no pane parsing). |
+| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching windows in the current Claude session's claude6 namespace. Use BEFORE `new` to decide reuse vs spawn. Exits 0 on match (one line per result), 1 on no match. |
 | `attach <window>` | Print the tmux attach command (the script does not exec it; Claude Code's bash is non-interactive). |
 | `rename <old> <new-topic>` | Replace topic only; preserves the `<claude6>-<rand2>` suffix. |
 | `kill <window>` / `kill --mine` / `kill --orphaned` | Remove a window, all of the current Claude session's windows, or all dead-codex windows. |
@@ -196,36 +197,49 @@ If `Escape` does not cancel (rare — codex stuck in a tool call), fall back to 
 
 ### Recipe: `reuse-existing-window`
 
-Use when:
-- The Claude conversation was resumed and `$CLAUDE_CODE_SESSION_ID` rolled — `ls --mine` returns nothing, but the user is referring to a prior codex window.
+Use BEFORE every `new` to avoid spawning duplicate windows. Also use when:
+- The Claude conversation was resumed and `$CLAUDE_CODE_SESSION_ID` rolled — `find` without `--any-session` returns nothing, but the user is referring to a prior codex window.
 - The user asks to "continue the earlier discussion" or "go back to the auth window".
-- After `kill --orphaned` cleaned up dead windows and you need to confirm what's left.
 
 ```bash
-# 1) List everything (no --mine filter) and skip the header.
-codex-tmux.sh ls | awk 'NR>1 && $1!="WINDOW"'
+# 1) Lookup matching window in current session (alive only, same cwd).
+#    Tab-separated output: window<TAB>state<TAB>cwd
+MATCHES=$(codex-tmux.sh find auth --cwd "$PWD" || true)
 
-# Output columns: WINDOW  TOPIC  STATE  CWD  CREATED
-# Example:
-#   codex-auth-0d61e6-x7  auth  alive  /Users/asun/codes/myproj  2026-05-24T23:01:34-0700
-
-# 2) Match by topic + cwd. Confirm with the user before resuming.
-WIN=$(codex-tmux.sh ls \
-    | awk -v topic="auth" -v cwd="$PWD" '$2==topic && $4==cwd && $3=="alive" {print $1; exit}')
-
-# 3) If WIN is empty, the window is dead, gone, or in a different cwd.
-#    Either spawn fresh with `new <topic> --cwd "$PWD"` and pass prior
-#    context inline, or attach to a `dead` window first to read scrollback:
-codex-tmux.sh ls | awk '$2=="auth" && $3=="dead" {print $1}'
-# A dead window still holds the conversation scrollback (remain-on-exit is
-# on). Read it via `tmux capture-pane -t cc-codex:$WIN -p -S -2000`, then
-# `kill` it and spawn fresh with the salvaged context.
-
-# 4) Once WIN is confirmed and alive, just drive it like a normal window:
-#    short-inline-prompt / detect-idle / extract-delta.
+# 2) If something matched, pick the first window.
+if [[ -n "$MATCHES" ]]; then
+    WIN=$(printf '%s\n' "$MATCHES" | head -n1 | cut -f1)
+    # WIN is the window name; drive it via short-inline-prompt + detect-idle.
+else
+    # No match — safe to spawn fresh.
+    WIN=$(codex-tmux.sh new auth --cwd "$PWD" | head -n1)
+fi
 ```
 
-Why the `claude6` token isn't enough: it's the first 6 chars of the *current* `$CLAUDE_CODE_SESSION_ID`. If the conversation was resumed in a new Claude session, every prior window will have a different claude6 token and `--mine` will miss them. Topic + cwd is the stable cross-session match.
+For dead-window recovery (codex process exited but scrollback preserved):
+
+```bash
+# Find any matching window including dead ones.
+DEAD=$(codex-tmux.sh find auth --cwd "$PWD" --include-dead | awk -F'\t' '$2=="dead" {print $1; exit}')
+if [[ -n "$DEAD" ]]; then
+    # Salvage prior conversation context from scrollback before killing.
+    PRIOR=$(tmux capture-pane -t cc-codex:$DEAD -p -S -2000)
+    codex-tmux.sh kill "$DEAD"
+    WIN=$(codex-tmux.sh new auth --cwd "$PWD" | head -n1)
+    # Pass $PRIOR to codex inline as context in the first prompt.
+fi
+```
+
+For cross-Claude-session references (user resumed a conversation and wants their old auth window):
+
+```bash
+# Widen search to all claude sessions, then confirm with the user.
+codex-tmux.sh find auth --any-session
+# → codex-auth-bbbbbb-x7    alive    /Users/asun/codes/myproj
+# Confirm: "I see codex-auth-bbbbbb-x7 (alive) — reuse this one?"
+```
+
+Why the `claude6` token isn't enough on its own: it's the first 6 chars of the *current* `$CLAUDE_CODE_SESSION_ID`. If the conversation was resumed in a new Claude session, every prior window will have a different claude6 token and the default `find` will miss them — that's what `--any-session` is for.
 
 Codex sometimes shows interactive prompts that need acknowledgement before the main response can continue.
 

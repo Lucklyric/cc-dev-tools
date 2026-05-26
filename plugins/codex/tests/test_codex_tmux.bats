@@ -236,6 +236,92 @@ setup() {
         | grep -Fxq "codex-kill-aaaaaa-aa"
 }
 
+@test "find: matches alive window with same topic and cwd" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d "sleep 60"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_topic' "auth"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_cwd' "/tmp/proj"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth --cwd /tmp/proj
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"codex-auth-aaaaaa-aa"* ]]
+    [[ "$output" == *"alive"* ]]
+}
+
+@test "find: no match returns exit 1" {
+    "$SCRIPT" _internal ensure_session
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find nonexistent
+    [ "$status" -eq 1 ]
+}
+
+@test "find: ignores dead windows by default" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d \
+        "bash -c 'sleep 0.3; exit 0'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" remain-on-exit on
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_topic' "auth"
+    sleep 1
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth
+    [ "$status" -eq 1 ]
+}
+
+@test "find: --include-dead matches dead windows" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d \
+        "bash -c 'sleep 0.3; exit 0'"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" remain-on-exit on
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_topic' "auth"
+    sleep 1
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth --include-dead
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"codex-auth-aaaaaa-aa"* ]]
+    [[ "$output" == *"dead"* ]]
+}
+
+@test "find: ignores windows from other claude sessions" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "sleep 60"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_topic' "auth"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth
+    [ "$status" -eq 1 ]
+}
+
+@test "find: --any-session matches windows across all claude sessions" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "sleep 60"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_topic' "auth"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth --any-session
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"codex-auth-bbbbbb-bb"* ]]
+}
+
+@test "find: cwd mismatch yields no match" {
+    "$SCRIPT" _internal ensure_session
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d "sleep 60"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_topic' "auth"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_cwd' "/tmp/proj-a"
+    CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
+        run "$SCRIPT" find auth --cwd /tmp/proj-b
+    [ "$status" -eq 1 ]
+}
+
+@test "find: missing topic exits 2" {
+    "$SCRIPT" _internal ensure_session
+    run "$SCRIPT" find
+    [ "$status" -eq 2 ]
+}
+
+@test "find: invalid topic exits 2" {
+    "$SCRIPT" _internal ensure_session
+    run "$SCRIPT" find InvalidTopic
+    [ "$status" -eq 2 ]
+}
+
 @test "kill --mine: removes only windows matching the current claude6 prefix" {
     "$SCRIPT" _internal ensure_session
     tmux new-window -t "$SESSION_NAME_TEST" -n "codex-foo-aaaaaa-aa" -d "sleep 60"
