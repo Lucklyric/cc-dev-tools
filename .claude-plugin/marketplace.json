@@ -1,7 +1,7 @@
 {
   "name": "cc-dev-tools",
   "description": "Claude Code marketplace containing development tools and AI integrations for advanced workflows",
-  "version": "2.25.0",
+  "version": "2.26.0",
   "owner": {
     "name": "0xasun"
   },
@@ -24,7 +24,7 @@
     {
       "name": "telegram-notifier",
       "source": "./plugins/telegram-notifier",
-      "description": "Telegram notifications for Claude Code response completion, subagent tasks, and system notifications. Configurable via environment variables with dry-run mode for testing."
+      "description": "Telegram bridge for Claude Code: notification hooks plus on-demand artifact sending via the telegram skill. Triggers: 'use asun:telegram to send', 'telegram this file'. Supports images, video, audio, documents, voice notes, animations, stickers, and text. Configurable via environment variables with dry-run mode."
     }
   ]
 }

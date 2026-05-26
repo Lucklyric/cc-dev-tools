@@ -1,12 +1,13 @@
 {
   "name": "telegram-notifier",
-  "description": "Telegram notifications for Claude Code response completion, subagent tasks, and system notifications",
-  "version": "0.3.0",
+  "description": "Telegram bridge for Claude Code: notification hooks (Stop, SubagentStop, Notification) plus on-demand artifact sending via the telegram skill. Triggers: 'use asun:telegram to send', 'telegram this file', 'send to telegram', 'post to telegram'. Supports images, video, audio, documents, voice notes, animations, stickers, and text.",
+  "version": "0.4.0",
   "author": {
     "name": "0xasun"
   },
   "repository": "https://github.com/Lucklyric/cc-dev-tools",
   "homepage": "https://github.com/Lucklyric/cc-dev-tools/tree/main/plugins/telegram-notifier",
-  "keywords": ["telegram", "notifications", "hooks"],
-  "license": "Apache-2.0"
+  "keywords": ["telegram", "notifications", "hooks", "artifact", "send", "bot"],
+  "license": "Apache-2.0",
+  "skills": ["./skills/telegram"]
 }

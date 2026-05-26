@@ -1,12 +1,13 @@
 # Telegram Notifier Plugin
 
-Receive Telegram notifications when Claude Code completes responses, subagent tasks finish, or system notifications occur.
+A two-way-light, one-way-strong Telegram bridge for Claude Code. The plugin started as a notification-only hook bundle (v0.3.0 and earlier) and now also exposes a **skill** for on-demand artifact sending (v0.4.0+).
 
 ## Features
 
 - **Stop Hook**: Notifies when Claude Code completes a response
 - **SubagentStop Hook**: Notifies when subagent tasks complete
 - **Notification Hook**: Forwards Claude Code system notifications
+- **Telegram Skill (v0.4.0+)**: On-demand artifact sending — say "use asun:telegram to send foo.pdf" or "telegram this image" and Claude routes it to your chat. Auto-detects file kind (photo, video, audio, voice, animation, sticker, document) and falls back to `sendDocument` for anything unknown.
 - **Custom Messages**: Customize notification messages via environment variables
 - **Dry-Run Mode**: Test configuration without sending real notifications
 
@@ -114,6 +115,59 @@ When enabled, the plugin prints `[DRY RUN] <message>` to the terminal instead of
 | Stop | [host:project] Claude Code response completed at {time} | Claude Code completes a response |
 | SubagentStop | [host:project] Claude Code subagent completed at {time} | Background agent finishes |
 | Notification | [host:project] Claude Code notification | System notification |
+
+## Sending Artifacts (v0.4.0+)
+
+The telegram skill activates whenever you tell Claude to push something to Telegram:
+
+```
+You: use asun:telegram to send ~/Downloads/report.pdf
+You: telegram this image: docs/architecture.png
+You: send these to telegram: chart.png, notes.md, demo.mp4
+You: post to telegram with note "v2 review pack", file: report.pdf
+```
+
+Claude calls the helper script:
+
+```bash
+$CLAUDE_PLUGIN_ROOT/scripts/send-artifact.sh [--caption "<text>"] [--type <endpoint>] <file>
+$CLAUDE_PLUGIN_ROOT/scripts/send-artifact.sh --text "<message>"
+```
+
+### Endpoint auto-detection
+
+| Extension | Endpoint | Notes |
+|---|---|---|
+| `.jpg` `.jpeg` `.png` `.webp` | `sendPhoto` | Inline preview, 10MB limit |
+| `.gif` | `sendAnimation` | Animated, no audio |
+| `.mp4` `.mov` `.mkv` `.webm` | `sendVideo` | 50MB bot-API limit |
+| `.mp3` `.m4a` `.aac` `.flac` `.wav` | `sendAudio` | Music-style player |
+| `.ogg` `.opus` | `sendVoice` | Voice-note style |
+| `.tgs` | `sendSticker` | Animated sticker |
+| anything else | `sendDocument` | Generic, filename preserved, 50MB |
+
+Override with `--type` if needed: `--type document` forces document mode even for images.
+
+### Captions
+
+If you say "send foo.pdf with note: v2 draft", the note becomes the Telegram caption. The script always prepends a `[hostname:project]` tag so you can tell which session sent which file.
+
+### Exit codes
+
+| Exit | Meaning |
+|---|---|
+| 0 | Sent (or dry-run printed) |
+| 2 | Usage error |
+| 3 | File not readable |
+| 4 | Token or chat ID env var unset |
+| 5 | Telegram API returned an error (size limit, auth, etc.) — full response shown on stderr |
+
+### Try it in dry-run
+
+```bash
+CC_TELEGRAM_DRY_RUN=true $CLAUDE_PLUGIN_ROOT/scripts/send-artifact.sh ~/Downloads/report.pdf
+# [DRY RUN] sendDocument chat_id=... document=@/Users/.../report.pdf caption='[host:project]'
+```
 
 ## Troubleshooting
 
