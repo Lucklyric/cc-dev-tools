@@ -1,10 +1,42 @@
-# Codex Tmux Mode — Reference (v3.1.0+)
+# Codex Tmux Mode — Reference (v3.5.0+)
 
-The codex skill drives interaction with codex directly via `tmux send-keys` and `tmux capture-pane`. A thin helper script handles only lifecycle (spawn, list, kill, etc.). The recipes below are the source of truth for how to interact; the script is just a shortcut for management.
+> **Generic agentic-tmux concepts and the full recipe rationale now live in the `tmux` skill (tmux plugin).** This file documents only codex-specific calibration, the pane-mode default, and the dedicated-window fallback. For the *why* behind any recipe — the two-phase idle-detection rationale, copy-mode navigation, scrollback semantics, naming theory, and sync/locking — read the `tmux` skill's references (linked inline below). The codex plugin is the reference implementation that skill points back to.
+
+The codex skill drives interaction with codex directly via `tmux send-keys` and `tmux capture-pane`. A thin helper script handles only lifecycle (pane, bind, spawn, list, kill, etc.). By default — when Claude runs **inside tmux** — each Claude session gets **one reused codex pane** split into the current window (right next to Claude, visible live with no separate attach). When Claude is **not inside tmux**, it falls back to **one reused codex window** (`codex-<claude6>`) in the `cc-codex` session. Extra panes/windows are spawned only when the user explicitly asks for a separate or parallel task.
+
+## Pane mode (default — Claude inside tmux)
+
+When Claude is running inside tmux, the default is a codex **pane** split into the CURRENT Claude window (the window holding Claude's own pane). You watch progress live with no separate attach. In the normal case there is one codex pane per Claude session — `pane` marks it (via `claude6`) so it is reused, not duplicated. (A duplicate can occur if the Claude session id rolls mid-conversation, since the `claude6` token changes; recover with `kill --orphaned` or `kill %id`.)
+
+Resolve THE codex target with this snippet (the canonical opening of every codex interaction). `$TARGET` is a pane id (e.g. `%53`) inside tmux, or `cc-codex:<window>` in the fallback:
+
+```bash
+# Resolve THE codex target. Default: a pane in the current window.
+if [[ -n "${TMUX:-}" ]] && _out=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --cwd "$PWD"); then
+    TARGET=$(printf '%s\n' "$_out" | head -n1)   # pane id, e.g. %53
+else
+    # pane returned nonzero (exit 3 = not in tmux; exit 4 = codex died on launch)
+    # → fall back to a dedicated cc-codex window.
+    TARGET="cc-codex:$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh bind --cwd "$PWD" | head -n1)"
+fi
+# Now drive "$TARGET" with the interaction recipes (send → detect-idle → extract-delta).
+```
+
+Capture `pane`'s output and check its real exit code before `head` — piping straight into `head` masks the exit code, and without `pipefail` the `&&` would succeed with an empty `TARGET` on a nonzero `pane`. Exit 3 = not inside tmux; exit 4 = codex died on launch (after one auto-retry, with codex's last output on stderr). Both fall through to the `bind` fallback; a plain re-run also recovers exit 4 (`pane` auto-retries once).
+
+- **Returns a pane id.** `pane` prints the pane id (e.g. `%53`) on stdout line 1. Use it directly as `tmux ... -t "$TARGET"`.
+- **Reuse / respawn semantics.** `pane` is idempotent: it locates and reuses the existing codex pane if alive, respawns codex if the pane's process died, and only splits a new pane when none exists. Follow-ups, continuations, and new sub-tasks all land in the same pane.
+- **Split flags.** `--horizontal` / `--vertical` choose the split direction (default `--horizontal`); `--size PCT` sets the new pane's size (integer **10–90**, default `45`; out-of-range → exit 2). Sandbox flags `--full-auto` / `--read-only` (default read-only) are fixed when the pane is first created.
+- **Pane width / shrink.** Splitting off Claude's own pane shrinks Claude's pane once (to ~45% by default). If a **horizontal** split would leave codex too narrow, `pane` auto-switches to a **vertical (full-width)** split so codex keeps ≥80 cols. Pass `--vertical` up front to keep full width regardless.
+- **Not inside tmux.** `pane` exits **3** (with a hint to use `bind`) when there is no surrounding tmux; the resolve-target guard above handles this by falling back to `bind`.
+- **Codex died on launch.** `pane` exits **4** if codex exits immediately at launch (after one auto-retry), printing codex's last output on stderr. (`bind` uses the same exit 4 for immediate death.) Re-run to auto-retry once, or fall back to `bind` — see Troubleshooting § "Codex exited immediately at launch".
+- **Cleanup.** `kill "$TARGET"` accepts the pane id (e.g. `%53`) and kills the codex pane. `kill --mine` / `kill --orphaned` are pane-aware. See cleanup below.
+
+The dedicated-window path (`bind`) is the fallback when Claude is not inside tmux — see "Dedicated-window fallback" below. Everything else (recipes, calibration) is identical because the recipes drive `"$TARGET"` regardless of whether it is a pane id or `cc-codex:<window>`.
 
 ## Lifecycle (script-managed)
 
-All codex instances live in a single tmux session named `cc-codex`. Attach at any time with:
+All codex instances live in a single tmux session named `cc-codex` (override with `CC_CODEX_SESSION_NAME`). Attach at any time with:
 
 ```bash
 tmux attach -t cc-codex
@@ -16,295 +48,268 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes these l
 
 | Subcommand | Purpose |
 |---|---|
-| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn a new codex window. Returns immediately — does NOT wait for codex's TUI to be ready. |
-| `ls [--mine]` | List windows. State is `alive` / `dead` / `unknown` based on tmux + process inspection (no pane parsing). |
-| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching windows in the current Claude session's claude6 namespace. Use BEFORE `new` to decide reuse vs spawn. Exits 0 on match (one line per result), 1 on no match. |
-| `attach <window>` | Print the tmux attach command (the script does not exec it; Claude Code's bash is non-interactive). |
-| `rename <old> <new-topic>` | Replace topic only; preserves the `<claude6>-<rand2>` suffix. |
-| `kill <window>` / `kill --mine` / `kill --orphaned` | Remove a window, all of the current Claude session's windows, or all dead-codex windows. |
+| `pane [--cwd DIR] [--full-auto\|--read-only] [--horizontal\|--vertical] [--size PCT]` | **Default entry point (Claude inside tmux).** Spawn/locate/reuse THE single codex pane split into the CURRENT Claude window, marked by `claude6` so it is reused, not duplicated. Idempotent: reuse if alive, respawn codex if dead. Prints the pane id (e.g. `%53`) on line 1. Default split `--horizontal`, `--size 45` (size 10–90, else exit 2); a too-narrow horizontal split auto-switches to vertical (full-width) so codex keeps ≥80 cols. Exits **3** (hint to use `bind`) when NOT inside tmux; exits **4** if codex dies immediately at launch (after one auto-retry; codex's last output on stderr). |
+| `bind [--cwd DIR] [--full-auto\|--read-only]` | **Fallback entry point (Claude NOT inside tmux).** Get/create THE single bound window `codex-<claude6>` in the `cc-codex` session. Idempotent: reuse if alive, respawn codex if dead, create if absent. Records `@cc_codex_cwd/created/sandbox` metadata and sets `remain-on-exit on`. Output: window name on line 1, attach hint on line 2. Exits **4** if codex dies immediately at launch (after one auto-retry; codex's last output on stderr). |
+| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn an EXTRA codex window (explicit parallel tasks only). Returns immediately — does NOT wait for codex's TUI to be ready. |
+| `ls [--mine]` | List windows. State is `alive` / `dead` / `unknown` based on tmux + process inspection (no pane parsing). `--mine` matches both the bound name `codex-<claude6>` and extras `codex-<topic>-<claude6>-<rand2>`. |
+| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching EXTRA windows in the current Claude session's claude6 namespace. Exits 0 on match (one line per result), 1 on no match. Rarely needed under the pane/bound default — use it for extra-topic reuse or `--any-session` cross-session lookup. |
+| `attach <window>` | Print the tmux attach command for a **window** (the script does not exec it; Claude Code's bash is non-interactive). **Window-only** — passing a pane id fails (exit 6). A codex pane is already visible in your current window and needs no attach. |
+| `rename <old> <new-topic>` | Replace topic only; preserves the `<claude6>-<rand2>` suffix. (Extra windows only — the bound window has no topic to rename.) |
+| `kill <window>` / `kill <%pane-id>` / `kill --mine` / `kill --orphaned` | Remove a specific window, a specific codex pane (`kill %53`), all of the current Claude session's codex (`--mine`: panes AND bound/extra windows), or all dead-codex panes/windows (`--orphaned`). `--mine` and `--orphaned` are **pane-aware** — they remove codex PANES as well as `cc-codex` windows. |
 | `exec [flags...] <prompt>` | One-shot escape hatch using `codex exec` (no tmux). |
 
-Window naming stays `codex-<topic>-<claude6>-<rand2>` (see `SKILL.md` for the topic-slug rules).
+**Pane / window naming.** Default pane (inside tmux): the codex pane in the current window is identified by its pane id (e.g. `%53`) and marked with `claude6` so `pane` reuses it instead of splitting a duplicate. Fallback bound window: `codex-<claude6>` (e.g. `codex-0d61e6`), topic-agnostic, reused for every task. Extra windows (explicit parallel only): `codex-<topic>-<claude6>-<rand2>` (e.g. `codex-auth-0d61e6-x7`). `claude6` = first 6 chars of `$CLAUDE_CODE_SESSION_ID` (fallback: sha256 of `"$PPID:$PWD"`, first 6 chars). Full naming theory (the generic `<tool>-<claude6>` / `<tool>-<topic>-<claude6>-<rand2>` pattern, identity derivation, why the suffix exists) is in the `tmux` skill's `references/model-and-identity.md`; the topic-slug rules are in `SKILL.md`.
 
-## Interaction recipes (skill-driven)
+## Dedicated-window fallback (not inside tmux)
 
-Each recipe below is copy-pasteable bash. Substitute `<window>` with the actual window name returned by `new` (e.g., `codex-auth-0d61e6-x7`).
+This is the fallback when Claude is **not** running inside tmux (so `pane` cannot split into a current window). One window in the `cc-codex` session, reused, driven through the recipes below. The resolve-target snippet in "Pane mode" above already selects this path automatically; below is the standalone form.
+
+```bash
+# 1) Get THE bound window for this Claude session (idempotent).
+#    Line 1 = window name; line 2 = attach hint. Default sandbox is read-only;
+#    add --full-auto on first creation for an editable workspace.
+WIN=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh bind --cwd "$PWD" | head -n1)
+TARGET="cc-codex:$WIN"
+
+# 2) Wait for codex to be input-ready (only needed right after creation;
+#    a reused alive window is already idle). Bound the wait so a dead/empty
+#    target can't spin forever (mirrors the detect-idle deadline).
+IDLE_REGEX='gpt-5\.5.*·'
+RDY_DEADLINE=$(( $(date +%s) + 30 ))
+until tmux capture-pane -t "$TARGET" -p -S -200 | tail -3 | grep -qE "$IDLE_REGEX"; do
+    (( $(date +%s) > RDY_DEADLINE )) && { echo "codex not ready after 30s (dead pane?)"; break; }
+    sleep 0.5
+done
+
+# 3) Baseline → send → detect-idle → extract-delta, all against "$TARGET".
+BASELINE=$(tmux capture-pane -t "$TARGET" -p -S -200)
+tmux send-keys -t "$TARGET" -l -- "<prompt>"
+sleep 0.3
+tmux send-keys -t "$TARGET" Enter
+# ...detect-idle (see recipe below)...
+# Preferred delta: line-count tail (robust on redraw-heavy TUIs).
+BEFORE_LINES=$(printf '%s\n' "$BASELINE" | wc -l)
+AFTER=$(tmux capture-pane -t "$TARGET" -p -S -200)
+AFTER_LINES=$(printf '%s\n' "$AFTER" | wc -l)
+(( AFTER_LINES > BEFORE_LINES )) && printf '%s\n' "$AFTER" | tail -n "$(( AFTER_LINES - BEFORE_LINES ))"
+# Alternative (noisy on redraw-heavy TUIs): diff <(...) <(...) | grep '^>'
+```
+
+Every follow-up, continuation, and new sub-task in the same Claude session reuses the same `$TARGET` — just take a fresh `BASELINE`, send, detect-idle, extract-delta again. No `find`, no topic slug, no reuse-vs-spawn decision. (Inside tmux the only difference is that `$TARGET` is a pane id from `pane` instead of `cc-codex:$WIN` from `bind` — the recipes are identical.)
+
+### Spawning an extra window (explicit request only)
+
+Only when the user explicitly asks for a separate / parallel task ("in parallel", "separate window", "keep this one and also…", "don't interrupt the current task"):
+
+```bash
+# Derive a topic slug per SKILL.md, then spawn an EXTRA window.
+EXTRA=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh new auth --cwd "$PWD" | head -n1)
+# Wait for ready, then drive it with the same recipes targeting cc-codex:$EXTRA
+# (set TARGET="cc-codex:$EXTRA"). The default codex pane/window keeps running
+# untouched in parallel.
+```
+
+The default codex pane/window and any extras coexist; extras live in the `cc-codex` session, and `ls --mine` shows the windows. Generic one-driver discipline and spawn/cleanup theory: `tmux` skill `references/sync-and-lifecycle.md`.
+
+## Interaction recipes (codex-specific)
+
+The recipe *mechanics and rationale* live in the `tmux` skill's `references/interaction-recipes.md`. Below are the codex-calibrated commands — they all target `"$TARGET"`, which is the pane id from `pane` (default, inside tmux) or `cc-codex:<window>` from `bind` (fallback) or an extra window. The recipes are target-agnostic: identical whether `$TARGET` is a pane id like `%53` or a `session:window`.
 
 ### Recipe: `short-inline-prompt`
 
 Use when the prompt is ≤ ~500 chars, single line, no code blocks.
 
 ```bash
-# 1) Send the prompt literally, then Enter.
-tmux send-keys -t cc-codex:<window> -l -- "<prompt>"
+tmux send-keys -t "$TARGET" -l -- "<prompt>"
 sleep 0.3   # let the TUI register the typing before the Enter
-tmux send-keys -t cc-codex:<window> Enter
+tmux send-keys -t "$TARGET" Enter
 ```
 
-The 0.3s pause matters: without it, codex's TUI sometimes treats the Enter as part of the typing burst and does not submit on the first try. Increase to 0.5–1s on slow machines.
+The 0.3s pause matters: without it, codex's TUI sometimes treats the Enter as part of the typing burst and does not submit on the first try. Increase to 0.5–1s on slow machines. (Rationale: `tmux` skill `references/interaction-recipes.md` § send-inline.)
 
 ### Recipe: `tmp-file-prompt`
 
-Use when the prompt is > 500 chars, multi-line, contains code blocks, or contains characters that are tedious to send-key.
-
-The robust pattern is to use Claude's `Write` tool (not a shell heredoc) for the prompt body, so no quoting or delimiter-collision concerns matter. The shell only sends a short inline reference.
+Use when the prompt is > 500 chars, multi-line, contains code blocks, or contains characters that are tedious to send-key. Use Claude's `Write` tool for the prompt body, then send a short inline reference — codex's `@file` syntax loads it in-context.
 
 ```bash
 # 1) Compute a tmp path (do NOT write via heredoc — use the Write tool).
 PROMPT_FILE=$(mktemp -t cc-codex-prompt.XXXXXX.md)
 
 # 2) From Claude: invoke the Write tool with file_path=$PROMPT_FILE and the
-#    full prompt body as `content`. This handles arbitrary content (code
-#    blocks, nested heredocs, quotes, multi-line, etc.) without escaping.
+#    full prompt body as `content` (handles code blocks, quotes, nested
+#    heredocs, multi-line — no escaping).
 
-# 3) Send a short inline message that points codex at the file.
-tmux send-keys -t cc-codex:<window> -l -- "Read @${PROMPT_FILE} and follow its instructions."
+# 3) Point codex at the file.
+tmux send-keys -t "$TARGET" -l -- "Read @${PROMPT_FILE} and follow its instructions."
 sleep 0.3
-tmux send-keys -t cc-codex:<window> Enter
+tmux send-keys -t "$TARGET" Enter
 
-# 4) After capturing the response (recipe extract-delta), best-effort clean up:
+# 4) After capturing the response, best-effort clean up.
 rm -f "$PROMPT_FILE"
 ```
 
-Codex's `@file` syntax loads the file in-context, so `send-keys` does not have to stream the prompt body. The file should be readable by the codex process; `mktemp` defaults are fine. Cleanup is best-effort: codex re-reads the file only on explicit reference, so once the response is captured, removal is safe.
-
-Why not a heredoc? `cat > file <<'PROMPT_EOF' ... PROMPT_EOF` silently truncates if the prompt body itself contains the literal `PROMPT_EOF` line (e.g. when asking codex to review shell scripts that demonstrate nested heredocs). The Write-tool path has no such collision.
+Why the Write tool and not a heredoc: a `<<'EOF'` heredoc silently truncates if the prompt body contains the delimiter line (e.g. when asking codex to review shell that demonstrates nested heredocs). The Write-tool path has no such collision. (Full rationale: `tmux` skill § send-via-tmpfile.)
 
 ### Recipe: `detect-idle`
 
-This is the **recheck strategy**. There is no auto-notification when codex finishes a turn — Claude must actively poll the pane. The recipe is two phases run in order: activity-wait, then stability.
+The **recheck strategy** — Claude must actively poll; there is no auto-notification when codex finishes. Two phases: activity-wait, then stability. (Why two phases — the status line is present both before send and after completion, so a stability-only loop false-positives on the pre-send pane — is explained in full in the `tmux` skill's `references/interaction-recipes.md` § detect-idle.)
 
-**Why two phases:** codex's status line (`gpt-5.5 xhigh · /path`) is present *both* before a prompt is sent and after the response completes. A naive stability-only loop will exit immediately on the pre-send pane and treat the prompt as already complete (false positive). The activity-wait phase fixes this by requiring the pane to first **differ** from a baseline taken before the send.
-
-**Calibration.** Run `tmux capture-pane -t cc-codex:<window> -p | tail -5` while codex is idle to see what your CLI version puts near the bottom. For codex 0.133, the status line looks like `gpt-5.5 xhigh · /path/to/cwd`, so the default `IDLE_REGEX` below matches `gpt-5.5` plus any effort level. Update the regex if your codex version uses a different status line.
+**Codex calibration.** For codex 0.133+ the idle status line looks like `gpt-5.5 xhigh · /path/to/cwd`, so anchor the regex to the middot before the cwd path:
 
 ```bash
-IDLE_REGEX='gpt-5\.5.*(xhigh|high|medium|low)'
+IDLE_REGEX='gpt-5\.5.*·'
+```
 
-# --- Phase 0: take baseline BEFORE sending the prompt ------------------------
-BASELINE=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+Anchor to the ` · /path` status line, not just the model name, because the model name can appear in response text. Run `tmux capture-pane -t "$TARGET" -p | tail -5` while codex is idle to confirm what your CLI version prints, and update the regex if the status line changed.
 
-# ...send prompt with short-inline-prompt or tmp-file-prompt recipe...
+```bash
+# Phase 0: baseline BEFORE sending (also the delta anchor).
+BASELINE=$(tmux capture-pane -t "$TARGET" -p -S -200)
 
-# --- Phase 1: activity-wait — pane must first differ from baseline ----------
+# ...send prompt (short-inline-prompt or tmp-file-prompt)...
+
+# Phase 1: activity-wait — pane must first differ from baseline.
 ACTIVITY_DEADLINE=$(( $(date +%s) + 30 ))   # codex usually starts within 5s
 while (( $(date +%s) < ACTIVITY_DEADLINE )); do
-    [[ "$(tmux capture-pane -t cc-codex:<window> -p -S -200)" != "$BASELINE" ]] && break
+    [[ "$(tmux capture-pane -t "$TARGET" -p -S -200)" != "$BASELINE" ]] && break
     sleep 0.5
 done
 
-# --- Phase 2: stability — pane unchanged for 2 polls AND idle regex matches -
-PREV=""
-STABLE=0
-DEADLINE=$(( $(date +%s) + 600 ))   # 10-minute upper bound for the response
+# Phase 2: stability — pane unchanged for 2 polls AND idle regex matches the
+# BOTTOM of the pane only (last ~3 lines), so a response echoing the status line
+# can't fire a false idle. The stability compare stays over the whole buffer.
+PREV=""; STABLE=0; DEADLINE=$(( $(date +%s) + 600 ))   # 10-min upper bound
 while (( $(date +%s) < DEADLINE )); do
-    BUF=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
-    if [[ "$BUF" == "$PREV" ]] && echo "$BUF" | grep -qE "$IDLE_REGEX"; then
-        STABLE=$(( STABLE + 1 ))
-        (( STABLE >= 2 )) && break
-    else
-        STABLE=0
-    fi
-    PREV="$BUF"
-    sleep 0.5
+    BUF=$(tmux capture-pane -t "$TARGET" -p -S -200)
+    if [[ "$BUF" == "$PREV" ]] && printf '%s\n' "$BUF" | tail -3 | grep -qE "$IDLE_REGEX"; then
+        STABLE=$(( STABLE + 1 )); (( STABLE >= 2 )) && break
+    else STABLE=0; fi
+    PREV="$BUF"; sleep 0.5
 done
 ```
 
-Common pitfalls: skipping Phase 0/1 produces the false positive described above; setting `ACTIVITY_DEADLINE` too low aborts before codex's TUI redraws (slow machines need 10–30s); setting `DEADLINE` too low truncates long reasoning chains (xhigh effort can take several minutes for hard problems).
+Codex-specific tuning: `xhigh` effort can take several minutes on hard problems, so keep `DEADLINE` generous (600s+); slow machines may need `ACTIVITY_DEADLINE` raised to 10–30s before codex's TUI first redraws.
 
 ### Recipe: `extract-delta`
 
-After `detect-idle` confirms codex is ready again, read the new output (everything since the prompt was sent).
+After `detect-idle` confirms codex is idle again, read everything emitted since `BASELINE`.
 
 ```bash
-# Compute the line-count delta:
-#   AFTER = current pane capture
-#   BASELINE = capture taken just before sending the prompt
-#
-# Print only the lines past the baseline length.
 BEFORE_LINES=$(printf '%s\n' "$BASELINE" | wc -l)
-AFTER=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+AFTER=$(tmux capture-pane -t "$TARGET" -p -S -200)
 AFTER_LINES=$(printf '%s\n' "$AFTER" | wc -l)
 if (( AFTER_LINES > BEFORE_LINES )); then
     printf '%s\n' "$AFTER" | tail -n "$(( AFTER_LINES - BEFORE_LINES ))"
 fi
 ```
 
-Alternative — marker-based: when sending the prompt, prepend a uniquely-recognizable marker (e.g., a UUID) so you can re-locate the prompt in the pane after-the-fact, and read everything below it.
-
-### Recipe: `incremental-capture`
-
-When the response is longer than the default 200-line capture window.
-
-```bash
-# Capture progressively more scrollback until the full response is included.
-# -S -N means "start N lines back from the current view".
-for N in 200 500 1000 2000; do
-    BUF=$(tmux capture-pane -t cc-codex:<window> -p -S -"$N")
-    # Heuristic: stop when BUF contains the prompt marker / known top boundary.
-    if echo "$BUF" | grep -qF "<known-top-boundary>"; then
-        break
-    fi
-done
-```
-
-tmux's `history-limit` setting (default ~2000 lines) is the absolute upper bound for scrollback. If a single codex response exceeds that, use `copy-mode-navigation` (next recipe) or instruct codex to write its output to a file instead.
-
-### Recipe: `copy-mode-navigation`
-
-When the response exceeds the scrollback limit. Codex's pane usually doesn't auto-enter copy mode, so we drive it programmatically.
-
-```bash
-# Enter copy mode in the codex pane.
-tmux copy-mode -t cc-codex:<window>
-
-# Navigate to history top (oldest lines available in this window's scrollback).
-tmux send-keys -X -t cc-codex:<window> history-top
-
-# Capture from this position.
-tmux capture-pane -t cc-codex:<window> -p -S -2000 -E -
-
-# Exit copy mode when done.
-tmux send-keys -t cc-codex:<window> q
-```
-
-This is rarely needed in practice — most codex responses fit within a 2000-line scrollback. Reach for it only when `incremental-capture` returned a truncated buffer.
+For longer responses (`incremental-capture`, >200 lines) and responses past the scrollback limit (`copy-mode-navigation`), use the generic recipes in the `tmux` skill's `references/interaction-recipes.md`; they apply unchanged to `"$TARGET"`. Scrollback semantics (`-S -N`, `history-limit`) are documented there too.
 
 ### Recipe: `cancel-in-flight`
 
-Use when the user changes their mind mid-response ("stop, ask it X instead" / "never mind, cancel that"). Codex's TUI binds `Esc` to cancel the current generation; we drive that key, then wait for idle, then send the new prompt.
+User changes their mind mid-response. Codex's TUI binds `Esc` to cancel the current generation:
 
 ```bash
-# Cancel the in-flight generation.
-tmux send-keys -t cc-codex:<window> Escape
+tmux send-keys -t "$TARGET" Escape
 
-# Wait for codex to settle back to idle before sending anything new.
-# Use a fresh baseline because Esc itself may not produce visible activity.
-BASELINE=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
+# Wait for codex to settle back to idle (fresh baseline — Esc may not show activity).
+# Match the status line on the bottom of the pane only (last ~3 lines).
+BASELINE=$(tmux capture-pane -t "$TARGET" -p -S -200)
 PREV=""; STABLE=0; DEADLINE=$(( $(date +%s) + 30 ))
 while (( $(date +%s) < DEADLINE )); do
-    BUF=$(tmux capture-pane -t cc-codex:<window> -p -S -200)
-    if [[ "$BUF" == "$PREV" ]] && echo "$BUF" | grep -qE 'gpt-5\.5.*(xhigh|high|medium|low)'; then
+    BUF=$(tmux capture-pane -t "$TARGET" -p -S -200)
+    if [[ "$BUF" == "$PREV" ]] && printf '%s\n' "$BUF" | tail -3 | grep -qE 'gpt-5\.5.*·'; then
         STABLE=$(( STABLE + 1 )); (( STABLE >= 2 )) && break
     else STABLE=0; fi
     PREV="$BUF"; sleep 0.5
 done
-
-# Now send the replacement prompt via short-inline-prompt or tmp-file-prompt.
+# Then send the replacement prompt.
 ```
 
-If `Escape` does not cancel (rare — codex stuck in a tool call), fall back to `tmux send-keys -t cc-codex:<window> C-c`. As a last resort, `codex-tmux.sh kill <window>` and respawn with `new`.
+Codex-specific fallback if `Escape` doesn't cancel (rare — stuck in a tool call): `tmux send-keys -t "$TARGET" C-c`. Last resort: `codex-tmux.sh kill "$TARGET"` then resolve the target again to recreate the codex pane/window.
+
+### Recipe: `handle-interruption` (codex-specific prompts)
+
+Codex sometimes shows interactive prompts that need acknowledgement before the main response continues. These are codex-TUI-specific:
+
+| What you see in the pane | What to do |
+|---|---|
+| `Hooks need review` (first-ever codex run) | `tmux send-keys -t "$TARGET" "2" Enter` to "Trust all and continue". |
+| Approval prompt (`Apply this edit? [y/n]` or similar in workspace-write mode) | If safe: `tmux send-keys -t "$TARGET" "y" Enter`. If unsafe or unclear: have the user approve in the pane (it's visible in their window) — or, in the fallback, attach to the `cc-codex` window and approve there. |
+| `Sign in to Codex` / `Not authenticated` | `codex login` from the user's terminal. Codex doesn't recover by itself. |
+| MCP startup warning (`MCP client for X failed`) | Usually benign — codex continues. No action needed unless the user relies on that MCP. |
+
+After any interruption, re-run `detect-idle` to wait for the status line to reappear.
 
 ### Recipe: `reuse-existing-window`
 
-Use BEFORE every `new` to avoid spawning duplicate windows. Also use when:
-- The Claude conversation was resumed and `$CLAUDE_CODE_SESSION_ID` rolled — `find` without `--any-session` returns nothing, but the user is referring to a prior codex window.
-- The user asks to "continue the earlier discussion" or "go back to the auth window".
+Under the pane/bound default, normal reuse is automatic — `pane` (inside tmux) or `bind` (fallback) returns the same target every time. This recipe covers the edge cases:
+
+- **The pane/window's codex died.** `pane`/`bind` respawns it; no salvage unless the user wants continuity.
+- **Conversation resumed and `$CLAUDE_CODE_SESSION_ID` rolled.** A new claude6 means `pane`/`bind` creates a *new* pane/bound window; the prior one is invisible to default lookups. Use `--any-session` to find a prior window.
+- **User references a prior extra window** ("go back to the auth window").
 
 ```bash
-# 1) Lookup matching window in current session (alive only, same cwd).
-#    Tab-separated output: window<TAB>state<TAB>cwd
-MATCHES=$(codex-tmux.sh find auth --cwd "$PWD" || true)
+# Dead pane/window recovery with context salvage (only if continuity matters).
+# Re-run the resolve-target snippet (pane inside tmux, else bind).
+TARGET=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --cwd "$PWD" | head -n1)
+# If you saved scrollback before it died, replay it as inline context in the
+# first prompt. (pane/bind already respawned codex in $TARGET.)
 
-# 2) If something matched, pick the first window.
-if [[ -n "$MATCHES" ]]; then
-    WIN=$(printf '%s\n' "$MATCHES" | head -n1 | cut -f1)
-    # WIN is the window name; drive it via short-inline-prompt + detect-idle.
-else
-    # No match — safe to spawn fresh.
-    WIN=$(codex-tmux.sh new auth --cwd "$PWD" | head -n1)
-fi
-```
-
-For dead-window recovery (codex process exited but scrollback preserved):
-
-```bash
-# Find any matching window including dead ones.
-DEAD=$(codex-tmux.sh find auth --cwd "$PWD" --include-dead | awk -F'\t' '$2=="dead" {print $1; exit}')
-if [[ -n "$DEAD" ]]; then
-    # Salvage prior conversation context from scrollback before killing.
-    PRIOR=$(tmux capture-pane -t cc-codex:$DEAD -p -S -2000)
-    codex-tmux.sh kill "$DEAD"
-    WIN=$(codex-tmux.sh new auth --cwd "$PWD" | head -n1)
-    # Pass $PRIOR to codex inline as context in the first prompt.
-fi
-```
-
-For cross-Claude-session references (user resumed a conversation and wants their old auth window):
-
-```bash
-# Widen search to all claude sessions, then confirm with the user.
-codex-tmux.sh find auth --any-session
+# Cross-Claude-session reference: widen the search, then confirm with the user.
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh find auth --any-session
 # → codex-auth-bbbbbb-x7    alive    /Users/asun/codes/myproj
 # Confirm: "I see codex-auth-bbbbbb-x7 (alive) — reuse this one?"
 ```
 
-Why the `claude6` token isn't enough on its own: it's the first 6 chars of the *current* `$CLAUDE_CODE_SESSION_ID`. If the conversation was resumed in a new Claude session, every prior window will have a different claude6 token and the default `find` will miss them — that's what `--any-session` is for.
-
-Codex sometimes shows interactive prompts that need acknowledgement before the main response can continue.
-
-| What you see in the pane | What to do |
-|---|---|
-| `Hooks need review` (first-ever codex run) | `tmux send-keys -t cc-codex:<window> "2" Enter` to "Trust all and continue". |
-| Approval prompt (`Apply this edit? [y/n]` or similar in workspace-write mode) | If safe: `tmux send-keys -t cc-codex:<window> "y" Enter`. If unsafe or unclear: tell the user to attach and approve manually. |
-| `Sign in to Codex` / `Not authenticated` | `codex login` from the user's terminal. Codex doesn't recover by itself. |
-| MCP startup warning (`MCP client for X failed`) | Usually benign — codex continues. No action needed unless the user is relying on that MCP. |
-
-After any interruption, re-run `detect-idle` to wait for the status line to reappear.
+Why `claude6` alone isn't enough across resumes, plus the generic dead-window scrollback-salvage pattern, are in the `tmux` skill's `references/sync-and-lifecycle.md`.
 
 ## Choosing recipes — heuristics
 
 | Situation | Recipe |
 |---|---|
+| Any task in the default flow | resolve `$TARGET` (`pane` inside tmux, else `bind`) → `short-inline-prompt`/`tmp-file-prompt` → `detect-idle` → `extract-delta` |
 | Prompt < ~500 chars, single line | `short-inline-prompt` |
 | Multi-line prompt, code blocks, > ~1KB | `tmp-file-prompt` |
 | Need to know "is codex done" (the recheck strategy) | `detect-idle` |
 | Reading the latest response | `extract-delta` |
-| Response > ~200 lines | `incremental-capture` |
-| Response > tmux `history-limit` (~2000 lines) | `copy-mode-navigation` (rare) |
+| Response > ~200 lines / > scrollback limit | generic `incremental-capture` / `copy-mode-navigation` (`tmux` skill) |
 | User says "stop / cancel / never mind" mid-response | `cancel-in-flight` |
-| Codex shows a non-response prompt | `handle-interruption` |
-| Conversation resumed, session-id rolled, want to reuse prior window | `reuse-existing-window` |
+| Codex shows a hooks-review / approval / auth prompt | `handle-interruption` |
+| Codex pane/window died, session-id rolled, or prior extra window wanted | `reuse-existing-window` |
+| User explicitly wants a separate / parallel task | `new <topic>` then drive the extra window |
 
-## Tmux scrollback semantics
+## Sync / locking
 
-`tmux capture-pane -S -N` starts the capture N lines back from the current view (negative N = scrollback). The default `history-limit` (per pane) is around 2000 lines; once exceeded, older content is dropped. Configure on a per-session basis with `tmux set-option -t cc-codex history-limit 10000` if you need more.
+One driver (Claude) per window is the normal case, so no locking is needed. If you ever run parallel sends against the same window, wrap them with `flock` — see the generic serialization pattern in the `tmux` skill's `references/sync-and-lifecycle.md`.
 
-## Troubleshooting
+## Troubleshooting (codex-specific)
 
 ### Codex appears hung
 
-The most common cause is a one-time interruption (hooks-review, approval prompt). `tmux capture-pane -p` and look for an interactive prompt; if present, see `handle-interruption`.
+Most common cause is a one-time interruption (hooks-review, approval prompt). `tmux capture-pane -t "$TARGET" -p` and look for an interactive prompt; if present, see `handle-interruption`. If no prompt is visible, codex may be in a long reasoning step (xhigh) — wait longer. If `$TARGET` is a **pane** (default, inside tmux) it is already on-screen in your current window — just watch it (no attach; `attach` is window-only and exits 6 for a pane id). If `$TARGET` is a fallback `cc-codex:<window>`, `attach` it (or `tmux attach -t cc-codex`) to watch live.
 
-If no prompt is visible: codex may be doing a long reasoning step. Wait longer, or `attach` and watch live.
+### Codex exited immediately at launch
+
+`pane` / `bind` exit **4** when codex dies on arrival (the process exits right after launch, even after the one auto-retry the script performs). Detect it two ways:
+
+- **At launch:** the `pane` / `bind` call returns exit 4 and prints codex's last output on stderr. The resolve-target snippet already routes exit 4 to the `bind` fallback; surface codex's stderr to the user.
+- **Steady state:** `ls --mine` or `find` reports the pane/window as `dead`.
+
+Recovery: re-run the resolve-target snippet — `pane`/`bind` auto-retries once on the respawn — or fall back to `bind` (which the snippet does automatically when `pane` exits 4). This is usually a transient codex startup hiccup (e.g. `$CODEX_HOME` / MCP init), so a re-run typically succeeds. If it keeps dying, read codex's stderr output for the real cause (auth, bad config, MCP server failing to start).
 
 ### `detect-idle` returns immediately (false positive)
 
-This happens when the status line is already present in `BASELINE` and the pre-send pane content == post-send pane content because codex hasn't started responding yet. Add the "wait for activity" pre-step shown in the `detect-idle` recipe.
+The status line is already in `BASELINE` and codex hasn't started responding. Ensure Phase 0/1 (the activity-wait pre-step) is present. Generic explanation: `tmux` skill § detect-idle.
 
 ### Ready regex doesn't match
 
-Codex CLI may have updated. Run `tmux capture-pane -p | tail -10` while codex is idle and pick a stable substring (typically the model + effort line near the bottom). Update `IDLE_REGEX` in your recipe accordingly.
+Codex CLI may have updated its status line. Run `tmux capture-pane -t "$TARGET" -p | tail -10` while codex is idle, pick a stable substring (the model + effort line near the bottom), and update `IDLE_REGEX`.
 
-## Migration from v3.0.0
+### Sandbox mismatch on `pane` / `bind`
 
-| v3.0.0 (script-managed) | v3.1.0 (skill-driven) |
-|---|---|
-| `codex-tmux.sh send <window> <prompt>` | `short-inline-prompt` recipe, or `tmp-file-prompt` for long prompts |
-| `codex-tmux.sh capture <window>` | `tmux capture-pane -t cc-codex:<window> -p` (optionally `-S -N` for scrollback) |
-| `CC_CODEX_READY_REGEX` | Inline `IDLE_REGEX` in each `detect-idle` call. Tune per codex CLI version. |
-| `CC_CODEX_ACTIVITY_TIMEOUT` | Inline deadline in your `detect-idle` activity loop. Tune per call. |
-| `CC_CODEX_TIMEOUT` | Inline deadline in `detect-idle`. |
+If `--full-auto` is requested but the codex pane/window was created read-only (or vice-versa), the script warns on stderr and reuses the existing pane/window (recorded in `@cc_codex_sandbox` for windows). Surface the warning. To switch sandbox, `kill "$TARGET"` then re-resolve the target with the desired flag.
 
-The `cmd_send` lockfile pattern is no longer provided. If you need serialization across parallel sends (rare in normal use), wrap your call with `flock`:
+### Migration notes
 
-```bash
-LOCKFILE="$HOME/.cache/cc-codex/locks/<window>.lock"
-mkdir -p "$(dirname "$LOCKFILE")"
-flock "$LOCKFILE" bash -c '
-    tmux send-keys -t cc-codex:<window> -l -- "<prompt>"
-    sleep 0.3
-    tmux send-keys -t cc-codex:<window> Enter
-    # ... detect-idle and extract-delta inside the lock ...
-'
-```
+The `send` / `capture` keywords print an error and exit 64 — drive interaction via the recipes above. Generic migration history (the older script-managed `send`/`capture` model, `CC_CODEX_*` env knobs, and the lockfile pattern) is documented once in the `tmux` skill; it is not repeated here.

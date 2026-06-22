@@ -14,6 +14,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 | [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
 | [Nano Banana](#nano-banana-plugin) | Standalone image generation via MCP (no Gemini CLI needed) | MCP + Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
+| [tmux](#tmux-plugin) | Agent-CLI orchestration in tmux — canonical tmux know-how that codex references | Skill |
 
 ---
 
@@ -26,6 +27,7 @@ Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
 - **Fast Mode**: `gpt-5.5-fast` available on demand for speed-sensitive tasks
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only by default, workspace-write for code editing
+- **Codex Beside Claude**: By default spawns/reuses one codex instance as a **pane in your current tmux window** (visible next to Claude, no separate attach); falls back to one dedicated reusable window (`codex-<claude6>`) when Claude isn't running inside tmux. Extra panes/windows only on explicit request. Generic tmux orchestration lives in the [tmux plugin](#tmux-plugin).
 
 **Quick Start:**
 ```bash
@@ -157,6 +159,34 @@ export CC_TELEGRAM_CHAT_ID="your-chat-id"
 
 ---
 
+### tmux Plugin
+
+Canonical, reusable guide for one agent (Claude) to drive and observe *other* interactive agent CLIs inside tmux. This is the single source of generic tmux know-how that the [Codex plugin](#codex-plugin) references instead of re-teaching it.
+
+**Core Features:**
+- **Agent Identity & Naming**: Stable per-session identity (`claude6`) with window naming and binding/reuse patterns
+- **Session/Window/Pane Model**: How to spawn, find, and target windows for an agent CLI
+- **Send & Capture**: Send inline or via tmpfile, two-phase idle detection, incremental capture and delta extraction
+- **Sync & Lifecycle**: One-driver discipline, `flock` serialization, spawn/find/kill/cleanup, orphan and dead-window detection
+- **Per-CLI Calibration**: Guidance for codex, gemini, aider, and generic REPLs; codex is the reference implementation
+
+**Usage:**
+```
+> Drive the aider CLI in tmux and capture its output once it goes idle
+> Orchestrate an interactive agent CLI inside a reusable tmux window
+```
+
+| Info | Value |
+|------|-------|
+| Path | [`plugins/tmux/`](plugins/tmux/) |
+| Version | 0.1.0 |
+| Skills | tmux (agent-CLI orchestration) |
+| Type | Skill only (no hooks or agents) |
+
+**Full Documentation**: [tmux Plugin README](plugins/tmux/README.md)
+
+---
+
 ## Installation
 
 ### Step 1: Add this marketplace
@@ -174,6 +204,9 @@ export CC_TELEGRAM_CHAT_ID="your-chat-id"
 
 # Install Telegram Notifier plugin
 /plugin install telegram-notifier@cc-dev-tools
+
+# Install tmux plugin
+/plugin install tmux@cc-dev-tools
 ```
 
 ### Step 3: Restart Claude Code
@@ -214,12 +247,20 @@ cc-dev-tools/                          # Marketplace root
     │       ├── SKILL.md
     │       └── references/
     │
-    └── telegram-notifier/             # Telegram notifications
+    ├── telegram-notifier/             # Telegram notifications
+    │   ├── .claude-plugin/
+    │   │   └── plugin.json
+    │   ├── hooks/
+    │   │   └── hooks.json             # Stop, SubagentStop, Notification hooks
+    │   └── README.md
+    │
+    └── tmux/                          # Agent-CLI orchestration in tmux
         ├── .claude-plugin/
         │   └── plugin.json
-        ├── hooks/
-        │   └── hooks.json             # Stop, SubagentStop, Notification hooks
-        └── README.md
+        ├── README.md
+        └── skills/tmux/               # Canonical tmux orchestration skill
+            ├── SKILL.md
+            └── references/
 ```
 
 ## How It Works
@@ -229,7 +270,7 @@ cc-dev-tools/                          # Marketplace root
 1. You add the **marketplace** (`cc-dev-tools`) from GitHub
 2. You install a **plugin** (e.g., `codex`, `gemini`, or `telegram-notifier`)
 3. The plugin provides **components**:
-   - **Skills**: Invoked by Claude when triggered (codex, gemini)
+   - **Skills**: Invoked by Claude when triggered (codex, gemini, tmux)
    - **Hooks**: Event-driven automation (telegram-notifier)
 
 ## Migration from cc-skill-codex
@@ -253,14 +294,15 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.22.0
+**Marketplace**: 2.28.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 2.11.0 |
+| Codex | 3.4.0 |
 | Gemini | 2.1.0 |
 | Nano Banana | 1.4.0 |
 | Telegram Notifier | 0.3.0 |
+| tmux | 0.1.0 |
 
 ## Links
 
