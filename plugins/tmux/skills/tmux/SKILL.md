@@ -215,6 +215,12 @@ Locking, race-free spawn/find, and the lock-free macOS fallback: `references/syn
 
 ## Lifecycle & cleanup
 
+- **Stay in your lane (agent-session isolation).** Each agent owns only the workers it created,
+  identified by its own `@<tool>-<claude6>` marker. Reuse, relocate, spawn, and scoped cleanup
+  must touch ONLY your own markered panes/windows — **never** move, kill, or reuse a pane/window
+  belonging to another agent (a different `claude6`) or one you did not create. A *global* reap
+  of every agent's dead workers is a separate, explicit command — use it only when the user
+  asks to clean up everything, never as part of normal work.
 - **Bind, don't accumulate.** Ensure the single bound window exists (create if absent, reuse if
   alive, respawn if dead), then drive it. Spawn extra windows only on explicit request.
 - Set `remain-on-exit on` so a crashed CLI leaves its scrollback for diagnosis instead of

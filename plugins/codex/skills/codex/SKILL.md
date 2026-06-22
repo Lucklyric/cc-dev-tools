@@ -9,7 +9,9 @@ Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, archit
 
 **Default mode is tmux.** Codex runs in a long-lived attachable tmux pane/window so you can watch, intervene, and iterate. The helper script handles lifecycle (pane / bind / spawn / list / kill) and Claude drives the interaction layer directly with `tmux send-keys` and `tmux capture-pane`. A `codex exec` escape hatch remains for genuine one-shots.
 
-**One codex pane in your current window by default.** When Claude is running inside tmux, codex runs as a PANE split into your CURRENT tmux window — right next to Claude — so you can watch progress live with NO separate attach. In the normal case there is one codex pane per Claude session, reused for every task (call `pane` first; it is idempotent). (A duplicate pane can occur if the Claude session id rolls — recover with `kill --orphaned` or `kill %id`.) When Claude is NOT inside tmux, it falls back to a dedicated reused window `codex-<claude6>` in the `cc-codex` session (call `bind`). Only spawn an extra pane/window when the user explicitly asks for a separate or parallel task. The generic agentic-tmux concepts behind this (identity & naming patterns, send/capture/idle-detect, sync/locking, lifecycle) live in the **`tmux` skill** (tmux plugin); this skill links to it and keeps only codex-specifics.
+**One codex pane in your current window by default.** When Claude is running inside tmux, codex runs as a PANE split into your CURRENT tmux window — right next to Claude — so you can watch progress live with NO separate attach. In the normal case there is one codex pane per Claude session, reused for every task (call `pane` first; it is idempotent). (A duplicate pane can occur if the Claude session id rolls — recover with `kill %id`, or `kill --mine` then re-resolve.) When Claude is NOT inside tmux, it falls back to a dedicated reused window `codex-<claude6>` in the `cc-codex` session (call `bind`). Only spawn an extra pane/window when the user explicitly asks for a separate or parallel task. The generic agentic-tmux concepts behind this (identity & naming patterns, send/capture/idle-detect, sync/locking, lifecycle) live in the **`tmux` skill** (tmux plugin); this skill links to it and keeps only codex-specifics.
+
+> **Agent-session isolation (hard rule).** Codex is bound to THIS agent's `claude6`. Every operation the skill performs — resolve/reuse, relocate (`join-pane`), spawn, and cleanup via `kill --mine` / `kill %id` — touches ONLY this session's own codex pane/window, identified by the `@cc_codex_claude6` marker. **Never** move, kill, reuse, or otherwise disturb a tmux pane or window belonging to another agent (a different `claude6`) or one you did not create. In particular, do **not** run `kill --orphaned` as part of normal work — it is a *global, cross-agent* housekeeping command that reaps every agent's dead codex, and is appropriate only when the user explicitly asks to clean up everything.
 
 ## When to use tmux mode vs `exec`
 
@@ -108,13 +110,13 @@ $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh attach "$WIN"
 # Rename an extra window's topic; preserves claude6+rand2 suffix.
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh rename "$WIN" "newtopic"
 
-# Kill a specific codex pane/window (kill accepts a pane id like %53), all of
-# this Claude session's codex (panes + windows), or all dead-codex panes/windows.
-# --mine and --orphaned are pane-aware: they remove codex PANES as well as
-# cc-codex windows.
+# Kill a specific codex pane/window (kill accepts a pane id like %53) or all of
+# THIS Claude session's codex (panes + windows). Both are claude6-scoped and
+# pane-aware — they only ever touch this agent's own codex.
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh kill "$TARGET"   # pane id (%53) OR window
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh kill --mine
-$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh kill --orphaned
+# kill --orphaned exists too but is GLOBAL/cross-agent (reaps every agent's dead
+# codex) — do NOT use it in normal flow; only on explicit "clean up everything".
 
 # One-shot escape hatch (no tmux).
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "<prompt>"
@@ -223,7 +225,7 @@ See `references/tmux-mode.md` for the codex-specific calibration, the pane-mode 
 | User asks to start over from scratch ("reset codex", "fresh codex") | `codex-tmux.sh kill "$TARGET"` (pane id or window) then resolve the target again. |
 | `--full-auto` requested but the pane/window is read-only (or vice-versa) | The script warns on stderr and reuses the existing pane/window. Surface the warning; only `kill` + re-resolve if the user wants the other sandbox. |
 
-Both `pane` and `bind` already filter by `claude6` (the pane is also marked so it is normally reused, not duplicated — though a duplicate can occur if the session id rolls, recovered via `kill --orphaned` / `kill %id`), so cwd/topic matching that `find` used to do is unnecessary for the default flow. Reach for `find`/`new`/`--any-session` only in the explicit extra-window or cross-session cases below.
+Both `pane` and `bind` already filter by `claude6` (the pane is also marked so it is normally reused, not duplicated — though a duplicate can occur if the session id rolls, recovered via `kill %id` / `kill --mine`, both claude6-scoped), so cwd/topic matching that `find` used to do is unnecessary for the default flow. Reach for `find`/`new`/`--any-session` only in the explicit extra-window or cross-session cases below.
 
 ### Extra / parallel windows
 
@@ -246,8 +248,8 @@ $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
 |---|---|
 | Just the one codex pane / bound window, still useful | Leave it. It's reused next time you resolve the target, and resumable via `find --any-session`. |
 | Codex pane / bound window + extra parallel windows no longer needed | "Want me to `kill --mine` (clears this session's codex — pane(s) and windows together), or just `kill "$TARGET"` for the one?" |
-| Some panes/windows dead | "Want me to run `kill --orphaned` to clear the finished panes and windows?" |
-| User explicitly says "clean up" / "kill all" | Run `kill --mine` (removes this session's codex panes and windows) and report what was removed. |
+| Some of THIS session's panes/windows dead | "Want me to clear them — `kill %id` for a specific dead pane, or `kill --mine` for all of this session's codex?" (both claude6-scoped — they never touch another agent's codex) |
+| User explicitly says "clean up" / "kill all" | Run `kill --mine` (removes only THIS session's codex panes and windows) and report what was removed. Use the global `kill --orphaned` only if the user explicitly asks to clear *every* agent's dead codex. |
 
 **Never kill silently.** Always tell the user which pane/windows you're about to remove and wait for confirmation, unless they explicitly said "kill all of them". Killing destroys scrollback irreversibly. Leaving the codex pane/window alive is the friendly default — the next resolve-target call reuses it instead of spawning a fresh one.
 
@@ -257,9 +259,9 @@ $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
 |---|---|
 | Remove a specific codex pane (pane id like `%53`) or one window | `codex-tmux.sh kill "$TARGET"` (or `kill <%pane-id>`) |
 | Remove this Claude session's codex — panes AND bound/extra windows (alive or dead) | `codex-tmux.sh kill --mine` |
-| Remove only dead-codex panes and windows (any session) | `codex-tmux.sh kill --orphaned` |
+| GLOBAL / cross-agent — dead codex of EVERY agent (any session) | `codex-tmux.sh kill --orphaned` — escape hatch; use ONLY on explicit "clean up everything", never in normal flow |
 
-Note: `kill --mine` and `kill --orphaned` are pane-aware — they remove codex PANES as well as `cc-codex` windows. `kill <%pane-id>` (e.g. `kill %53`) removes one specific codex pane. `ls --mine` / `kill --mine` recognize both the exact bound name `codex-<claude6>` and the extra-window pattern `codex-<topic>-<claude6>-<rand2>`.
+Note: `kill --mine` is claude6-scoped (touches only THIS agent's codex) and pane-aware — it removes this session's codex PANES as well as its `cc-codex` windows, recognizing both the exact bound name `codex-<claude6>` and the extra-window pattern `codex-<topic>-<claude6>-<rand2>`. `kill <%pane-id>` (e.g. `kill %53`) removes one specific codex pane. `kill --orphaned` is the one non-scoped command — it reaps dead codex across ALL agents, so do not use it as part of normal cleanup.
 
 ## Sandbox and approval policy
 
