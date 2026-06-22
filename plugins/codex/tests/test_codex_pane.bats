@@ -198,3 +198,17 @@ teardown() {
     [[ "$output" == *"pane"* ]]
     ! tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$pane"
 }
+
+@test "pane / kill --mine do NOT auto-create the cc-codex session (no empty-session wart)" {
+    local FRESH="cc-codex-wart-$$"
+    export CC_CODEX_SESSION_NAME="$FRESH"
+    tmux kill-session -t "$FRESH" 2>/dev/null || true
+    # pane mode must never create the dedicated session
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    ! tmux has-session -t "$FRESH" 2>/dev/null
+    # kill --mine must clean the pane WITHOUT resurrecting an empty session
+    run "$SCRIPT" kill --mine
+    [ "$status" -eq 0 ]
+    ! tmux has-session -t "$FRESH" 2>/dev/null
+}

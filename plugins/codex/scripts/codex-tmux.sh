@@ -10,6 +10,11 @@ readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
 # ---------- Pure helpers (no tmux, no codex) ----------
 
 compute_claude6() {
+    # The per-agent isolation token: the first 6 chars of $CLAUDE_CODE_SESSION_ID.
+    # This is the ONLY isolation boundary — two agents whose session ids share a
+    # 6-char prefix would resolve to the same codex (reuse/kill each other's).
+    # Session ids are random UUIDs, so a real collision is ~1 in 16M; if you run
+    # synthetic/fixed session ids (e.g. tests), keep their 6-char prefixes unique.
     if [[ -n "${CLAUDE_CODE_SESSION_ID:-}" ]]; then
         printf '%s' "${CLAUDE_CODE_SESSION_ID:0:6}"
         return
@@ -352,7 +357,10 @@ cmd_pane() {
                     pane=""
                 fi
             fi
-            if [[ -n "$pane" ]]; then
+            # Final liveness re-check closes a TOCTOU race: the pane found above
+            # could die/vanish before we return it (then the caller would drive a
+            # dead target). If so, fall through and spawn fresh.
+            if [[ -n "$pane" ]] && pane_alive "$pane"; then
                 # Reuse; warn (don't fail) on a sandbox mismatch.
                 local existing
                 existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
@@ -461,7 +469,9 @@ cmd_find() {
     [[ -z "$topic" ]] && { echo "codex-tmux find: <topic> required" >&2; return 2; }
     validate_topic "$topic" || return 2
 
-    ensure_session
+    # Read-only: don't auto-create the cc-codex session (avoids leaving an empty
+    # session behind). An absent session simply yields no matches.
+    ensure_tmux_or_die
     local my_token=""
     (( any_session )) || my_token="$(compute_claude6)"
 
@@ -504,7 +514,8 @@ cmd_ls() {
         esac
     done
 
-    ensure_session
+    # Read-only: don't auto-create the cc-codex session; absent = no rows.
+    ensure_tmux_or_die
     local my_token=""
     if (( mine_only )); then
         my_token="$(compute_claude6)"
@@ -531,7 +542,7 @@ cmd_ls() {
 cmd_attach() {
     local window="$1"
     [[ -z "$window" ]] && { echo "codex-tmux attach: window required" >&2; return 2; }
-    ensure_session
+    ensure_tmux_or_die
     window_exists "$window" || { echo "codex-tmux attach: window '$window' not found" >&2; return 6; }
     echo "tmux attach -t $SESSION_NAME \\; select-window -t $window"
 }
@@ -542,7 +553,7 @@ cmd_rename() {
     [[ -z "$old" || -z "$new_topic" ]] && {
         echo "codex-tmux rename: old-window and new-topic required" >&2; return 2; }
     validate_topic "$new_topic" || return 2
-    ensure_session
+    ensure_tmux_or_die
     window_exists "$old" || { echo "codex-tmux rename: window '$old' not found" >&2; return 6; }
 
     # Pattern: codex-<topic>-<claude6>-<rand2>
@@ -562,7 +573,7 @@ cmd_rename() {
 
 cmd_kill() {
     if [[ "${1:-}" == "--orphaned" ]]; then
-        ensure_session
+        ensure_tmux_or_die
         local removed=0
         # Dead codex windows in the cc-codex session.
         while IFS= read -r win; do
@@ -585,7 +596,7 @@ cmd_kill() {
     fi
 
     if [[ "${1:-}" == "--mine" ]]; then
-        ensure_session
+        ensure_tmux_or_die
         local my_token removed=0
         my_token="$(compute_claude6)"
         # This Claude's codex windows.
@@ -616,7 +627,7 @@ cmd_kill() {
             || { echo "codex-tmux kill: pane '$window' not found" >&2; return 6; }
         return 0
     fi
-    ensure_session
+    ensure_tmux_or_die
     window_exists "$window" || { echo "codex-tmux kill: window '$window' not found" >&2; return 6; }
     tmux kill-window -t "$SESSION_NAME:$window"
 }
