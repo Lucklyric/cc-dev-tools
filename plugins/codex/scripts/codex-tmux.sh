@@ -332,24 +332,41 @@ cmd_pane() {
     fi
     my_token="$(compute_claude6)"
 
-    # Locate this Claude's existing codex pane anywhere (survives window moves).
+    # Locate this Claude's existing codex pane anywhere on the server.
     local match pane dead
     if match="$(find_codex_pane "$my_token")"; then
         pane="${match%%$'\t'*}"
         dead="${match##*$'\t'}"
         if [[ "$dead" != "1" ]]; then
-            # Reuse the live pane; warn (don't fail) on a sandbox mismatch.
-            local existing
-            existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
-            if [[ -n "$want_sandbox" && -n "$existing" && "$want_sandbox" != "$existing" ]]; then
-                echo "codex-tmux pane: codex pane '$pane' is '$existing'; requested '$want_sandbox'. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane --$want_sandbox)." >&2
+            # Keep codex in the agent's CURRENT window. If the live pane is in a
+            # different window, relocate it here (join-pane) so it always sits
+            # beside Claude and is never duplicated. If the relocate fails, drop
+            # the stray and spawn fresh below.
+            local pane_win
+            pane_win="$(tmux display-message -p -t "$pane" '#{session_name}:#{window_index}' 2>/dev/null || true)"
+            if [[ -n "$pane_win" && "$pane_win" != "$window" ]]; then
+                if tmux join-pane -h -s "$pane" -t "$ref_pane" 2>/dev/null; then
+                    tmux select-pane -t "$pane" -T "codex-$my_token" 2>/dev/null || true
+                else
+                    tmux kill-pane -t "$pane" 2>/dev/null || true
+                    pane=""
+                fi
             fi
-            echo "$pane"
-            echo "Reusing codex pane $pane (next to Claude)."
-            return 0
+            if [[ -n "$pane" ]]; then
+                # Reuse; warn (don't fail) on a sandbox mismatch.
+                local existing
+                existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
+                if [[ -n "$want_sandbox" && -n "$existing" && "$want_sandbox" != "$existing" ]]; then
+                    echo "codex-tmux pane: codex pane '$pane' is '$existing'; requested '$want_sandbox'. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane --$want_sandbox)." >&2
+                fi
+                echo "$pane"
+                echo "Reusing codex pane $pane (in your current window)."
+                return 0
+            fi
+        else
+            # Dead pane: remove it and respawn below.
+            tmux kill-pane -t "$pane" 2>/dev/null || true
         fi
-        # Dead pane: remove it and respawn below.
-        tmux kill-pane -t "$pane" 2>/dev/null || true
     fi
 
     # Build the codex command (network access when writing).

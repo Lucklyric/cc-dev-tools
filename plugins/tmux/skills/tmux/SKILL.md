@@ -51,6 +51,13 @@ placement, then bind identity to whichever you chose:
 > no attach. A pane is also still the right tool for showing two views of one worker at once
 > (CLI + log tail). See `references/model-and-identity.md`.
 
+> **Default placement & announcing.** Unless the human explicitly asks for a *new window* or a
+> *new session*, spawn the driven CLI in the agent's **current session and window** (a pane
+> beside the agent). Keep one worker per session: if its pane already exists in another window,
+> **relocate it into the current window** (`tmux join-pane`) rather than duplicating it. And
+> **announce before you spawn or move it** — e.g. *"I'll open `<tool>` as a pane in your current
+> window (`<session>:<window>`)"* — so a split or relocation is never a surprise.
+
 ## Identity & naming contract
 
 To bind *one* Claude session to *its* sub-processes — and to find/kill exactly those later —

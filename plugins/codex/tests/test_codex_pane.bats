@@ -165,16 +165,20 @@ teardown() {
     [ "$(tmux show-option -p -qv -t "$mine" '@cc_codex_claude6')" = "0d61e6" ]
 }
 
-@test "pane: reuses this Claude's pane from another window (session-wide)" {
+@test "pane: relocates this Claude's pane into the current window (not duplicated)" {
     run "$SCRIPT" pane --cwd /tmp
     [ "$status" -eq 0 ]
     local first="${lines[0]}"
     sleep 0.3
-    # Move "Claude" to a brand-new window; reuse must still find the codex pane.
-    local ref2; ref2="$(tmux new-window -t "$PANE_SESSION" -P -F '#{pane_id}')"
+    # Move "Claude" to a brand-new window; the codex pane should FOLLOW here.
+    local ref2 ref2_win
+    ref2="$(tmux new-window -t "$PANE_SESSION" -P -F '#{pane_id}')"
+    ref2_win="$(tmux display-message -p -t "$ref2" '#{window_index}')"
     CC_CODEX_REF_PANE="$ref2" run "$SCRIPT" pane --cwd /tmp
     [ "$status" -eq 0 ]
-    [ "${lines[0]}" = "$first" ]
+    [ "${lines[0]}" = "$first" ]                       # same pane, relocated not duplicated
+    local now_win; now_win="$(tmux display-message -p -t "$first" '#{window_index}')"
+    [ "$now_win" = "$ref2_win" ]                       # now lives in the current window
 }
 
 @test "pane --size out of range / non-numeric exits 2" {

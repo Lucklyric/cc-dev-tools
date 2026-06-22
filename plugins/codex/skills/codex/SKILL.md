@@ -44,6 +44,10 @@ Capture `pane`'s output to a variable first and check its real exit code (do **n
 
 **Spawn an EXTRA pane/window ONLY when the user explicitly asks for a separate or parallel task** — phrases like "in parallel", "separate window", "keep this one and also…", "don't interrupt the current task", "spin up another", "side by side". In that case (and only then) use the topic-naming protocol + `new` (see below). For everything else, the single reused pane/window is the answer.
 
+**Placement — codex stays with the agent.** The codex pane always lives in Claude's **current session and window**: `pane` splits into the current window, and if a prior codex pane exists in *another* window it is **relocated here** (`join-pane`), never duplicated. A new window or a new tmux session is used **only when the user explicitly asks** for one.
+
+**Announce before spawning.** When you first open (or relocate) codex, briefly tell the user where — e.g. *"I'll open codex as a pane in your current window (`research:4`)."* — so a split or move is never a surprise.
+
 ## Topic naming protocol (extra-window case only)
 
 > **Only needed when the user explicitly asked for a separate / parallel window.** For the default single codex pane/window you do not derive a topic — `pane` reuses the one pane in the current window, and `bind` names the fallback window `codex-<claude6>` automatically.
