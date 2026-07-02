@@ -212,3 +212,143 @@ teardown() {
     [ "$status" -eq 0 ]
     ! tmux has-session -t "$FRESH" 2>/dev/null
 }
+
+# ---------- Multi-pane surface (panes / pane --topic) ----------
+
+# First bare pane-id line in $output. bats' `run` merges stderr into $output,
+# and a second split in an already-halved window legitimately emits the
+# width-floor warning ("<80 cols; using a vertical split") on stderr BEFORE
+# the pane id — so ${lines[0]} is not reliable for topic panes.
+output_pane_id() {
+    printf '%s\n' "$output" | grep -m1 -E '^%[0-9]+$'
+}
+
+@test "panes: lists the primary pane with topic main" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local pane="${lines[0]}"
+    run "$SCRIPT" panes
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$pane"$'\t'"main"$'\t'"alive"* ]]
+}
+
+@test "panes: exits 1 when this agent has no codex panes" {
+    # Unique claude6 so stale panes from other agents/runs can never match.
+    CLAUDE_CODE_SESSION_ID="e0e0e0e0-0000-4000-8000-000000000000" \
+        run "$SCRIPT" panes
+    [ "$status" -eq 1 ]
+}
+
+@test "panes: does not list another claude6's pane by default; --all does" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local mine="${lines[0]}"
+    local foreign
+    foreign="$(tmux split-window -t "$REF_PANE" -d -P -F '#{pane_id}' "sleep 60")"
+    tmux set-option -p -t "$foreign" '@cc_codex_claude6' "ffffff"
+    # Default: filtered to this agent's claude6 (match "<id>\t" to avoid the
+    # %5-is-a-prefix-of-%53 substring trap).
+    run "$SCRIPT" panes
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$mine"$'\t'* ]]
+    [[ "$output" != *"$foreign"$'\t'* ]]
+    # --all: every agent's codex panes, foreign included.
+    run "$SCRIPT" panes --all
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$mine"$'\t'* ]]
+    [[ "$output" == *"$foreign"$'\t'* ]]
+}
+
+@test "pane --topic: spawns an extra pane coexisting with the primary" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local primary="${lines[0]}"
+    run "$SCRIPT" pane --topic auth --cwd /tmp
+    [ "$status" -eq 0 ]
+    local extra; extra="$(output_pane_id)"
+    [ -n "$extra" ]
+    [ "$primary" != "$extra" ]
+    [ "$(tmux display-message -p -t "$primary" '#{pane_dead}')" = "0" ]
+    [ "$(tmux display-message -p -t "$extra" '#{pane_dead}')" = "0" ]
+    [ "$(tmux show-option -p -qv -t "$primary" '@cc_codex_topic')" = "main" ]
+    [ "$(tmux show-option -p -qv -t "$extra" '@cc_codex_topic')" = "auth" ]
+    [ "$(tmux display-message -p -t "$extra" '#{pane_title}')" = "codex-auth-0d61e6" ]
+}
+
+@test "pane --topic: reuses the same topic pane on repeat (idempotent)" {
+    run "$SCRIPT" pane --topic auth --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
+    sleep 0.3
+    local count1; count1="$(pane_count)"
+    run "$SCRIPT" pane --topic auth --cwd /tmp
+    [ "$status" -eq 0 ]
+    local second="${lines[0]}"
+    local count2; count2="$(pane_count)"
+    [ "$first" = "$second" ]
+    [ "$count1" -eq "$count2" ]
+}
+
+@test "pane --topic: invalid slug exits 2" {
+    run "$SCRIPT" pane --topic x --cwd /tmp          # too short
+    [ "$status" -eq 2 ]
+    run "$SCRIPT" pane --topic Auth --cwd /tmp       # uppercase
+    [ "$status" -eq 2 ]
+    run "$SCRIPT" pane --topic way-too-long-topic-slug --cwd /tmp  # >15 chars
+    [ "$status" -eq 2 ]
+}
+
+@test "legacy pane without @cc_codex_topic is treated as main" {
+    # Simulate a pane created before the topic option existed: claude6 marker
+    # only, no @cc_codex_topic. `pane` must reuse it, not spawn a duplicate.
+    local legacy
+    legacy="$(tmux split-window -t "$REF_PANE" -d -P -F '#{pane_id}' "sleep 60")"
+    tmux set-option -p -t "$legacy" '@cc_codex_claude6' "0d61e6"
+    local count1; count1="$(pane_count)"
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "$legacy" ]
+    [ "$(pane_count)" -eq "$count1" ]
+}
+
+@test "kill --mine removes primary AND topic panes" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local primary="${lines[0]}"
+    run "$SCRIPT" pane --topic auth --cwd /tmp
+    [ "$status" -eq 0 ]
+    local extra; extra="$(output_pane_id)"
+    [ -n "$extra" ]
+    tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$primary"
+    tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$extra"
+    run "$SCRIPT" kill --mine
+    [ "$status" -eq 0 ]
+    ! tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$primary"
+    ! tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$extra"
+}
+
+@test "panes: TSV has 5 fields (pane_id, topic, state, window, cwd)" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    run "$SCRIPT" pane --topic auth --cwd /tmp
+    [ "$status" -eq 0 ]
+    run "$SCRIPT" panes
+    [ "$status" -eq 0 ]
+    local nf
+    nf="$(printf '%s\n' "$output" | awk -F'\t' '{print NF}' | sort -u)"
+    [ "$nf" = "5" ]
+}
+
+@test "panes: does NOT auto-create the cc-codex session (read-only detection)" {
+    local FRESH="cc-codex-panes-wart-$$"
+    export CC_CODEX_SESSION_NAME="$FRESH"
+    tmux kill-session -t "$FRESH" 2>/dev/null || true
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    run "$SCRIPT" panes
+    [ "$status" -eq 0 ]
+    ! tmux has-session -t "$FRESH" 2>/dev/null
+    run "$SCRIPT" panes --all
+    [ "$status" -eq 0 ]
+    ! tmux has-session -t "$FRESH" 2>/dev/null
+}

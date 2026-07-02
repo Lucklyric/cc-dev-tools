@@ -27,7 +27,7 @@ Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
 - **Fast Mode**: `gpt-5.5-fast` available on demand for speed-sensitive tasks
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only by default, workspace-write for code editing
-- **Codex Beside Claude**: By default spawns/reuses one codex instance as a **pane in your current tmux window** (visible next to Claude, no separate attach); falls back to one dedicated reusable window (`codex-<claude6>`) when Claude isn't running inside tmux. Extra panes/windows only on explicit request. Generic tmux orchestration lives in the [tmux plugin](#tmux-plugin).
+- **Codex Beside Claude**: By default spawns/reuses one codex instance as a **pane in your current tmux window** (visible next to Claude, no separate attach); falls back to one dedicated reusable window (`codex-<claude6>`) when Claude isn't running inside tmux. Supports multi-pane orchestration — detect all your codex panes (`panes`), spawn extra topic-named panes in the current window (`pane --topic`), and drive them independently. Generic tmux orchestration lives in the [tmux plugin](#tmux-plugin), which codex now formally depends on (auto-installed with codex).
 
 **Quick Start:**
 ```bash
@@ -47,7 +47,7 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 2.11.0 |
+| Version | 3.6.0 |
 | Models | GPT-5.5, GPT-5.5-Fast |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
@@ -152,7 +152,7 @@ export CC_TELEGRAM_CHAT_ID="your-chat-id"
 | Info | Value |
 |------|-------|
 | Path | [`plugins/telegram-notifier/`](plugins/telegram-notifier/) |
-| Version | 0.3.0 |
+| Version | 0.4.0 |
 | Type | Hooks only (no skills or agents) |
 
 **Full Documentation**: [Telegram Notifier README](plugins/telegram-notifier/README.md)
@@ -294,14 +294,14 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.28.0
+**Marketplace**: 2.30.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 3.4.0 |
+| Codex | 3.6.0 |
 | Gemini | 2.1.0 |
 | Nano Banana | 1.4.0 |
-| Telegram Notifier | 0.3.0 |
+| Telegram Notifier | 0.4.0 |
 | tmux | 0.1.0 |
 
 ## Links

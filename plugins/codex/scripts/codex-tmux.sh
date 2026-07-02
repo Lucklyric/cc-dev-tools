@@ -200,33 +200,40 @@ cmd_bind() {
         codex_cmd+=( -c "sandbox_workspace_write.network_access=true" )
     fi
 
-    # Spawn the bound window detached.
-    tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
-        "${codex_cmd[@]}"
+    # Spawn the bound window detached, then verify codex survived launch; retry
+    # once on immediate exit (transient $CODEX_HOME / MCP init hiccups happen),
+    # mirroring cmd_pane. Report exit 4 instead of returning a dead window the
+    # caller would then drive blindly.
+    local attempt=0
+    while (( attempt < 2 )); do
+        attempt=$(( attempt + 1 ))
+        tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
+            "${codex_cmd[@]}"
 
-    # Keep the window alive after codex exits (per FR-014) so the user can
-    # attach and read the exit message. Must be set ASAP after new-window.
-    # All post-spawn options are guarded: if codex exits instantly the window may
-    # already be gone, and an unguarded failure would abort under `set -e`.
-    tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit on 2>/dev/null || true
-    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
-    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
-    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
+        # Keep the window alive after codex exits (per FR-014) so the user can
+        # attach and read the exit message. Must be set ASAP after new-window.
+        # All post-spawn options are guarded: if codex exits instantly the
+        # window may already be gone, and an unguarded failure would abort
+        # under `set -e`.
+        tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit on 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
 
-    # Liveness: detect codex that exited immediately at launch (transient
-    # $CODEX_HOME / MCP init hiccups happen). Report it instead of returning a
-    # dead window the caller would then drive blindly.
-    sleep 0.4
-    if [[ "$(window_state "$window")" != "alive" ]]; then
-        echo "codex-tmux bind: codex exited immediately in $window:" >&2
+        sleep 0.4
+        if [[ "$(window_state "$window")" == "alive" ]]; then
+            # Output: window name on stdout line 1, attach hint on line 2.
+            echo "$window"
+            echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
+            return 0
+        fi
+        echo "codex-tmux bind: codex exited immediately in $window (attempt $attempt):" >&2
         tmux capture-pane -t "$SESSION_NAME:$window" -p -S -20 2>/dev/null | sed 's/^/  | /' >&2 || true
-        echo "Re-run to retry, or check 'codex login'." >&2
-        return 4
-    fi
-
-    # Output: window name on stdout line 1, attach hint on line 2.
-    echo "$window"
-    echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
+        tmux kill-window -t "$SESSION_NAME:$window" 2>/dev/null || true
+        sleep 0.5
+    done
+    echo "codex-tmux bind: codex exited immediately twice; aborting. Check 'codex login', then re-run." >&2
+    return 4
 }
 
 # ---------- Pane mode (codex as a pane in the current Claude window) ----------
@@ -255,40 +262,49 @@ pane_alive() {
     [[ "$state" == "alive" ]]
 }
 
-# Find THIS Claude session's codex pane anywhere on the server (matched by the
-# @cc_codex_claude6 marker). Server-wide (`list-panes -a`) so reuse survives
-# Claude moving the pane to another window. The marker is unique per Claude
-# session and is NOT inherited by splits, so there is no false-match risk.
+# Find THIS Claude session's codex pane for a topic anywhere on the server
+# (matched by the @cc_codex_claude6 + @cc_codex_topic markers). Server-wide
+# (`list-panes -a`) so reuse survives Claude moving the pane to another window.
+# The claude6 marker is unique per Claude session and is NOT inherited by
+# splits, so there is no false-match risk. Legacy panes without a topic option
+# are treated as topic "main".
+# NOTE on parsing: IFS=$'\t' treats tab as IFS whitespace, so consecutive tabs
+# COLLAPSE and empty fields would shift. Every possibly-empty field is made
+# non-empty at the source via tmux conditionals ('-' sentinel / 'main' default).
 # Prints "<pane_id>\t<pane_dead>" for the first match and returns 0; else 1.
 find_codex_pane() {
-    local my_token="$1"
-    local pid mark dead
-    while IFS=$'\t' read -r pid mark dead; do
+    local my_token="$1" want_topic="${2:-main}"
+    local pid mark topic dead
+    while IFS=$'\t' read -r pid mark topic dead; do
         [[ "$mark" == "$my_token" ]] || continue
+        [[ "$topic" == "$want_topic" ]] || continue
         printf '%s\t%s\n' "$pid" "${dead:-0}"
         return 0
     done < <(tmux list-panes -a \
-        -F '#{pane_id}'$'\t''#{@cc_codex_claude6}'$'\t''#{pane_dead}' 2>/dev/null)
+        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}' 2>/dev/null)
     return 1
 }
 
 # Split a codex pane, finalize its options (all guarded — the pane may already
 # be gone if codex exited instantly), and echo the new pane id. Returns 1 if the
 # split itself failed.
-# Args: ref_pane orient size cwd sandbox my_token  [codex argv...]
+# Args: ref_pane orient size cwd sandbox my_token topic  [codex argv...]
 _split_codex_pane() {
-    local ref_pane="$1" orient="$2" size="$3" cwd="$4" sandbox="$5" my_token="$6"
-    shift 6
+    local ref_pane="$1" orient="$2" size="$3" cwd="$4" sandbox="$5" my_token="$6" topic="$7"
+    shift 7
+    local title="codex-$my_token"
+    [[ "$topic" != "main" ]] && title="codex-$topic-$my_token"
     local new_pane
     new_pane="$(tmux split-window -t "$ref_pane" "$orient" -l "${size}%" -d -c "$cwd" \
         -P -F '#{pane_id}' "$@" 2>/dev/null)" || return 1
     [[ -z "$new_pane" ]] && return 1
     tmux set-option -p -t "$new_pane" remain-on-exit on 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_claude6' "$my_token" 2>/dev/null || true
+    tmux set-option -p -t "$new_pane" '@cc_codex_topic' "$topic" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
-    tmux select-pane -t "$new_pane" -T "codex-$my_token" 2>/dev/null || true
+    tmux select-pane -t "$new_pane" -T "$title" 2>/dev/null || true
     printf '%s' "$new_pane"
 }
 
@@ -297,16 +313,21 @@ cmd_pane() {
     # window (the window holding Claude Code's own pane). This is the default
     # when running inside tmux; it returns exit 3 (with a hint) when not inside
     # tmux so the skill can fall back to `bind` (dedicated-window mode).
+    # --topic (default "main" = the primary pane) resolves/reuses/spawns an
+    # EXTRA topic-named pane in the same window, with identical semantics
+    # applied per-topic.
     local cwd="$PWD"
     local sandbox="read-only"
     local approval="on-request"
     local want_sandbox=""
     local orient="-h"          # horizontal split (codex to the right)
     local size="45"            # percent of the reference pane
+    local topic="main"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --cwd) cwd="$2"; shift 2 ;;
+            --topic) topic="$2"; shift 2 ;;
             --full-auto) sandbox="workspace-write"; want_sandbox="workspace-write"; shift ;;
             --read-only) sandbox="read-only"; want_sandbox="read-only"; shift ;;
             --vertical) orient="-v"; shift ;;
@@ -321,6 +342,7 @@ cmd_pane() {
         echo "codex-tmux pane: --size must be an integer 10-90 (got '$size')" >&2
         return 2
     fi
+    validate_topic "$topic" || return 2
 
     ensure_tmux_or_die
 
@@ -336,10 +358,15 @@ cmd_pane() {
         return 3
     fi
     my_token="$(compute_claude6)"
+    local title="codex-$my_token"
+    [[ "$topic" != "main" ]] && title="codex-$topic-$my_token"
+    local topic_flag=""
+    [[ "$topic" != "main" ]] && topic_flag=" --topic $topic"
 
-    # Locate this Claude's existing codex pane anywhere on the server.
+    # Locate this Claude's existing codex pane for this topic anywhere on the
+    # server.
     local match pane dead
-    if match="$(find_codex_pane "$my_token")"; then
+    if match="$(find_codex_pane "$my_token" "$topic")"; then
         pane="${match%%$'\t'*}"
         dead="${match##*$'\t'}"
         if [[ "$dead" != "1" ]]; then
@@ -351,7 +378,7 @@ cmd_pane() {
             pane_win="$(tmux display-message -p -t "$pane" '#{session_name}:#{window_index}' 2>/dev/null || true)"
             if [[ -n "$pane_win" && "$pane_win" != "$window" ]]; then
                 if tmux join-pane -h -s "$pane" -t "$ref_pane" 2>/dev/null; then
-                    tmux select-pane -t "$pane" -T "codex-$my_token" 2>/dev/null || true
+                    tmux select-pane -t "$pane" -T "$title" 2>/dev/null || true
                 else
                     tmux kill-pane -t "$pane" 2>/dev/null || true
                     pane=""
@@ -365,10 +392,14 @@ cmd_pane() {
                 local existing
                 existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
                 if [[ -n "$want_sandbox" && -n "$existing" && "$want_sandbox" != "$existing" ]]; then
-                    echo "codex-tmux pane: codex pane '$pane' is '$existing'; requested '$want_sandbox'. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane --$want_sandbox)." >&2
+                    echo "codex-tmux pane: codex pane '$pane' is '$existing'; requested '$want_sandbox'. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane --$want_sandbox$topic_flag)." >&2
                 fi
                 echo "$pane"
-                echo "Reusing codex pane $pane (in your current window)."
+                if [[ "$topic" == "main" ]]; then
+                    echo "Reusing codex pane $pane (in your current window)."
+                else
+                    echo "Reusing codex pane $pane for topic '$topic' (in your current window)."
+                fi
                 return 0
             fi
         else
@@ -403,12 +434,16 @@ cmd_pane() {
     local new_pane attempt=0
     while (( attempt < 2 )); do
         attempt=$(( attempt + 1 ))
-        new_pane="$(_split_codex_pane "$ref_pane" "$orient" "$size" "$cwd" "$sandbox" "$my_token" "${codex_cmd[@]}")" \
+        new_pane="$(_split_codex_pane "$ref_pane" "$orient" "$size" "$cwd" "$sandbox" "$my_token" "$topic" "${codex_cmd[@]}")" \
             || { echo "codex-tmux pane: split-window failed (window too small? try --vertical or 'bind')" >&2; return 1; }
         sleep 0.4
         if pane_alive "$new_pane"; then
             echo "$new_pane"
-            echo "Codex pane $new_pane in window $window (visible next to Claude)."
+            if [[ "$topic" == "main" ]]; then
+                echo "Codex pane $new_pane in window $window (visible next to Claude)."
+            else
+                echo "Codex pane $new_pane for topic '$topic' in window $window (visible next to Claude)."
+            fi
             return 0
         fi
         echo "codex-tmux pane: codex exited immediately in $new_pane (attempt $attempt):" >&2
@@ -418,6 +453,44 @@ cmd_pane() {
     done
     echo "codex-tmux pane: codex exited immediately twice; aborting. Re-run, or use 'bind'." >&2
     return 4
+}
+
+cmd_panes() {
+    # Read-only detection: list codex PANES server-wide (matched by the
+    # @cc_codex_claude6 marker), filtered to the current Claude session's
+    # claude6 unless --all. Prints one TSV line per pane:
+    #   <pane_id>\t<topic>\t<state>\t<session:window_index>\t<cwd>
+    # (state = alive|dead). Exits 0 if anything was printed, 1 otherwise.
+    # Never creates the cc-codex session (ensure_tmux_or_die only).
+    local all=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --all) all=1; shift ;;
+            *) echo "codex-tmux panes: unknown arg '$1'" >&2; return 2 ;;
+        esac
+    done
+
+    ensure_tmux_or_die
+    local my_token=""
+    (( all )) || my_token="$(compute_claude6)"
+
+    # Every possibly-empty field is made non-empty at the source via tmux
+    # conditionals so tab-IFS parsing never collapses/shifts fields (see
+    # find_codex_pane). Rows whose marker is the '-' sentinel are not codex
+    # panes and are skipped.
+    local found=0
+    local pid mark topic dead win cwd state
+    while IFS=$'\t' read -r pid mark topic dead win cwd; do
+        [[ "$mark" == "-" ]] && continue
+        [[ -n "$my_token" && "$mark" != "$my_token" ]] && continue
+        state="alive"
+        [[ "$dead" == "1" ]] && state="dead"
+        printf '%s\t%s\t%s\t%s\t%s\n' "$pid" "$topic" "$state" "$win" "$cwd"
+        found=$(( found + 1 ))
+    done < <(tmux list-panes -a \
+        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}'$'\t''#{session_name}:#{window_index}'$'\t''#{?@cc_codex_cwd,#{@cc_codex_cwd},-}' 2>/dev/null)
+
+    (( found > 0 ))
 }
 
 # Detect whether the codex process inside a window is still alive.
@@ -584,13 +657,15 @@ cmd_kill() {
                 removed=$(( removed + 1 ))
             fi
         done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
-        # Dead codex PANES anywhere on the server (any Claude session).
+        # Dead codex PANES anywhere on the server (any Claude session). The
+        # marker field is made non-empty via a tmux conditional ('-' sentinel
+        # = unmarked) so tab-IFS parsing never collapses/shifts fields.
         local pid mark dead
         while IFS=$'\t' read -r pid mark dead; do
-            [[ -n "$mark" && "$dead" == "1" ]] || continue
+            [[ "$mark" != "-" && "$dead" == "1" ]] || continue
             tmux kill-pane -t "$pid" 2>/dev/null || true
             removed=$(( removed + 1 ))
-        done < <(tmux list-panes -a -F '#{pane_id}'$'\t''#{@cc_codex_claude6}'$'\t''#{pane_dead}' 2>/dev/null)
+        done < <(tmux list-panes -a -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{pane_dead}' 2>/dev/null)
         echo "removed $removed orphan window(s)/pane(s)"
         return 0
     fi
@@ -607,13 +682,16 @@ cmd_kill() {
             tmux kill-window -t "$SESSION_NAME:$win" 2>/dev/null || true
             removed=$(( removed + 1 ))
         done < <(tmux list-windows -t "$SESSION_NAME" -F '#{window_name}' 2>/dev/null)
-        # This Claude's codex PANES anywhere on the server (alive or dead).
+        # This Claude's codex PANES anywhere on the server (alive or dead,
+        # ALL topics). The marker field is made non-empty via a tmux
+        # conditional ('-' sentinel = unmarked) so tab-IFS parsing never
+        # collapses/shifts fields.
         local pid mark
         while IFS=$'\t' read -r pid mark; do
             [[ "$mark" == "$my_token" ]] || continue
             tmux kill-pane -t "$pid" 2>/dev/null || true
             removed=$(( removed + 1 ))
-        done < <(tmux list-panes -a -F '#{pane_id}'$'\t''#{@cc_codex_claude6}' 2>/dev/null)
+        done < <(tmux list-panes -a -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}' 2>/dev/null)
         echo "removed $removed window(s)/pane(s) for claude6=$my_token"
         return 0
     fi
@@ -659,17 +737,27 @@ usage() {
 Usage: codex-tmux.sh <subcommand> [args...]
 
 Subcommands:
-  pane [--cwd DIR] [--full-auto|--read-only] [--horizontal|--vertical] [--size PCT]
+  pane [--topic SLUG] [--cwd DIR] [--full-auto|--read-only] [--horizontal|--vertical] [--size PCT]
       DEFAULT when Claude runs inside tmux. Spawn / locate / reuse a single
       codex instance as a PANE split into the CURRENT Claude window (right
       next to Claude, so progress is visible with no separate attach).
       Idempotent per Claude session (reuse is server-wide, surviving window
       moves): reuses the live codex pane if present, respawns it if dead, else
       splits a new one. Prints the pane id (e.g. %53) on stdout line 1.
+      --topic SLUG (2-15 chars, [a-z0-9-]; default: main) addresses an EXTRA
+      topic-named pane in the same window; each topic gets its own pane with
+      the same per-topic reuse/relocate/respawn semantics.
       Exits 3 (use `bind`) when not inside tmux; exits 4 if codex dies on
       launch (after one retry; codex output on stderr). Default split:
       horizontal, 45% (--size 10-90); auto-switches to vertical if a
       horizontal split would leave codex <80 cols.
+
+  panes [--all]
+      Read-only detection: list codex PANES server-wide, one TSV line per
+      pane: "<pane_id>\t<topic>\t<state>\t<session:window_index>\t<cwd>"
+      (state = alive|dead). Filtered to the current Claude session's claude6
+      by default; --all lists every agent's codex panes. Exits 0 if at least
+      one line was printed, 1 otherwise. Never creates the cc-codex session.
 
   bind [--cwd DIR] [--full-auto|--read-only]
       Dedicated-window mode / fallback when NOT inside tmux. Bind this Claude
@@ -679,8 +767,9 @@ Subcommands:
       line 1 plus an attach hint on line 2.
 
   new <topic> [--cwd DIR] [--full-auto|--read-only]
-      Create a new codex window in the cc-codex tmux session. Use ONLY for
-      explicit separate/parallel tasks; the default is `bind`.
+      Create a new codex window in the cc-codex tmux session. Use ONLY when a
+      SEPARATE WINDOW is explicitly requested; the default is `pane` (extra
+      panes via `pane --topic`), with `bind` as the outside-tmux fallback.
       Prints the full window name on stdout plus an attach hint.
 
   send | capture
@@ -735,6 +824,7 @@ main() {
             usage
             ;;
         pane) cmd_pane "$@" ;;
+        panes) cmd_panes "$@" ;;
         bind) cmd_bind "$@" ;;
         new) cmd_new "$@" ;;
         send|capture)

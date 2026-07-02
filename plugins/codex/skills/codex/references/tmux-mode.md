@@ -1,12 +1,12 @@
-# Codex Tmux Mode — Reference (v3.5.0+)
+# Codex Tmux Mode — Reference (v3.6.0+)
 
-> **Generic agentic-tmux concepts and the full recipe rationale now live in the `tmux` skill (tmux plugin).** This file documents only codex-specific calibration, the pane-mode default, and the dedicated-window fallback. For the *why* behind any recipe — the two-phase idle-detection rationale, copy-mode navigation, scrollback semantics, naming theory, and sync/locking — read the `tmux` skill's references (linked inline below). The codex plugin is the reference implementation that skill points back to.
+> **Generic agentic-tmux concepts and the full recipe rationale now live in the `tmux` skill (tmux plugin).** This file documents only codex-specific calibration, the pane-mode default, and the dedicated-window fallback. For the *why* behind any recipe — the two-phase idle-detection rationale, copy-mode navigation, scrollback semantics, naming theory, and sync/locking — read the `tmux` skill's references (linked inline below). The codex plugin is the reference implementation that skill points back to. The codex plugin declares the tmux plugin as a dependency, so it auto-installs alongside codex and these cross-references always resolve.
 
-The codex skill drives interaction with codex directly via `tmux send-keys` and `tmux capture-pane`. A thin helper script handles only lifecycle (pane, bind, spawn, list, kill, etc.). By default — when Claude runs **inside tmux** — each Claude session gets **one reused codex pane** split into the current window (right next to Claude, visible live with no separate attach). When Claude is **not inside tmux**, it falls back to **one reused codex window** (`codex-<claude6>`) in the `cc-codex` session. Extra panes/windows are spawned only when the user explicitly asks for a separate or parallel task.
+The codex skill drives interaction with codex directly via `tmux send-keys` and `tmux capture-pane`. A thin helper script handles only lifecycle (pane, panes, bind, spawn, list, kill, etc.). By default — when Claude runs **inside tmux** — each Claude session gets **one reused codex pane** split into the current window (right next to Claude, visible live with no separate attach). When Claude is **not inside tmux**, it falls back to **one reused codex window** (`codex-<claude6>`) in the `cc-codex` session. Extra topic-named panes (still in the current window, via `pane --topic`) are spawned only when the user explicitly asks for a parallel task; an extra window (`new`) only for an explicitly requested separate window.
 
 ## Pane mode (default — Claude inside tmux)
 
-When Claude is running inside tmux, the default is a codex **pane** split into the CURRENT Claude window (the window holding Claude's own pane). You watch progress live with no separate attach. In the normal case there is one codex pane per Claude session — `pane` marks it (via `claude6`) so it is reused, not duplicated. (A duplicate can occur if the Claude session id rolls mid-conversation, since the `claude6` token changes; recover with `kill --orphaned` or `kill %id`.)
+When Claude is running inside tmux, the default is a codex **pane** split into the CURRENT Claude window (the window holding Claude's own pane). You watch progress live with no separate attach. In the normal case there is one codex pane per Claude session — the topic-`main` pane; `pane` marks it (via `claude6` + topic) so it is reused, not duplicated. (A duplicate can occur if the Claude session id rolls mid-conversation, since the `claude6` token changes; recover with `kill %id`, or `kill --mine` then re-resolve — both claude6-scoped; never `kill --orphaned` for this, it is global/cross-agent.)
 
 Resolve THE codex target with this snippet (the canonical opening of every codex interaction). `$TARGET` is a pane id (e.g. `%53`) inside tmux, or `cc-codex:<window>` in the fallback:
 
@@ -26,6 +26,7 @@ Capture `pane`'s output and check its real exit code before `head` — piping st
 
 - **Returns a pane id.** `pane` prints the pane id (e.g. `%53`) on stdout line 1. Use it directly as `tmux ... -t "$TARGET"`.
 - **Reuse / respawn semantics.** `pane` is idempotent: it locates and reuses the existing codex pane if alive, respawns codex if the pane's process died, and only splits a new pane when none exists. Follow-ups, continuations, and new sub-tasks all land in the same pane.
+- **Multiple panes (topics).** `--topic <slug>` resolves the EXTRA pane for that topic with the same semantics applied per-topic: reuse-if-alive, relocate into the current window if it lives in another one (`join-pane`, never duplicated), respawn-if-dead, width floor, liveness check + one auto-retry (exit 4), sandbox-mismatch warning. Plain `pane` is exactly `--topic main` (the primary pane). Every codex pane carries `@cc_codex_claude6` + `@cc_codex_topic`; legacy panes without `@cc_codex_topic` are treated as topic `main`. Pane titles: `codex-<claude6>` (topic `main`) / `codex-<topic>-<claude6>` (extras). Use `panes` to detect them; each pane is its own `$TARGET` with its own baseline and idle loop (one driver per pane).
 - **Split flags.** `--horizontal` / `--vertical` choose the split direction (default `--horizontal`); `--size PCT` sets the new pane's size (integer **10–90**, default `45`; out-of-range → exit 2). Sandbox flags `--full-auto` / `--read-only` (default read-only) are fixed when the pane is first created.
 - **Pane width / shrink.** Splitting off Claude's own pane shrinks Claude's pane once (to ~45% by default). If a **horizontal** split would leave codex too narrow, `pane` auto-switches to a **vertical (full-width)** split so codex keeps ≥80 cols. Pass `--vertical` up front to keep full width regardless.
 - **Not inside tmux.** `pane` exits **3** (with a hint to use `bind`) when there is no surrounding tmux; the resolve-target guard above handles this by falling back to `bind`.
@@ -48,17 +49,18 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes these l
 
 | Subcommand | Purpose |
 |---|---|
-| `pane [--cwd DIR] [--full-auto\|--read-only] [--horizontal\|--vertical] [--size PCT]` | **Default entry point (Claude inside tmux).** Spawn/locate/reuse THE single codex pane split into the CURRENT Claude window, marked by `claude6` so it is reused, not duplicated. Idempotent: reuse if alive, respawn codex if dead. Prints the pane id (e.g. `%53`) on line 1. Default split `--horizontal`, `--size 45` (size 10–90, else exit 2); a too-narrow horizontal split auto-switches to vertical (full-width) so codex keeps ≥80 cols. Exits **3** (hint to use `bind`) when NOT inside tmux; exits **4** if codex dies immediately at launch (after one auto-retry; codex's last output on stderr). |
+| `pane [--topic <slug>] [--cwd DIR] [--full-auto\|--read-only] [--horizontal\|--vertical] [--size PCT]` | **Default entry point (Claude inside tmux).** Spawn/locate/reuse the codex pane for a topic, split into the CURRENT Claude window, marked by `claude6` + topic so it is reused, not duplicated. `--topic` defaults to `main` (the primary pane; behavior unchanged); a slug (2–15 chars `[a-z0-9-]`) resolves the EXTRA pane for that topic with the same per-topic semantics (reuse-if-alive, relocate-into-current-window, respawn-if-dead, width floor, sandbox-mismatch warning). Prints the pane id (e.g. `%53`) on line 1. Default split `--horizontal`, `--size 45` (size 10–90, else exit 2); a too-narrow horizontal split auto-switches to vertical (full-width) so codex keeps ≥80 cols. Exits **3** (hint to use `bind`) when NOT inside tmux; exits **4** if codex dies immediately at launch (after one auto-retry; codex's last output on stderr). |
+| `panes [--all]` | **Read-only detection.** List codex panes server-wide, filtered to this agent's `claude6` by default (`--all` = every agent's). One TSV line per pane: `pane_id`, `topic`, `state` (`alive`/`dead`), `session:window_index`, `cwd` — every field guaranteed non-empty (`-` for unknown), so tab-splitting is safe. Exit 0 if ≥1 pane printed, else 1. Never creates anything (not even the `cc-codex` session). |
 | `bind [--cwd DIR] [--full-auto\|--read-only]` | **Fallback entry point (Claude NOT inside tmux).** Get/create THE single bound window `codex-<claude6>` in the `cc-codex` session. Idempotent: reuse if alive, respawn codex if dead, create if absent. Records `@cc_codex_cwd/created/sandbox` metadata and sets `remain-on-exit on`. Output: window name on line 1, attach hint on line 2. Exits **4** if codex dies immediately at launch (after one auto-retry; codex's last output on stderr). |
-| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn an EXTRA codex window (explicit parallel tasks only). Returns immediately — does NOT wait for codex's TUI to be ready. |
+| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn an EXTRA codex window — ONLY for an explicitly requested SEPARATE WINDOW (parallel tasks stay in the current window via `pane --topic`). Returns immediately — does NOT wait for codex's TUI to be ready. |
 | `ls [--mine]` | List windows. State is `alive` / `dead` / `unknown` based on tmux + process inspection (no pane parsing). `--mine` matches both the bound name `codex-<claude6>` and extras `codex-<topic>-<claude6>-<rand2>`. |
 | `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching EXTRA windows in the current Claude session's claude6 namespace. Exits 0 on match (one line per result), 1 on no match. Rarely needed under the pane/bound default — use it for extra-topic reuse or `--any-session` cross-session lookup. |
 | `attach <window>` | Print the tmux attach command for a **window** (the script does not exec it; Claude Code's bash is non-interactive). **Window-only** — passing a pane id fails (exit 6). A codex pane is already visible in your current window and needs no attach. |
 | `rename <old> <new-topic>` | Replace topic only; preserves the `<claude6>-<rand2>` suffix. (Extra windows only — the bound window has no topic to rename.) |
-| `kill <window>` / `kill <%pane-id>` / `kill --mine` / `kill --orphaned` | Remove a specific window, a specific codex pane (`kill %53`), all of the current Claude session's codex (`--mine`: panes AND bound/extra windows), or all dead-codex panes/windows (`--orphaned`). `--mine` and `--orphaned` are **pane-aware** — they remove codex PANES as well as `cc-codex` windows. |
+| `kill <window>` / `kill <%pane-id>` / `kill --mine` / `kill --orphaned` | Remove a specific window, a specific codex pane (`kill %53`), all of the current Claude session's codex (`--mine`: ALL panes regardless of topic AND bound/extra windows), or all dead-codex panes/windows (`--orphaned`). `--mine` and `--orphaned` are **pane-aware** — they remove codex PANES as well as `cc-codex` windows. |
 | `exec [flags...] <prompt>` | One-shot escape hatch using `codex exec` (no tmux). |
 
-**Pane / window naming.** Default pane (inside tmux): the codex pane in the current window is identified by its pane id (e.g. `%53`) and marked with `claude6` so `pane` reuses it instead of splitting a duplicate. Fallback bound window: `codex-<claude6>` (e.g. `codex-0d61e6`), topic-agnostic, reused for every task. Extra windows (explicit parallel only): `codex-<topic>-<claude6>-<rand2>` (e.g. `codex-auth-0d61e6-x7`). `claude6` = first 6 chars of `$CLAUDE_CODE_SESSION_ID` (fallback: sha256 of `"$PPID:$PWD"`, first 6 chars). Full naming theory (the generic `<tool>-<claude6>` / `<tool>-<topic>-<claude6>-<rand2>` pattern, identity derivation, why the suffix exists) is in the `tmux` skill's `references/model-and-identity.md`; the topic-slug rules are in `SKILL.md`.
+**Pane / window naming.** Panes (inside tmux): each codex pane is identified by its pane id (e.g. `%53`) and marked with `@cc_codex_claude6` plus `@cc_codex_topic` — `main` for the primary pane, a topic slug for extras (legacy panes without `@cc_codex_topic` are treated as topic `main`) — so `pane` reuses the right pane per topic instead of splitting a duplicate. Pane titles: `codex-<claude6>` when the topic is `main`, else `codex-<topic>-<claude6>`. Fallback bound window: `codex-<claude6>` (e.g. `codex-0d61e6`), topic-agnostic, reused for every task. Extra windows (explicit separate-window request only): `codex-<topic>-<claude6>-<rand2>` (e.g. `codex-auth-0d61e6-x7`). `claude6` = first 6 chars of `$CLAUDE_CODE_SESSION_ID` (fallback: sha256 of `"$PPID:$PWD"`, first 6 chars). Full naming theory (the generic `<tool>-<claude6>` / `<tool>-<topic>-<claude6>-<rand2>` pattern, identity derivation, why the suffix exists) is in the `tmux` skill's `references/model-and-identity.md`; the topic-slug rules are in `SKILL.md`.
 
 ## Dedicated-window fallback (not inside tmux)
 
@@ -97,19 +99,33 @@ AFTER_LINES=$(printf '%s\n' "$AFTER" | wc -l)
 
 Every follow-up, continuation, and new sub-task in the same Claude session reuses the same `$TARGET` — just take a fresh `BASELINE`, send, detect-idle, extract-delta again. No `find`, no topic slug, no reuse-vs-spawn decision. (Inside tmux the only difference is that `$TARGET` is a pane id from `pane` instead of `cc-codex:$WIN` from `bind` — the recipes are identical.)
 
-### Spawning an extra window (explicit request only)
+### Multiple panes / extra windows (explicit request only)
 
-Only when the user explicitly asks for a separate / parallel task ("in parallel", "separate window", "keep this one and also…", "don't interrupt the current task"):
+Parallel task in the CURRENT window ("in parallel", "a second codex", "also start another", "don't interrupt the current task") → an extra topic pane. (Inside tmux only — `pane` exits 3 outside tmux; in the not-inside-tmux fallback a parallel task gets an extra `new <topic>` window instead.)
 
 ```bash
-# Derive a topic slug per SKILL.md, then spawn an EXTRA window.
+# Derive a topic slug per SKILL.md, then spawn/reuse the EXTRA pane
+# (announce before spawning). Capture-and-check like the resolve snippet —
+# do NOT pipe into head unchecked (exit 4 = codex died would yield an empty id).
+if _eout=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --topic tests --cwd "$PWD"); then
+    EXTRA=$(printf '%s\n' "$_eout" | head -n1)
+fi
+# Drive it as its own $TARGET with the same recipes. Keep a PER-PANE baseline
+# and idle loop (one driver per pane); the main pane keeps running untouched.
+```
+
+Per-topic reuse/relocate semantics: `pane --topic` is idempotent per topic — it reuses the topic's pane if alive, relocates it into the current window if it drifted to another one, and respawns codex if dead. Legacy panes without `@cc_codex_topic` count as topic `main`. `panes` lists every pane you own (TSV: pane id, topic, state, location, cwd) without creating anything.
+
+Explicitly requested SEPARATE WINDOW ("separate window", "new window") → `new`:
+
+```bash
 EXTRA=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh new auth --cwd "$PWD" | head -n1)
 # Wait for ready, then drive it with the same recipes targeting cc-codex:$EXTRA
 # (set TARGET="cc-codex:$EXTRA"). The default codex pane/window keeps running
 # untouched in parallel.
 ```
 
-The default codex pane/window and any extras coexist; extras live in the `cc-codex` session, and `ls --mine` shows the windows. Generic one-driver discipline and spawn/cleanup theory: `tmux` skill `references/sync-and-lifecycle.md`.
+The main pane, any topic panes, and any extra windows coexist; `panes` shows this agent's panes and `ls --mine` shows the windows. A new tmux *session* is created only ever on explicit user request. Generic one-driver discipline and spawn/cleanup theory: `tmux` skill `references/sync-and-lifecycle.md`.
 
 ## Interaction recipes (codex-specific)
 
@@ -277,11 +293,13 @@ Why `claude6` alone isn't enough across resumes, plus the generic dead-window sc
 | User says "stop / cancel / never mind" mid-response | `cancel-in-flight` |
 | Codex shows a hooks-review / approval / auth prompt | `handle-interruption` |
 | Codex pane/window died, session-id rolled, or prior extra window wanted | `reuse-existing-window` |
-| User explicitly wants a separate / parallel task | `new <topic>` then drive the extra window |
+| Rediscovering which codex panes you own | `panes` (read-only TSV: pane id, topic, state, location, cwd) |
+| User explicitly wants a parallel task | `pane --topic <slug>` then drive the extra pane (current window; per-pane baseline + idle loop) |
+| User explicitly wants a SEPARATE WINDOW | `new <topic>` then drive the extra window |
 
 ## Sync / locking
 
-One driver (Claude) per window is the normal case, so no locking is needed. If you ever run parallel sends against the same window, wrap them with `flock` — see the generic serialization pattern in the `tmux` skill's `references/sync-and-lifecycle.md`.
+One driver (Claude) per pane/window is the normal case, so no locking is needed. With multiple topic panes, driving several panes concurrently is fine — each pane has exactly one driver and its own baseline/idle state; what needs serialization is two drivers on the SAME pane. If you ever run parallel sends against the same pane/window, wrap them with `flock` — see the generic serialization pattern in the `tmux` skill's `references/sync-and-lifecycle.md`.
 
 ## Troubleshooting (codex-specific)
 
@@ -308,7 +326,7 @@ Codex CLI may have updated its status line. Run `tmux capture-pane -t "$TARGET" 
 
 ### Sandbox mismatch on `pane` / `bind`
 
-If `--full-auto` is requested but the codex pane/window was created read-only (or vice-versa), the script warns on stderr and reuses the existing pane/window (recorded in `@cc_codex_sandbox` for windows). Surface the warning. To switch sandbox, `kill "$TARGET"` then re-resolve the target with the desired flag.
+If `--full-auto` is requested but the codex pane/window was created read-only (or vice-versa), the script warns on stderr and reuses the existing pane/window (recorded in `@cc_codex_sandbox` for windows). The check is per pane, so each topic pane has its own fixed sandbox. Surface the warning. To switch sandbox, `kill "$TARGET"` then re-resolve the target with the desired flag.
 
 ### Migration notes
 
