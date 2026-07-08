@@ -6,6 +6,14 @@ set -euo pipefail
 # ---------- Constants (overridable via env) ----------
 readonly SESSION_NAME="${CC_CODEX_SESSION_NAME:-cc-codex}"
 readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
+# How the codex pane/window behaves when the codex process exits:
+#   failed (default) — keep the pane ONLY on a non-zero (crash) exit so you can
+#                      read the error; a clean exit (status 0, codex finished or
+#                      you closed it) auto-closes the pane — no dead-pane clutter.
+#   on               — always keep the dead pane (old behavior; preserves the
+#                      final screen / `codex resume` id even on a clean exit).
+#   off              — always close the pane when codex exits.
+readonly REMAIN_ON_EXIT="${CC_CODEX_REMAIN_ON_EXIT:-failed}"
 
 # ---------- Pure helpers (no tmux, no codex) ----------
 
@@ -129,11 +137,12 @@ cmd_new() {
     tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
         "${codex_cmd[@]}"
 
-    # CRITICAL: keep the window alive after codex exits (per FR-014) so the user
-    # can attach and read the exit message. Must be set ASAP after new-window.
-    # All post-spawn options are guarded: if codex exits instantly the window may
-    # already be gone, and an unguarded failure would abort under `set -e`.
-    tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit on 2>/dev/null || true
+    # remain-on-exit ($REMAIN_ON_EXIT, default 'failed'): keep the window on a
+    # crash (non-zero exit) so the error is readable; a clean exit auto-closes it.
+    # Must be set ASAP after new-window. All post-spawn options are guarded: if
+    # codex exits instantly the window may already be gone, and an unguarded
+    # failure would abort under `set -e`.
+    tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit "$REMAIN_ON_EXIT" 2>/dev/null || true
 
     # Record metadata as per-window user options.
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
@@ -210,12 +219,13 @@ cmd_bind() {
         tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
             "${codex_cmd[@]}"
 
-        # Keep the window alive after codex exits (per FR-014) so the user can
-        # attach and read the exit message. Must be set ASAP after new-window.
+        # remain-on-exit ($REMAIN_ON_EXIT, default 'failed'): keep the window on
+        # a crash so the error is readable; a clean exit auto-closes it. Set ASAP
+        # after new-window.
         # All post-spawn options are guarded: if codex exits instantly the
         # window may already be gone, and an unguarded failure would abort
         # under `set -e`.
-        tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit on 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" remain-on-exit "$REMAIN_ON_EXIT" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
@@ -298,7 +308,7 @@ _split_codex_pane() {
     new_pane="$(tmux split-window -t "$ref_pane" "$orient" -l "${size}%" -d -c "$cwd" \
         -P -F '#{pane_id}' "$@" 2>/dev/null)" || return 1
     [[ -z "$new_pane" ]] && return 1
-    tmux set-option -p -t "$new_pane" remain-on-exit on 2>/dev/null || true
+    tmux set-option -p -t "$new_pane" remain-on-exit "$REMAIN_ON_EXIT" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_claude6' "$my_token" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_topic' "$topic" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_cwd' "$cwd" 2>/dev/null || true

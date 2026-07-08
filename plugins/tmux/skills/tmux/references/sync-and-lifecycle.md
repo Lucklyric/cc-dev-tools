@@ -65,7 +65,7 @@ The lifecycle of a driven window:
 
 | Phase | What happens |
 |---|---|
-| **Spawn** | Create the window, start the CLI in it detached, set `remain-on-exit on`, record metadata. |
+| **Spawn** | Create the window, start the CLI in it detached, set `remain-on-exit failed` (see §5), record metadata. |
 | **Find** | Locate existing windows by name (token-scoped or widened) and inspect their state. |
 | **Reuse** | If a matching window is alive, drive it instead of spawning a duplicate. |
 | **Kill** | Remove a window when the user asks or at cleanup. Destroys its scrollback. |
@@ -81,8 +81,8 @@ tmux has-session -t "$SESSION" 2>/dev/null || tmux new-session -d -s "$SESSION" 
 # Spawn the driven CLI in a new, detached window.
 tmux new-window -t "$SESSION" -n "$WINDOW" -d -c "$cwd" <tool> [tool-flags...]
 
-# CRITICAL: keep the window after the CLI exits (see §5), set ASAP after new-window.
-tmux set-option -w -t "$TARGET" remain-on-exit on
+# Keep a CRASHED CLI's window for diagnosis; a clean exit auto-closes (see §5).
+tmux set-option -w -t "$TARGET" remain-on-exit failed
 
 # Record metadata as per-window user options (@-prefixed) for later find/cleanup.
 tmux set-option -w -t "$TARGET" '@cc_cwd'     "$cwd"
@@ -178,15 +178,18 @@ fi
 
 ## 5. `remain-on-exit` — surviving scrollback
 
-By default tmux destroys a window the instant its process exits, taking the scrollback with it. Set `remain-on-exit on` immediately after `new-window` so that when the driven CLI exits — cleanly, by crash, or by `Esc`-cancel-then-quit — the window stays as a **dead** window with its full output intact:
+By default tmux destroys a window the instant its process exits, taking the scrollback with it. `remain-on-exit` (set immediately after `new-window`/`split-window`) keeps the exited pane/window as a **dead** one with its output intact. It takes three values (tmux 3.2+):
 
 ```bash
-tmux set-option -w -t "$TARGET" remain-on-exit on
+tmux set-option -w -t "$TARGET" remain-on-exit failed   # keep ONLY on a crash (recommended)
+# ... or: on  (keep on any exit, incl. clean)  |  off  (never keep)
 ```
 
-This is what makes dead-window recovery (§4) possible: the human can attach and read the final output / error, and the agent can salvage context before respawning. Without it, a CLI that exits mid-task leaves nothing to diagnose.
+- **`failed` (recommended default).** Keep the dead pane **only when the CLI exited non-zero** (a crash) — so the error is readable — while a **clean exit (status 0) auto-closes** the pane. This is what makes dead-CLI recovery (§4) possible for the case that matters (crashes) without leaving corpses behind.
+- **`on`.** Keep on *any* exit, including clean. Fine for a *window* (a dead window is just an idle tab), but see the caveat.
+- **`off`.** Never keep — the pane vanishes the instant the CLI exits.
 
-**Pane placement caveat.** `remain-on-exit on` is unambiguously good for a *window* (a dead window is just an idle tab). But for a **pane split into a human's live window**, a dead pane keeps **occupying screen space** in the window the human is actively using — half their view is now a frozen corpse. So with pane placement, salvage the scrollback and then **prune the dead pane promptly** before re-spawning (see §6), rather than letting it linger.
+**Pane placement caveat — prefer `failed`.** For a **pane split into a human's live window**, `on` is actively hostile: a dead pane keeps **occupying screen space** in the window the human is using — half their view becomes a frozen "Pane is dead (status 0)" corpse after every clean exit. Use **`failed`** so clean exits auto-close and only genuine crashes linger (and prune even those promptly per §6). Reserve `on` for windows the human isn't actively looking at.
 
 ---
 

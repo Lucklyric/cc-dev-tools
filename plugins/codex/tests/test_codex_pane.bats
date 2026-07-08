@@ -85,12 +85,14 @@ teardown() {
     [[ "${lines[0]}" =~ ^%[0-9]+$ ]]
 }
 
-@test "pane: respawns the codex pane when its process is dead" {
+@test "pane: respawns the codex pane when its process crashed (dead)" {
     run "$SCRIPT" pane --cwd /tmp
     [ "$status" -eq 0 ]
     local first="${lines[0]}"
-    # Make the mock exit; remain-on-exit keeps the pane around as dead.
-    tmux send-keys -t "$first" "/exit" Enter
+    # Crash the codex process (SIGKILL = non-zero exit) so remain-on-exit=failed
+    # keeps the pane around as DEAD.
+    local pid; pid="$(tmux display-message -p -t "$first" '#{pane_pid}')"
+    kill -KILL "$pid" 2>/dev/null || true
     sleep 0.7
     [ "$(tmux display-message -p -t "$first" '#{pane_dead}')" = "1" ]
     run "$SCRIPT" pane --cwd /tmp
@@ -98,6 +100,30 @@ teardown() {
     local second="${lines[0]}"
     [ "$first" != "$second" ]
     [ "$(tmux display-message -p -t "$second" '#{pane_dead}')" = "0" ]
+}
+
+@test "pane: a clean exit auto-closes the pane (remain-on-exit=failed, no dead clutter)" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
+    # /exit makes the mock exit 0 (clean) → the pane must AUTO-CLOSE, not linger dead.
+    tmux send-keys -t "$first" "/exit" Enter
+    sleep 0.8
+    ! tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$first"
+    # Re-resolving after the pane closed spawns a fresh live pane.
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" != "$first" ]
+}
+
+@test "pane: CC_CODEX_REMAIN_ON_EXIT=on keeps a clean-exit pane dead (override)" {
+    CC_CODEX_REMAIN_ON_EXIT=on run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
+    tmux send-keys -t "$first" "/exit" Enter
+    sleep 0.8
+    # With the override, a clean exit is kept as a dead pane (old behavior).
+    [ "$(tmux display-message -p -t "$first" '#{pane_dead}')" = "1" ]
 }
 
 @test "pane: exits 3 when not inside tmux (no reference pane)" {

@@ -309,4 +309,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.6.0
+3.6.1

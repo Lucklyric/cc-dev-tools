@@ -223,8 +223,9 @@ Locking, race-free spawn/find, and the lock-free macOS fallback: `references/syn
   asks to clean up everything, never as part of normal work.
 - **Bind, don't accumulate.** Ensure the single bound window exists (create if absent, reuse if
   alive, respawn if dead), then drive it. Spawn extra windows only on explicit request.
-- Set `remain-on-exit on` so a crashed CLI leaves its scrollback for diagnosis instead of
-  vanishing.
+- Set `remain-on-exit failed` so a *crashed* CLI (non-zero exit) leaves its scrollback for
+  diagnosis, while a *clean* exit auto-closes the pane (no dead-pane corpse in a live window).
+  Use `on` only for a window the human isn't actively viewing.
 - Detect state without parsing the pane: a window is `alive`/`dead`/`unknown` from tmux plus
   process inspection.
 - **Never kill silently** — killing destroys scrollback irreversibly. Tell the user which
