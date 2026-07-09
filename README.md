@@ -10,7 +10,7 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 | Plugin | Description | Type |
 |--------|-------------|------|
-| [Codex](#codex-plugin) | OpenAI GPT-5.5 integration for frontier reasoning tasks | Skill |
+| [Codex](#codex-plugin) | OpenAI GPT-5.6 series integration for frontier reasoning tasks | Skill |
 | [Gemini](#gemini-plugin) | Google Gemini 3.1 Pro AI integration for research and reasoning | Skill |
 | [Nano Banana](#nano-banana-plugin) | Standalone image generation via MCP (no Gemini CLI needed) | MCP + Skill |
 | [Telegram Notifier](#telegram-notifier-plugin) | Telegram notifications for Claude Code events | Hooks |
@@ -20,11 +20,12 @@ This marketplace provides Claude Code plugins for enhanced development capabilit
 
 ### Codex Plugin
 
-Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
+Frontier AI assistant through OpenAI Codex CLI (GPT-5.6 series) integration.
 
 **Core Features:**
-- **Frontier Reasoning**: GPT-5.5 with xhigh reasoning effort for maximum capability
-- **Fast Mode**: `gpt-5.5-fast` available on demand for speed-sensitive tasks
+- **GPT-5.6 series**: `gpt-5.6-sol` (frontier, default), `gpt-5.6-terra` (balanced), `gpt-5.6-luna` (fast) — pick model + effort per task
+- **Extended effort ladder**: low · medium · high · xhigh · **max** · **ultra** (5.6 adds `max`/`ultra`; default `xhigh`); override via `CC_CODEX_MODEL` / `CC_CODEX_EFFORT`
+- **Code Review**: delegate `codex review` over uncommitted changes, a base branch, or a commit
 - **Session Continuation**: Resume previous conversations with `codex exec resume --last`
 - **Safe Sandbox Defaults**: Read-only by default, workspace-write for code editing
 - **Codex Beside Claude**: By default spawns/reuses one codex instance as a **pane in your current tmux window** (visible next to Claude, no separate attach); falls back to one dedicated reusable window (`codex-<claude6>`) when Claude isn't running inside tmux. Supports multi-pane orchestration — detect all your codex panes (`panes`), spawn extra topic-named panes in the current window (`pane --topic`), and drive them independently. Generic tmux orchestration lives in the [tmux plugin](#tmux-plugin), which codex now formally depends on (auto-installed with codex).
@@ -35,7 +36,7 @@ Frontier AI assistant through OpenAI Codex CLI (GPT-5.5) integration.
 npm install -g @openai/codex
 # or: brew install --cask codex
 
-codex --version  # Requires v0.125.0+
+codex --version  # Requires v0.144.0+ for the GPT-5.6 series
 codex login
 ```
 
@@ -47,8 +48,8 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 3.6.1 |
-| Models | GPT-5.5, GPT-5.5-Fast |
+| Version | 3.7.0 |
+| Models | GPT-5.6-Sol / Terra / Luna (GPT-5.5 fallback) |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
 
@@ -294,11 +295,11 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.30.1
+**Marketplace**: 2.31.0
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 3.6.1 |
+| Codex | 3.7.0 |
 | Gemini | 2.1.0 |
 | Nano Banana | 1.4.0 |
 | Telegram Notifier | 0.4.0 |

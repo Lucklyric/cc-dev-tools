@@ -1,4 +1,4 @@
-# Codex Tmux Mode — Reference (v3.6.0+)
+# Codex Tmux Mode — Reference (v3.7.0+)
 
 > **Generic agentic-tmux concepts and the full recipe rationale now live in the `tmux` skill (tmux plugin).** This file documents only codex-specific calibration, the pane-mode default, and the dedicated-window fallback. For the *why* behind any recipe — the two-phase idle-detection rationale, copy-mode navigation, scrollback semantics, naming theory, and sync/locking — read the `tmux` skill's references (linked inline below). The codex plugin is the reference implementation that skill points back to. The codex plugin declares the tmux plugin as a dependency, so it auto-installs alongside codex and these cross-references always resolve.
 
@@ -77,7 +77,7 @@ TARGET="cc-codex:$WIN"
 # 2) Wait for codex to be input-ready (only needed right after creation;
 #    a reused alive window is already idle). Bound the wait so a dead/empty
 #    target can't spin forever (mirrors the detect-idle deadline).
-IDLE_REGEX='gpt-5\.5.*·'
+IDLE_REGEX='gpt-5\.[0-9].*·'   # model-agnostic: sol/terra/luna/5.5
 RDY_DEADLINE=$(( $(date +%s) + 30 ))
 until tmux capture-pane -t "$TARGET" -p -S -200 | tail -3 | grep -qE "$IDLE_REGEX"; do
     (( $(date +%s) > RDY_DEADLINE )) && { echo "codex not ready after 30s (dead pane?)"; break; }
@@ -171,10 +171,10 @@ Why the Write tool and not a heredoc: a `<<'EOF'` heredoc silently truncates if 
 
 The **recheck strategy** — Claude must actively poll; there is no auto-notification when codex finishes. Two phases: activity-wait, then stability. (Why two phases — the status line is present both before send and after completion, so a stability-only loop false-positives on the pre-send pane — is explained in full in the `tmux` skill's `references/interaction-recipes.md` § detect-idle.)
 
-**Codex calibration.** For codex 0.133+ the idle status line looks like `gpt-5.5 xhigh · /path/to/cwd`, so anchor the regex to the middot before the cwd path:
+**Codex calibration.** For codex 0.144+ the idle status line looks like `gpt-5.6-sol xhigh · /path/to/cwd`, so anchor the regex to the middot before the cwd path. Keep it model-agnostic (`gpt-5\.[0-9]`) so it matches whichever 5.6 slug (sol/terra/luna) or `gpt-5.5` override is running:
 
 ```bash
-IDLE_REGEX='gpt-5\.5.*·'
+IDLE_REGEX='gpt-5\.[0-9].*·'   # model-agnostic: sol/terra/luna/5.5
 ```
 
 Anchor to the ` · /path` status line, not just the model name, because the model name can appear in response text. Run `tmux capture-pane -t "$TARGET" -p | tail -5` while codex is idle to confirm what your CLI version prints, and update the regex if the status line changed.
@@ -235,7 +235,7 @@ BASELINE=$(tmux capture-pane -t "$TARGET" -p -S -200)
 PREV=""; STABLE=0; DEADLINE=$(( $(date +%s) + 30 ))
 while (( $(date +%s) < DEADLINE )); do
     BUF=$(tmux capture-pane -t "$TARGET" -p -S -200)
-    if [[ "$BUF" == "$PREV" ]] && printf '%s\n' "$BUF" | tail -3 | grep -qE 'gpt-5\.5.*·'; then
+    if [[ "$BUF" == "$PREV" ]] && printf '%s\n' "$BUF" | tail -3 | grep -qE 'gpt-5\.[0-9].*·'; then
         STABLE=$(( STABLE + 1 )); (( STABLE >= 2 )) && break
     else STABLE=0; fi
     PREV="$BUF"; sleep 0.5

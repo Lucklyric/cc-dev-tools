@@ -24,10 +24,10 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 1. **Claude detects** the reasoning task (queue design)
 2. **Skill is invoked** autonomously
-3. **Codex CLI is called** with gpt-5.5 (high-reasoning general model):
+3. **Codex CLI is called** with gpt-5.6-sol (high-reasoning general model):
 
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Help me design a queue data structure in Python"
 ```
@@ -54,10 +54,10 @@ Codex provides:
 ### What Happens
 
 1. **Skill detects** code editing request
-2. **Uses gpt-5.5** (frontier reasoning model with xhigh effort):
+2. **Uses gpt-5.6-sol** (frontier reasoning model with xhigh effort):
 
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "Edit my Python file to implement the queue with thread-safety"
@@ -88,7 +88,7 @@ Codex:
 2. **Codex invoked** with general reasoning settings:
 
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Design a REST API for a blog system"
 ```
@@ -115,7 +115,7 @@ Codex delivers:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Help me implement a binary search tree with balancing"
 ```
@@ -140,7 +140,7 @@ Codex provides:
 ### What Happens
 
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "Refactor the authentication system with comprehensive security improvements"
@@ -156,7 +156,7 @@ Codex provides:
 - Detailed reasoning about trade-offs
 - Long-horizon planning for complex changes (native context compaction)
 
-**Note**: xhigh is the default reasoning effort for all Codex invocations. gpt-5.5 has native context compaction ideal for long-horizon refactoring tasks.
+**Note**: xhigh is the default reasoning effort for all Codex invocations. gpt-5.6-sol has native context compaction ideal for long-horizon refactoring tasks.
 
 ---
 
@@ -164,17 +164,17 @@ Codex provides:
 
 | Task Type | Model | Sandbox | Reasoning | Example |
 |-----------|-------|---------|-----------|---------|
-| General reasoning | `gpt-5.5` | `read-only` | xhigh | "Design a queue" |
-| Architecture design | `gpt-5.5` | `read-only` | xhigh | "Design REST API" |
-| Code review | `gpt-5.5` | `read-only` | xhigh | "Review this code" |
-| Code editing | `gpt-5.5` | `workspace-write` | xhigh | "Edit file to add X" |
-| Complex refactoring | `gpt-5.5` | `workspace-write` | xhigh | "Refactor auth system" |
-| Implementation | `gpt-5.5` | `workspace-write` | xhigh | "Implement function Y" |
+| General reasoning | `gpt-5.6-sol` | `read-only` | xhigh | "Design a queue" |
+| Architecture design | `gpt-5.6-sol` | `read-only` | xhigh | "Design REST API" |
+| Code review | `gpt-5.6-sol` | `read-only` | xhigh | "Review this code" |
+| Code editing | `gpt-5.6-sol` | `workspace-write` | xhigh | "Edit file to add X" |
+| Complex refactoring | `gpt-5.6-sol` | `workspace-write` | xhigh | "Refactor auth system" |
+| Implementation | `gpt-5.6-sol` | `workspace-write` | xhigh | "Implement function Y" |
 
-**Note**: `gpt-5.5` is the default model for ALL tasks with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
+**Note**: `gpt-5.6-sol` is the default model for ALL tasks with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
 
 ### Fallback Chain
-- **Primary**: `gpt-5.5` → `gpt-5.5-fast`
+- **Primary**: `gpt-5.6-sol` → `gpt-5.6-sol-fast`
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---

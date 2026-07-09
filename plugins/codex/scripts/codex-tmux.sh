@@ -14,6 +14,17 @@ readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
 #                      final screen / `codex resume` id even on a clean exit).
 #   off              — always close the pane when codex exits.
 readonly REMAIN_ON_EXIT="${CC_CODEX_REMAIN_ON_EXIT:-failed}"
+# Model and reasoning effort for every spawned/exec'd codex.
+#   CODEX_MODEL  (default gpt-5.6-sol) — the frontier GPT-5.6 agentic model.
+#                Requires codex CLI >= 0.144.0. On older CLIs set
+#                CC_CODEX_MODEL=gpt-5.5 (or another slug your CLI supports).
+#                Other 5.6 slugs: gpt-5.6-terra (balanced), gpt-5.6-luna (fast).
+#   CODEX_EFFORT (default xhigh) — reasoning depth. The 5.6 series ladder is
+#                low < medium < high < xhigh < max < ultra. Default 'xhigh' is a
+#                strong balance; escalate to 'max'/'ultra' (sol/terra only) for
+#                the hardest problems, or dial down (e.g. high) for speed.
+readonly CODEX_MODEL="${CC_CODEX_MODEL:-gpt-5.6-sol}"
+readonly CODEX_EFFORT="${CC_CODEX_EFFORT:-xhigh}"
 
 # ---------- Pure helpers (no tmux, no codex) ----------
 
@@ -125,8 +136,9 @@ cmd_new() {
     # Build the codex command with network access if writing.
     local codex_cmd=(
         "$CODEX_BIN"
+        -m "$CODEX_MODEL"
         -c "approval_policy=$approval"
-        -c "model_reasoning_effort=xhigh"
+        -c "model_reasoning_effort=$CODEX_EFFORT"
         -s "$sandbox"
     )
     if [[ "$sandbox" == "workspace-write" ]]; then
@@ -201,8 +213,9 @@ cmd_bind() {
     # Build the codex command with network access if writing.
     local codex_cmd=(
         "$CODEX_BIN"
+        -m "$CODEX_MODEL"
         -c "approval_policy=$approval"
-        -c "model_reasoning_effort=xhigh"
+        -c "model_reasoning_effort=$CODEX_EFFORT"
         -s "$sandbox"
     )
     if [[ "$sandbox" == "workspace-write" ]]; then
@@ -421,8 +434,9 @@ cmd_pane() {
     # Build the codex command (network access when writing).
     local codex_cmd=(
         "$CODEX_BIN"
+        -m "$CODEX_MODEL"
         -c "approval_policy=$approval"
-        -c "model_reasoning_effort=xhigh"
+        -c "model_reasoning_effort=$CODEX_EFFORT"
         -s "$sandbox"
     )
     [[ "$sandbox" == "workspace-write" ]] && codex_cmd+=( -c "sandbox_workspace_write.network_access=true" )
@@ -733,9 +747,9 @@ cmd_exec() {
     done
 
     local cmd=( "$CODEX_BIN" exec )
-    (( has_m )) || cmd+=( -m gpt-5.5 )
+    (( has_m )) || cmd+=( -m "$CODEX_MODEL" )
     (( has_s )) || cmd+=( -s read-only )
-    (( has_effort )) || cmd+=( -c model_reasoning_effort=xhigh )
+    (( has_effort )) || cmd+=( -c "model_reasoning_effort=$CODEX_EFFORT" )
     cmd+=( "$@" )
 
     exec "${cmd[@]}"

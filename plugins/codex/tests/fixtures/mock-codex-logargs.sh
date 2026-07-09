@@ -7,7 +7,7 @@ set -uo pipefail
 printf '%s\n' "$*" > "mock-codex-argv.log" 2>/dev/null || true
 echo "mock-codex (logargs) ready"
 printf "▌ \n"
-echo "  gpt-5.5 xhigh · /mock-cwd"
+echo "  gpt-5.6-sol xhigh · /mock-cwd"
 while IFS= read -r line; do
     [[ "$line" == "/exit" ]] && exit 0
     echo "[mock] $line"

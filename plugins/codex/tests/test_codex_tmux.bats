@@ -369,7 +369,7 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"exec"* ]]
     [[ "$output" == *"-m"* ]]
-    [[ "$output" == *"gpt-5.5"* ]]
+    [[ "$output" == *"gpt-5.6-sol"* ]]
     [[ "$output" == *"-s"* ]]
     [[ "$output" == *"read-only"* ]]
     [[ "$output" == *"model_reasoning_effort=xhigh"* ]]
@@ -388,10 +388,10 @@ setup() {
 
 @test "exec: detects -m=value equals-form and does not duplicate the flag" {
     CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-exec.sh" \
-        run "$SCRIPT" exec -m=gpt-5.5-fast "hello"
+        run "$SCRIPT" exec -m=gpt-5.6-sol-fast "hello"
     [ "$status" -eq 0 ]
     # The equals-form should be preserved; the default -m should NOT be injected.
-    [[ "$output" == *"-m=gpt-5.5-fast"* ]]
+    [[ "$output" == *"-m=gpt-5.6-sol-fast"* ]]
     # Count occurrences of "-m" args: should be exactly 1.
     local m_count
     m_count="$(printf '%s\n' "$output" | grep -cE '^(-m|-m=)')"

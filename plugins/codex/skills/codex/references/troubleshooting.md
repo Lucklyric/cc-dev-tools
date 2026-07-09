@@ -31,7 +31,7 @@ To upgrade an existing install:
   npm install -g @openai/codex@latest
   brew upgrade --cask codex
 
-Verify: codex --version  (require v0.125.0+)
+Verify: codex --version  (require v0.144.0+ for the GPT-5.6 series)
 Source of truth: https://github.com/openai/codex
 ```
 
@@ -51,32 +51,44 @@ After authentication, retry the request.
 Error: Invalid model specified
 
 To fix:
-- Use 'gpt-5.5' for all tasks
-- Use 'gpt-5.5-fast' for speed-sensitive tasks (API-key auth only)
+- Use 'gpt-5.6-sol' for all tasks
+- Use 'gpt-5.6-sol-fast' for speed-sensitive tasks (API-key auth only)
 
-Example: codex exec -m gpt-5.5 -s workspace-write \
+Example: codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "implement feature"
-Example (fast): codex exec -m gpt-5.5-fast -s read-only "quick analysis"
+Example (fast): codex exec -m gpt-5.6-sol-fast -s read-only "quick analysis"
 ```
 
 ### Model Not Supported on ChatGPT Account
 
-Variants such as `gpt-5.5-pro`, `gpt-5.5-codex`, and `gpt-5.5-fast` return:
+The `-fast` service-tier variants (e.g. `gpt-5.6-sol-fast`) return:
 
 ```
-The 'gpt-5.5-pro' model is not supported when using Codex with a ChatGPT account.
+The 'gpt-5.6-sol-fast' model is not supported when using Codex with a ChatGPT account.
 ```
 
-To fix: log out and log in with an OpenAI API key on a tier with access to the model:
+The base 5.6 slugs (`gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`) and `gpt-5.5` DO work under ChatGPT-account auth. Only the `-fast` speed tier needs API-key auth.
+
+To use a `-fast` variant: log out and log in with an OpenAI API key on a tier with access:
 
 ```
 codex logout
 codex login --api-key <key>
 ```
 
-Otherwise, fall back to `gpt-5.5`.
+Otherwise, drop the `-fast` suffix (use `gpt-5.6-sol`) or lower the reasoning effort for speed.
+
+### Model Requires a Newer Version of Codex
+
+The 5.6 series requires codex CLI **≥ 0.144.0**. On an older CLI:
+
+```
+The 'gpt-5.6-sol' model requires a newer version of Codex. Please upgrade to the latest app or CLI and try again.
+```
+
+To fix: upgrade codex (`npm install -g @openai/codex@latest` or `brew upgrade --cask codex`), or set `CC_CODEX_MODEL=gpt-5.5` to keep using the prior model on the current CLI.
 
 ## Troubleshooting
 

@@ -8,8 +8,8 @@ echo "mock-codex v0.0.0 ready"
 echo "Type a message or /exit to quit"
 printf "▌ \n"
 # Emit a fake status line that matches the production-default ready regex
-# (gpt-5.5 + reasoning effort), so the mock works without a regex override.
-echo "  gpt-5.5 xhigh · /mock-cwd"
+# (gpt-5.6 + reasoning effort), so the mock works without a regex override.
+echo "  gpt-5.6-sol xhigh · /mock-cwd"
 
 while IFS= read -r line; do
     if [[ "$line" == "/exit" ]]; then
@@ -18,5 +18,5 @@ while IFS= read -r line; do
     fi
     echo "[mock-response] you said: $line"
     printf "▌ \n"
-    echo "  gpt-5.5 xhigh · /mock-cwd"
+    echo "  gpt-5.6-sol xhigh · /mock-cwd"
 done

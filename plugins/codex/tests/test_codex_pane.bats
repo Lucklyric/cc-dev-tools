@@ -154,17 +154,32 @@ teardown() {
     [[ "$output" == *"exited immediately"* ]]
 }
 
-@test "pane: passes default codex flags (read-only sandbox, policy, effort)" {
+@test "pane: passes default codex flags (model, read-only sandbox, policy, effort)" {
     local cwd; cwd="$(mktemp -d)"
     CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-logargs.sh" \
         run "$SCRIPT" pane --cwd "$cwd"
     [ "$status" -eq 0 ]
     sleep 0.3
     local argv; argv="$(cat "$cwd/mock-codex-argv.log")"
+    [[ "$argv" == *"-m gpt-5.6-sol"* ]]
     [[ "$argv" == *"-s read-only"* ]]
     [[ "$argv" == *"approval_policy=on-request"* ]]
     [[ "$argv" == *"model_reasoning_effort=xhigh"* ]]
     [[ "$argv" != *"network_access=true"* ]]
+    rm -rf "$cwd"
+}
+
+@test "pane: CC_CODEX_MODEL and CC_CODEX_EFFORT override the defaults" {
+    local cwd; cwd="$(mktemp -d)"
+    CC_CODEX_MODEL="gpt-5.6-terra" CC_CODEX_EFFORT="ultra" \
+    CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-logargs.sh" \
+        run "$SCRIPT" pane --cwd "$cwd"
+    [ "$status" -eq 0 ]
+    sleep 0.3
+    local argv; argv="$(cat "$cwd/mock-codex-argv.log")"
+    [[ "$argv" == *"-m gpt-5.6-terra"* ]]
+    [[ "$argv" == *"model_reasoning_effort=ultra"* ]]
+    [[ "$argv" != *"gpt-5.6-sol"* ]]
     rm -rf "$cwd"
 }
 

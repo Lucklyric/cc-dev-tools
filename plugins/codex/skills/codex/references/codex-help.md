@@ -1,6 +1,6 @@
 # Codex CLI Help Reference
 
-**Version**: 0.125.0
+**Version**: 0.144.0+
 
 ## IMPORTANT: Interactive vs Exec Mode Differences
 
@@ -387,15 +387,21 @@ Options:
           Print help
 ```
 
-## Model Support (v0.125.0)
+## Model Support (v0.144.0+)
 
-**Available Models**:
-- `gpt-5.5` - Frontier reasoning model for all tasks (default)
-- `gpt-5.5-fast` - Speed-optimized variant for quick tasks (on demand)
+**GPT-5.6 series** (requires codex CLI ≥ 0.144.0):
+- `gpt-5.6-sol` - Latest frontier agentic coding model (plugin default)
+- `gpt-5.6-terra` - Balanced agentic coding model for everyday work
+- `gpt-5.6-luna` - Fast & affordable agentic coding model
+- `gpt-5.6-<name>-fast` - Speed-tier variant (e.g. `gpt-5.6-sol-fast`) — API-key auth only
+- `gpt-5.5` - Prior frontier model (still available; use on CLIs older than 0.144.0)
 
-**Reasoning Effort Levels** (all supported by gpt-5.5):
-- `none` - No extended reasoning
-- `low` - Minimal reasoning
-- `medium` - Balanced reasoning
-- `high` - High reasoning (default for gpt-5.5-fast)
-- `xhigh` - Extra-high reasoning for maximum capability (default for gpt-5.5)
+**Reasoning Effort Levels**:
+- `low` - Fast responses with lighter reasoning
+- `medium` - Balances speed and reasoning depth for everyday tasks
+- `high` - Greater reasoning depth for complex problems
+- `xhigh` - Extra-high reasoning (plugin default)
+- `max` - Maximum reasoning depth for the hardest problems (5.6 series)
+- `ultra` - Maximum reasoning with automatic task delegation (`gpt-5.6-sol`/`gpt-5.6-terra` only)
+
+(`gpt-5.6-luna` tops out at `max`; `gpt-5.5` tops out at `xhigh`.)

@@ -5,7 +5,7 @@ description: This skill should be used when the user asks to "use codex", "ask c
 
 # Codex: High-Reasoning AI Assistant for Claude Code
 
-Use OpenAI's Codex CLI (`gpt-5.5`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model.
+Use OpenAI's Codex CLI (GPT-5.6 series — default `gpt-5.6-sol`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model. Pick the 5.6 model + effort by task (see "Model and reasoning effort"). Requires codex CLI **≥ 0.144.0** for the 5.6 series.
 
 **Default mode is tmux.** Codex runs in a long-lived attachable tmux pane/window so you can watch, intervene, and iterate. The helper script handles lifecycle (pane / bind / spawn / list / kill) and Claude drives the interaction layer directly with `tmux send-keys` and `tmux capture-pane`. A `codex exec` escape hatch remains for genuine one-shots.
 
@@ -208,7 +208,8 @@ Each line is the short form. Full recipes with calibration notes live in `refere
 # the model name can appear in response text. $TARGET is the pane id or
 # cc-codex:window from the resolve-target snippet above. Bound the wait so a
 # dead/empty target can't spin forever (mirrors the detect-idle deadline).
-IDLE_REGEX='gpt-5\.5.*·'
+# Model-agnostic: matches any gpt-5.x slug (sol/terra/luna/5.5) + status separator.
+IDLE_REGEX='gpt-5\.[0-9].*·'
 RDY_DEADLINE=$(( $(date +%s) + 30 ))
 until tmux capture-pane -t "$TARGET" -p -S -200 | tail -3 | grep -qE "$IDLE_REGEX"; do
     (( $(date +%s) > RDY_DEADLINE )) && { echo "codex not ready after 30s (dead pane?)"; break; }
@@ -356,11 +357,73 @@ The skill still defaults to read-only sandbox; switch to `--full-auto` only when
 
 ## Model and reasoning effort
 
-Defaults: model `gpt-5.5`, reasoning effort `xhigh`. In tmux mode (`pane`/`bind`/`new`) the script pins only the reasoning effort (`-c model_reasoning_effort=xhigh`); the **model comes from your codex config's default** (typically `gpt-5.5`). `-m gpt-5.5` is injected only in `exec` mode. If your codex config defaults to a different model, the calibrated `IDLE_REGEX` (`gpt-5\.5.*·`) will not match — recalibrate it per `references/tmux-mode.md` § calibration.
+**Defaults: model `gpt-5.6-sol`, reasoning effort `xhigh`.** The script pins BOTH in every mode — `pane`/`bind`/`new` and `exec` all pass `-m gpt-5.6-sol -c model_reasoning_effort=xhigh` (this changed in v3.7.0: spawns used to inherit the model from your codex config; they now pin it). Override via env: `CC_CODEX_MODEL` and `CC_CODEX_EFFORT` (e.g. `CC_CODEX_MODEL=gpt-5.5` on a codex CLI older than 0.144.0, which cannot run the 5.6 series).
 
-Use `gpt-5.5-fast` only when the user explicitly asks for speed ("fast", "quick"). On ChatGPT-account auth, only `gpt-5.5` is callable; `gpt-5.5-fast`, `gpt-5.5-codex`, and `gpt-5.5-pro` require API-key auth.
+### The GPT-5.6 series (requires codex CLI ≥ 0.144.0)
 
-**Fallback chain**: model `gpt-5.5` → `gpt-5.5-fast`; effort `xhigh` → `high` → `medium`.
+| Model | Role | Effort ladder | When |
+|---|---|---|---|
+| `gpt-5.6-sol` (default) | Frontier agentic coding | low · medium · high · xhigh · **max** · **ultra** | Hard reasoning, architecture, deep debugging, tricky refactors. |
+| `gpt-5.6-terra` | Balanced everyday | low · medium · high · xhigh · **max** · **ultra** | Standard coding/review at lower cost than sol. |
+| `gpt-5.6-luna` | Fast & affordable | low · medium · high · xhigh · **max** | Quick edits, simple lookups, high-volume/cheap work (no `ultra`). |
+
+Reasoning effort ladder: **low < medium < high < xhigh < max < ultra**. `xhigh` is the default strong setting; `max` = "maximum reasoning depth for the hardest problems", `ultra` = "maximum reasoning with automatic task delegation" (sol/terra only). `max`/`ultra` are slower and costlier — escalate to them deliberately, don't default there.
+
+### Pick the model + effort by task
+
+Choose a 5.6-series combination that fits the task instead of always using the default:
+
+| Task | Suggested combination |
+|---|---|
+| Default / anything unclear | `gpt-5.6-sol` + `xhigh` |
+| The hardest problems (gnarly architecture, deep multi-file debugging) | `gpt-5.6-sol` + `max`, or `ultra` for the very hardest |
+| Everyday coding, moderate reviews (cost-aware) | `gpt-5.6-terra` + `high`/`xhigh` |
+| Quick edits, simple questions, high volume | `gpt-5.6-luna` + `medium`/`high` |
+| User explicitly asks for speed ("fast", "quick") | drop the effort (`high`/`medium`) and/or use `gpt-5.6-luna`; the `-fast` service tier (`gpt-5.6-sol-fast`) needs API-key auth |
+
+To use a non-default combination for a task, set the env vars when resolving the target, e.g.:
+
+```bash
+CC_CODEX_EFFORT=max   $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --cwd "$PWD"   # sol + max
+CC_CODEX_MODEL=gpt-5.6-luna CC_CODEX_EFFORT=medium \
+    $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "quick one-off question"
+```
+
+The sandbox and model/effort are fixed when a pane/window is first created; to switch, `kill "$TARGET"` and re-resolve with the new env.
+
+**Auth note:** ChatGPT-account auth now runs the base 5.6 slugs (`gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`) and `gpt-5.5`. The `-fast` service-tier variants (e.g. `gpt-5.6-sol-fast`) require API-key auth — under a ChatGPT account they return HTTP 400 "not supported".
+
+**Fallback chain**: model `gpt-5.6-sol` → `gpt-5.6-terra`/`gpt-5.6-luna` → `gpt-5.5` (older CLI); effort `xhigh` → `high` → `medium`.
+
+## Delegating a code review (`codex review`)
+
+Codex has a dedicated non-interactive review subcommand (CLI ≥ 0.144.0). Use it when the user asks codex to *review* changes rather than have a conversation — it is always a one-shot (no tmux session), so run it via `exec`'s sibling directly:
+
+```bash
+# Review the current uncommitted changes (staged + unstaged + untracked).
+codex review --uncommitted
+# Review this branch against a base branch.
+codex review --base main
+# Review a specific commit.
+codex review --commit <SHA> --title "optional summary shown in the review"
+# Freeform focus: pass custom review instructions as the prompt.
+codex review --uncommitted "Focus on concurrency safety and error handling."
+```
+
+Route "have codex review my changes / this branch / this commit" here; route "let's discuss / iterate on this design" to the default tmux pane.
+
+## Capturing exec output cleanly (structured / scripted use)
+
+For the `exec` escape hatch, prefer these over scraping stdout when you need the result programmatically (CLI ≥ 0.144.0):
+
+- `-o FILE` / `--output-last-message FILE` — write only codex's final message to a file (clean, no TUI chrome).
+- `--output-schema FILE` — constrain the final response to a JSON Schema (structured output).
+- `--json` — stream events as JSONL.
+- `--ephemeral` — run without persisting a session file (true throwaway one-shot).
+
+```bash
+$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec -o /tmp/ans.txt "Summarize @report.md in 3 bullets."
+```
 
 ## File context passing
 
@@ -388,7 +451,7 @@ Interaction errors (codex hung, regex doesn't match, unexpected TUI prompt) are 
 - The **`tmux` skill** (tmux plugin) is now the canonical home for generic agentic-tmux concepts and the full recipe catalog — identity & naming patterns, the session/window/pane model, send/capture/idle-detect (incl. why two-phase), sync/locking, scrollback semantics, and lifecycle/cleanup. This skill links to it for background; see the **tmux skill's own** `references/interaction-recipes.md`, `references/model-and-identity.md`, and `references/sync-and-lifecycle.md` (files in the tmux plugin, not in this plugin's references/). Read it when you need the *why* behind a recipe.
 
 **Canonical (codex-specific tmux workflow):**
-- `references/tmux-mode.md` — **canonical for codex** — codex-specific calibration (`gpt-5.5` `IDLE_REGEX`), the `pane` (default) / `panes` (detection) / `bind` (fallback) workflow, multi-pane topics, `"$TARGET"`-driven recipes, hooks-review handling, sandbox flags. Generic theory is delegated to the `tmux` skill.
+- `references/tmux-mode.md` — **canonical for codex** — codex-specific calibration (model-agnostic `gpt-5\.[0-9].*·` `IDLE_REGEX`), the `pane` (default) / `panes` (detection) / `bind` (fallback) workflow, multi-pane topics, `"$TARGET"`-driven recipes, hooks-review handling, sandbox flags. Generic theory is delegated to the `tmux` skill.
 - `references/cli-features.md` — CLI flag table, interactive-vs-exec differences, `codex review` and `codex apply`.
 - `references/codex-config.md` — every `-c` key with type and default.
 - `references/codex-help.md` — raw `--help` output.

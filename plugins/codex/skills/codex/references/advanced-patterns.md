@@ -23,12 +23,12 @@ Claude Code's bash environment is non-terminal. Plain `codex` commands will NOT 
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Review this code for architecture issues"
 ```
 
-**Why**: Architectural review is a reasoning task - use gpt-5.5 with read-only sandbox.
+**Why**: Architectural review is a reasoning task - use gpt-5.6-sol with read-only sandbox.
 
 ---
 
@@ -38,13 +38,13 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "Implement the authentication module"
 ```
 
-**Why**: Implementation requires file writing and code generation - use gpt-5.5 with xhigh reasoning.
+**Why**: Implementation requires file writing and code generation - use gpt-5.6-sol with xhigh reasoning.
 
 ---
 
@@ -56,7 +56,7 @@ codex exec -m gpt-5.5 -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "Refactor this codebase for better maintainability"
@@ -74,7 +74,7 @@ codex exec -m gpt-5.5 -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Review this code for security vulnerabilities"
 ```
@@ -91,7 +91,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   --enable web_search_request \
@@ -108,7 +108,7 @@ codex exec -m gpt-5.5 -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   --enable web_search_request \
   "Find latest JWT security best practices and review this auth code"
@@ -124,7 +124,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Design an optimal algorithm for distributed consensus"
 ```
@@ -139,7 +139,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=low \
   "Quick syntax check on this code"
 ```
@@ -156,7 +156,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   -c model_verbosity=high \
   "Explain this algorithm in detail"
@@ -172,7 +172,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   -c model_verbosity=low \
   "Review this code"
@@ -190,7 +190,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   -C ./backend \
   "Review the API code"
@@ -208,7 +208,7 @@ codex exec -m gpt-5.5 -s read-only \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   -c approval_policy=on-request \
@@ -229,7 +229,7 @@ codex exec -m gpt-5.5 -s workspace-write \
 
 **Skill Executes**:
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   -c model_verbosity=high \
@@ -283,13 +283,13 @@ You can create reusable configuration profiles in `~/.codex/config.toml`:
 
 ```toml
 [profiles.review]
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 sandbox = "read-only"
 model_reasoning_effort = "xhigh"
 model_verbosity = "medium"
 
 [profiles.implement]
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 sandbox = "workspace-write"
 model_reasoning_effort = "xhigh"
 approval_policy = "on-request"
@@ -312,8 +312,8 @@ codex exec -p review "Analyze this code"
 
 ### 1. Use GPT-5.5 for Everything
 
-- **Default**: `gpt-5.5` with xhigh reasoning for ALL tasks
-- **Fast**: `gpt-5.5-fast` only when user explicitly requests speed
+- **Default**: `gpt-5.6-sol` with xhigh reasoning for ALL tasks
+- **Fast**: `gpt-5.6-sol-fast` only when user explicitly requests speed
 
 ### 2. Use Safe Defaults, Override Intentionally
 
@@ -325,7 +325,7 @@ codex exec -p review "Analyze this code"
 
 For best results researching current practices:
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   --enable web_search_request \
   -c model_reasoning_effort=xhigh \
   "Research latest distributed systems patterns"
@@ -348,7 +348,7 @@ Use `-c approval_policy=on-request` (in `codex exec`) when:
 
 **Phase 1 - Research** (GPT-5.5 + web search):
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   --enable web_search_request \
   -c model_reasoning_effort=xhigh \
   "Research latest authentication patterns"
@@ -362,7 +362,7 @@ codex exec resume --last
 
 **Phase 3 - Implement** (GPT-5.5 + workspace-write):
 ```bash
-codex exec -m gpt-5.5 -s workspace-write \
+codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
   "Implement the authentication system we designed"
@@ -374,7 +374,7 @@ codex exec -m gpt-5.5 -s workspace-write \
 
 **Review** (GPT-5.5 + read-only):
 ```bash
-codex exec -m gpt-5.5 -s read-only \
+codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Review this code for security issues"
 ```

@@ -1,6 +1,6 @@
 # Codex CLI Features Reference
 
-**Codex CLI Version**: 0.125.0+
+**Codex CLI Version**: 0.144.0+ (required for the GPT-5.6 series)
 
 This document provides a comprehensive reference for Codex CLI features and flags.
 
@@ -8,7 +8,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.5`, `gpt-5.5-fast` | Model selection |
+| `-m, --model` | `gpt-5.6-sol`, `gpt-5.6-sol-fast` | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=xhigh`) |
 | `-C, --cd` | directory path | Working directory |
@@ -94,7 +94,7 @@ codex exec --color never "Run in CI/CD pipeline"
 
 ```bash
 # v0.125.0+ - web search is automatic, no flag needed
-codex exec -m gpt-5.5 "research latest patterns"
+codex exec -m gpt-5.6-sol "research latest patterns"
 
 # Interactive mode still supports --search flag
 codex --search "research topic"
