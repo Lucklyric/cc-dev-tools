@@ -48,7 +48,7 @@ codex login
 | Info | Value |
 |------|-------|
 | Path | [`plugins/codex/`](plugins/codex/) |
-| Version | 3.7.0 |
+| Version | 3.7.1 |
 | Models | GPT-5.6-Sol / Terra / Luna (GPT-5.5 fallback) |
 
 **Full Documentation**: [Codex Plugin README](plugins/codex/README.md)
@@ -295,11 +295,11 @@ Apache 2.0
 
 ## Version
 
-**Marketplace**: 2.31.0
+**Marketplace**: 2.31.1
 
 | Plugin | Version |
 |--------|---------|
-| Codex | 3.7.0 |
+| Codex | 3.7.1 |
 | Gemini | 2.1.0 |
 | Nano Banana | 1.4.0 |
 | Telegram Notifier | 0.4.0 |

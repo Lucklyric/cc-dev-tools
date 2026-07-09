@@ -51,8 +51,8 @@ After authentication, retry the request.
 Error: Invalid model specified
 
 To fix:
-- Use 'gpt-5.6-sol' for all tasks
-- Use 'gpt-5.6-sol-fast' for speed-sensitive tasks (API-key auth only)
+- Use 'gpt-5.6-sol' (default) — or 'gpt-5.6-terra'/'gpt-5.6-luna' for cost/speed
+- '-fast' tiers (e.g. 'gpt-5.6-sol-fast') are API-key auth only
 
 Example: codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
@@ -116,6 +116,7 @@ Commands like `codex --help`, `codex --version`, `codex login`, and `codex logou
 
 - Always use `codex exec` instead of plain `codex` in Claude Code.
 - Claude Code's bash environment is non-interactive/non-terminal.
+- Exception: `codex review` is itself non-interactive and safe without a TTY — this rule applies to plain interactive `codex`, not to `codex review`.
 
 ### Errors during execution
 

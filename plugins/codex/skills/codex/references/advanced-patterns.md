@@ -1,6 +1,6 @@
 # Advanced Configuration Examples
 
-> **LEGACY — `exec`-mode only.** Since v3.1.0 the default codex workflow is tmux mode (see `tmux-mode.md`). The advanced flag combinations below apply to `codex exec` one-shots. In tmux mode, pass model / sandbox / reasoning-effort flags to `codex-tmux.sh new <topic> ...` instead.
+> **LEGACY — `exec`-mode only.** Since v3.1.0 the default codex workflow is tmux mode (see `tmux-mode.md`). The advanced flag combinations below apply to `codex exec` one-shots. In tmux mode (`pane`/`bind`/`new`), model and reasoning effort come from the `CC_CODEX_MODEL`/`CC_CODEX_EFFORT` env vars, and sandbox from `--full-auto`/`--read-only`.
 
 ---
 
@@ -94,11 +94,10 @@ codex exec -m gpt-5.6-sol -s read-only \
 codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
   -c sandbox_workspace_write.network_access=true \
-  --enable web_search_request \
   "Research latest Python async patterns and implement them"
 ```
 
-**Feature**: `--enable web_search_request` enables web search for up-to-date information.
+**Feature**: web search is built-in on supported models — no flag needed in `codex exec` (the old `--enable web_search_request` flag is deprecated).
 
 ---
 
@@ -110,7 +109,6 @@ codex exec -m gpt-5.6-sol -s workspace-write \
 ```bash
 codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
   "Find latest JWT security best practices and review this auth code"
 ```
 
@@ -234,12 +232,11 @@ codex exec -m gpt-5.6-sol -s workspace-write \
   -c sandbox_workspace_write.network_access=true \
   -c model_verbosity=high \
   -c approval_policy=on-request \
-  --enable web_search_request \
   "Find latest security practices, review my auth module in detail, and fix issues"
 ```
 
 **Features**:
-- Web search enabled (`--enable web_search_request`)
+- Web search built-in (no flag needed; `--enable web_search_request` is deprecated)
 - Maximum reasoning (`model_reasoning_effort=xhigh`)
 - Detailed output (`model_verbosity=high`)
 - File writing allowed (`workspace-write`)
@@ -247,17 +244,19 @@ codex exec -m gpt-5.6-sol -s workspace-write \
 
 ---
 
-## Model Selection: GPT-5.5 vs GPT-5.5-Fast
+## Model Selection: the GPT-5.6 series
 
-**GPT-5.5** (default for ALL tasks):
+**GPT-5.6-Sol** (default):
 - Architecture, design, analysis, code editing, implementation, refactoring
 - Long-horizon tasks with native context compaction
-- Always use with `-c model_reasoning_effort=xhigh`
+- Default `-c model_reasoning_effort=xhigh`; escalate to `max`/`ultra` for the hardest problems
 
-**GPT-5.5-Fast** (on demand only):
-- Quick syntax checks, simple reviews
-- When user explicitly requests speed/fast mode
-- Uses `high` reasoning by default
+**GPT-5.6-Terra** (balanced, cost-aware):
+- Everyday coding and moderate reviews at lower cost than sol
+
+**GPT-5.6-Luna** (fast & affordable):
+- Quick syntax checks, simple reviews, high-volume work
+- When user explicitly requests speed/fast mode (tops out at `max`, no `ultra`)
 
 ---
 
@@ -310,10 +309,11 @@ codex exec -p review "Analyze this code"
 
 ## Best Practices
 
-### 1. Use GPT-5.5 for Everything
+### 1. Pick the GPT-5.6 model + effort by task
 
-- **Default**: `gpt-5.6-sol` with xhigh reasoning for ALL tasks
-- **Fast**: `gpt-5.6-sol-fast` only when user explicitly requests speed
+- **Default**: `gpt-5.6-sol` with xhigh reasoning (escalate to `max`/`ultra` for the hardest problems)
+- **Cost-aware / everyday**: `gpt-5.6-terra` (high/xhigh)
+- **Speed**: `gpt-5.6-luna` and/or a lower effort; the `-fast` service tier (`gpt-5.6-sol-fast`) needs API-key auth
 
 ### 2. Use Safe Defaults, Override Intentionally
 
@@ -326,7 +326,6 @@ codex exec -p review "Analyze this code"
 For best results researching current practices:
 ```bash
 codex exec -m gpt-5.6-sol -s read-only \
-  --enable web_search_request \
   -c model_reasoning_effort=xhigh \
   "Research latest distributed systems patterns"
 ```
@@ -346,21 +345,20 @@ Use `-c approval_policy=on-request` (in `codex exec`) when:
 
 ### Pattern 1: Research → Design → Implement
 
-**Phase 1 - Research** (GPT-5.5 + web search):
+**Phase 1 - Research** (GPT-5.6-Sol + web search):
 ```bash
 codex exec -m gpt-5.6-sol -s read-only \
-  --enable web_search_request \
   -c model_reasoning_effort=xhigh \
   "Research latest authentication patterns"
 ```
 
-**Phase 2 - Design** (GPT-5.5 + xhigh reasoning):
+**Phase 2 - Design** (GPT-5.6-Sol + xhigh reasoning):
 ```bash
 codex exec resume --last
 # "Design the authentication system based on research"
 ```
 
-**Phase 3 - Implement** (GPT-5.5 + workspace-write):
+**Phase 3 - Implement** (GPT-5.6-Sol + workspace-write):
 ```bash
 codex exec -m gpt-5.6-sol -s workspace-write \
   -c model_reasoning_effort=xhigh \
@@ -372,20 +370,20 @@ codex exec -m gpt-5.6-sol -s workspace-write \
 
 ### Pattern 2: Review → Fix → Verify
 
-**Review** (GPT-5.5 + read-only):
+**Review** (GPT-5.6-Sol + read-only):
 ```bash
 codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
   "Review this code for security issues"
 ```
 
-**Fix** (GPT-5.5 + workspace-write):
+**Fix** (GPT-5.6-Sol + workspace-write):
 ```bash
 codex exec resume --last
 # "Fix the security issues identified"
 ```
 
-**Verify** (GPT-5.5 + read-only):
+**Verify** (GPT-5.6-Sol + read-only):
 ```bash
 codex exec resume --last
 # "Verify the fixes are correct"

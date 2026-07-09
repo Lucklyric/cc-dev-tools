@@ -1,6 +1,6 @@
 ---
 name: codex
-description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", or explicitly asks to delegate work to a frontier reasoning model (e.g., "have GPT-5 review this", "get the OpenAI reasoning model to design X", "ask the high-reasoning model"). Also triggers on "continue codex" / "resume the codex session" for iterative development. Do NOT trigger when the user is merely discussing GPT-5 / OpenAI reasoning as a topic, or asking Claude itself to do complex implementation / architecture / review work without naming codex or a frontier reasoning model.
+description: This skill should be used when the user asks to "use codex", "ask codex", "run codex", "call codex", "codex cli", or explicitly asks to delegate work to a frontier reasoning model (e.g., "have GPT-5 review this", "get the OpenAI reasoning model to design X", "ask the high-reasoning model"). Also triggers on "continue codex" / "resume the codex session" for iterative development, and on "have codex review this PR / branch / diff / my changes" for delegated code review. Do NOT trigger when the user is merely discussing GPT-5 / OpenAI reasoning as a topic, or asking Claude itself to do complex implementation / architecture / review work without naming codex or a frontier reasoning model.
 ---
 
 # Codex: High-Reasoning AI Assistant for Claude Code
@@ -357,7 +357,7 @@ The skill still defaults to read-only sandbox; switch to `--full-auto` only when
 
 ## Model and reasoning effort
 
-**Defaults: model `gpt-5.6-sol`, reasoning effort `xhigh`.** The script pins BOTH in every mode — `pane`/`bind`/`new` and `exec` all pass `-m gpt-5.6-sol -c model_reasoning_effort=xhigh` (this changed in v3.7.0: spawns used to inherit the model from your codex config; they now pin it). Override via env: `CC_CODEX_MODEL` and `CC_CODEX_EFFORT` (e.g. `CC_CODEX_MODEL=gpt-5.5` on a codex CLI older than 0.144.0, which cannot run the 5.6 series).
+**Defaults: model `gpt-5.6-sol`, reasoning effort `xhigh`.** The script pins BOTH at every codex it starts — `pane`/`bind`/`new` spawns and `exec` one-shots all pass `-m gpt-5.6-sol -c model_reasoning_effort=xhigh` (this changed in v3.7.0: spawns used to inherit the model from your codex config; they now pin it). Override via env: `CC_CODEX_MODEL` and `CC_CODEX_EFFORT` (e.g. `CC_CODEX_MODEL=gpt-5.5` on a codex CLI older than 0.144.0, which cannot run the 5.6 series). The one exception is `codex review`, which bypasses the helper (see "Delegating a code review").
 
 ### The GPT-5.6 series (requires codex CLI ≥ 0.144.0)
 
@@ -389,7 +389,7 @@ CC_CODEX_MODEL=gpt-5.6-luna CC_CODEX_EFFORT=medium \
     $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "quick one-off question"
 ```
 
-The sandbox and model/effort are fixed when a pane/window is first created; to switch, `kill "$TARGET"` and re-resolve with the new env.
+**When selection applies.** Model and effort are fixed when a codex process STARTS: (a) the first `pane`/`bind`/`new` call that actually spawns codex, (b) every `exec` one-shot (the cheapest way to run a different combo per task), and (c) a new `--topic` pane. A REUSED pane/window keeps whatever it was started with — an env override on a reuse call does nothing, and the script warns on stderr (`… do NOT apply to a reused pane`); surface that warning. To switch the main pane's model/effort, `kill "$TARGET"` and re-resolve with the new env — that destroys codex's conversation context, so confirm with the user first (see "Never kill silently"). For a one-off harder/cheaper task mid-conversation, prefer an `exec` one-shot or a new `--topic` pane over killing the main pane.
 
 **Auth note:** ChatGPT-account auth now runs the base 5.6 slugs (`gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`) and `gpt-5.5`. The `-fast` service-tier variants (e.g. `gpt-5.6-sol-fast`) require API-key auth — under a ChatGPT account they return HTTP 400 "not supported".
 
@@ -397,32 +397,25 @@ The sandbox and model/effort are fixed when a pane/window is first created; to s
 
 ## Delegating a code review (`codex review`)
 
-Codex has a dedicated non-interactive review subcommand (CLI ≥ 0.144.0). Use it when the user asks codex to *review* changes rather than have a conversation — it is always a one-shot (no tmux session), so run it via `exec`'s sibling directly:
+`codex review` is a dedicated top-level subcommand that runs **non-interactively** — safe in Claude Code's non-TTY bash (the "always use `codex exec`" rule applies to plain `codex`, not to `codex review`). Use it when the user asks codex to *review* changes rather than have a conversation — always a one-shot, no tmux session:
 
 ```bash
-# Review the current uncommitted changes (staged + unstaged + untracked).
-codex review --uncommitted
-# Review this branch against a base branch.
-codex review --base main
-# Review a specific commit.
-codex review --commit <SHA> --title "optional summary shown in the review"
-# Freeform focus: pass custom review instructions as the prompt.
+codex review --uncommitted                        # staged + unstaged + untracked
+codex review --base main                          # this branch vs a base branch
+codex review --commit <SHA> --title "summary"     # a specific commit
 codex review --uncommitted "Focus on concurrency safety and error handling."
 ```
 
-Route "have codex review my changes / this branch / this commit" here; route "let's discuss / iterate on this design" to the default tmux pane.
+**Model note:** `review` bypasses the helper script — `CC_CODEX_MODEL`/`CC_CODEX_EFFORT` do NOT apply; it uses the codex config's `review_model`. Pin per call with `-c review_model="gpt-5.6-sol"`.
+
+Route "have codex review my changes / this branch / this commit / this PR" here; "let's discuss / iterate on this design" goes to the default tmux pane. Flag details: `references/cli-features.md`.
 
 ## Capturing exec output cleanly (structured / scripted use)
 
-For the `exec` escape hatch, prefer these over scraping stdout when you need the result programmatically (CLI ≥ 0.144.0):
-
-- `-o FILE` / `--output-last-message FILE` — write only codex's final message to a file (clean, no TUI chrome).
-- `--output-schema FILE` — constrain the final response to a JSON Schema (structured output).
-- `--json` — stream events as JSONL.
-- `--ephemeral` — run without persisting a session file (true throwaway one-shot).
+For `exec` one-shots, prefer these over scraping stdout when you need the result programmatically: `-o FILE` / `--output-last-message FILE` (only codex's final message, no TUI chrome), `--output-schema FILE` (JSON-Schema-constrained output), `--json` (JSONL event stream). Related: `--ephemeral` runs without persisting a session file (throwaway one-shot, not resumable). Flag details: `references/cli-features.md`.
 
 ```bash
-$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec -o /tmp/ans.txt "Summarize @report.md in 3 bullets."
+OUT=$(mktemp -t cc-codex-out); $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec -o "$OUT" "Summarize @report.md in 3 bullets."
 ```
 
 ## File context passing

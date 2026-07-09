@@ -48,6 +48,19 @@ count_codex_windows() {
         | grep -Fxq "$BOUND_WINDOW"
 }
 
+@test "bind: passes default codex flags (model, effort)" {
+    local cwd; cwd="$(mktemp -d)"
+    CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" \
+        CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-logargs.sh" \
+        run "$SCRIPT" bind --cwd "$cwd"
+    [ "$status" -eq 0 ]
+    sleep 0.3
+    local argv; argv="$(cat "$cwd/mock-codex-argv.log")"
+    [[ "$argv" == *"-m gpt-5.6-sol"* ]]
+    [[ "$argv" == *"model_reasoning_effort=xhigh"* ]]
+    rm -rf "$cwd"
+}
+
 @test "bind: window name matches ^codex-[a-z0-9]{6}$" {
     CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" \
         CC_CODEX_BIN="$MOCK_CODEX" \

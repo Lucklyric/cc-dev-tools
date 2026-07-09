@@ -8,17 +8,15 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with the GPT-
 
 > **Requires codex CLI ≥ 0.144.0** for the GPT-5.6 series. On older CLIs, set `CC_CODEX_MODEL=gpt-5.5` to fall back to the prior model.
 
-## Default mode: tmux session (v3.0.0+)
+## Default mode: codex pane beside Claude
 
-By default, codex calls run inside a long-lived attachable tmux session named `cc-codex`. Each codex instance lives in its own window. Attach with:
+By default, codex runs as a **pane split into your current tmux window** — right next to Claude, no separate attach. When Claude is not running inside tmux, it falls back to one dedicated reused window (`codex-<claude6>`) in the `cc-codex` session:
 
 ```bash
-tmux attach -t cc-codex
+tmux attach -t cc-codex   # only needed for the fallback window
 ```
 
-A `codex exec` escape hatch remains for one-shot calls. See `skills/codex/references/tmux-mode.md` for the full workflow.
-
-v3.1.0 splits responsibilities: the helper script handles lifecycle (spawn / list / kill), and the codex skill itself drives interaction via tmux commands. See `skills/codex/references/tmux-mode.md` for the interaction recipes.
+A `codex exec` escape hatch remains for one-shot calls. The helper script handles lifecycle (pane / bind / spawn / list / kill); the codex skill drives interaction via raw tmux commands (`send-keys` / `capture-pane`). See `skills/codex/references/tmux-mode.md` for the full workflow and recipes.
 
 ### Helper script subcommands
 
@@ -26,13 +24,18 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` exposes lifecyc
 
 | Subcommand | Purpose |
 |---|---|
-| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn a new codex window. Returns the window name immediately; does NOT wait for codex's TUI to be ready. |
+| `pane [--topic <slug>] [--cwd DIR] [--full-auto\|--read-only] [--horizontal\|--vertical] [--size PCT]` | **DEFAULT** (inside tmux): get/create THE codex pane in the current window. Idempotent — reuse if alive, relocate if drifted, respawn if dead. Prints a pane id (e.g. `%53`). Exit 3 = not inside tmux (use `bind`); exit 4 = codex died at launch. |
+| `panes [--all]` | Read-only: list this agent's codex panes as TSV (pane_id, topic, state, location, cwd). Never creates anything. |
+| `bind [--cwd DIR] [--full-auto\|--read-only]` | **FALLBACK** (outside tmux): get/create the single bound window `codex-<claude6>`. Idempotent. |
+| `new <topic> [--cwd DIR] [--full-auto\|--read-only]` | Spawn an extra SEPARATE window (explicit user request only). Returns the window name immediately. |
 | `ls [--mine]` | List codex windows with state (`alive` / `dead` / `unknown`). `--mine` filters to the current Claude session. |
-| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up matching windows in the current Claude session's `claude6` namespace. Exit 0 + one match per line, or exit 1 if none. Call this BEFORE `new` so codex windows aren't duplicated across turns. |
+| `find <topic> [--cwd DIR] [--include-dead] [--any-session]` | Look up extra windows by topic in this session's `claude6` namespace. Exit 0 + one match per line, or exit 1 if none. |
 | `attach <window>` | Print the tmux attach command (Claude Code's bash is non-interactive). |
 | `rename <old> <new-topic>` | Replace the topic portion; preserves the `<claude6>-<rand2>` suffix. |
-| `kill <window>` / `kill --orphaned` | Remove a window or all windows whose codex process has exited. |
+| `kill <window\|%pane-id>` / `kill --mine` / `kill --orphaned` | Remove one codex pane/window; ALL of this session's codex; or every agent's dead codex (global escape hatch — explicit request only). |
 | `exec [flags...] <prompt>` | One-shot escape hatch using `codex exec` (no tmux). |
+
+Model and reasoning effort for every spawn and `exec` come from `CC_CODEX_MODEL` / `CC_CODEX_EFFORT` (defaults `gpt-5.6-sol` / `xhigh`); they bind when a codex process starts, so overrides on a reuse call warn instead of applying.
 
 In v3.1.0 the `send` and `capture` subcommands were removed; they now print a migration error (exit 64) pointing at the recipe catalog. Drive interaction via `tmux send-keys` / `tmux capture-pane` per the recipes in `skills/codex/references/tmux-mode.md`.
 
@@ -339,4 +342,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.7.0
+3.7.1

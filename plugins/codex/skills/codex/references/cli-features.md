@@ -8,7 +8,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 
 | Flag | Values | Description |
 |------|--------|-------------|
-| `-m, --model` | `gpt-5.6-sol`, `gpt-5.6-sol-fast` | Model selection |
+| `-m, --model` | `gpt-5.6-sol` (default), `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`; `-fast` tiers (API-key auth) | Model selection |
 | `-s, --sandbox` | `read-only`, `workspace-write`, `danger-full-access` | Sandbox mode |
 | `-c, --config` | `key=value` | Config overrides (e.g., `model_reasoning_effort=xhigh`) |
 | `-C, --cd` | directory path | Working directory |
@@ -187,9 +187,9 @@ codex -a on-request "task"
 
 ---
 
-## Code Review Subcommand (v0.71.0+)
+## Code Review Subcommand
 
-The `codex review` subcommand provides non-interactive code review capabilities:
+The `codex review` subcommand runs a code review **non-interactively** — it is safe in Claude Code's non-TTY bash (the "always use `codex exec`" rule applies to plain `codex`, not to `codex review`). Canonical form is the top-level `codex review ...` (an equivalent `codex exec review ...` form exists; prefer the top-level one):
 
 ```bash
 # Review uncommitted changes (staged, unstaged, untracked)
@@ -203,10 +203,9 @@ codex review --commit abc123
 
 # Review with custom instructions
 codex review --uncommitted "Focus on security vulnerabilities"
-
-# Non-interactive via exec
-codex exec review --uncommitted
 ```
+
+Model: review uses the codex config's `review_model` (NOT the plugin's `CC_CODEX_MODEL`/`CC_CODEX_EFFORT`); pin per call with `-c review_model="gpt-5.6-sol"`.
 
 | Flag | Description |
 |------|-------------|
@@ -228,12 +227,6 @@ codex apply
 
 Useful when Codex generates changes in read-only mode and the user wants to apply them locally.
 
-## Interactive flags reachable via tmux mode (v3.0.0+)
+## Interactive flags reachable via tmux mode
 
-Before v3.0.0, interactive-only flags (`--search`, `-a/--ask-for-approval`) were unreachable because `codex exec` is non-interactive and plain `codex` fails in Claude Code's bash (`stdout is not a terminal`).
-
-As of v3.0.0, the default `new` flow launches interactive `codex` inside a tmux pane, which provides a PTY. All interactive flags now work; pass them via `new`'s codex-args pass-through (when implemented in a future minor version) or by attaching to the window and using codex's slash commands directly.
-
-For now, the recommended pattern for needing `--search` is to attach to the window and use codex's `/search` slash command interactively. The `-a` flag is superseded by `approval_policy=on-request` set automatically by `new`.
-
-As of v3.1.0, interactive flags like `--search` are still reachable through the tmux pane; see `references/tmux-mode.md` for the `handle-interruption` recipe and direct codex slash commands.
+Interactive-only flags (`--search`, `-a/--ask-for-approval`) are unreachable from `codex exec` (non-interactive) and plain `codex` fails in Claude Code's bash (`stdout is not a terminal`). The default tmux flow (`pane`, or the `bind`/`new` fallbacks) launches interactive `codex` inside a tmux pane, which provides a PTY — interactive features are reached there via codex's own slash commands (e.g. `/search`), sent with the interaction recipes in `tmux-mode.md`. The `-a` flag is superseded by `approval_policy=on-request`, which the helper sets automatically on every spawn.

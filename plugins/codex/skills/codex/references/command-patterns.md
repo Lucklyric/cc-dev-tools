@@ -171,10 +171,10 @@ Codex provides:
 | Complex refactoring | `gpt-5.6-sol` | `workspace-write` | xhigh | "Refactor auth system" |
 | Implementation | `gpt-5.6-sol` | `workspace-write` | xhigh | "Implement function Y" |
 
-**Note**: `gpt-5.6-sol` is the default model for ALL tasks with native context compaction. Always use `xhigh` reasoning effort for maximum capability.
+**Note**: `gpt-5.6-sol` is the default model with native context compaction; default effort `xhigh` (escalate to `max`/`ultra` for the hardest problems, or pick `gpt-5.6-terra`/`gpt-5.6-luna` for cost/speed — see SKILL.md § Model and reasoning effort).
 
 ### Fallback Chain
-- **Primary**: `gpt-5.6-sol` → `gpt-5.6-sol-fast`
+- **Model**: `gpt-5.6-sol` → `gpt-5.6-terra` / `gpt-5.6-luna` → `gpt-5.5` (CLI < 0.144.0). Do NOT fall back to `-fast` variants — they need API-key auth.
 - **Reasoning effort**: `xhigh` → `high` → `medium`
 
 ---

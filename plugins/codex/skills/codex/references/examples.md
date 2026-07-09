@@ -40,7 +40,6 @@ codex exec -m gpt-5.6-sol -s read-only \
 ```bash
 codex exec -m gpt-5.6-sol -s read-only \
   -c model_reasoning_effort=xhigh \
-  --enable web_search_request \
   "Research async patterns"
 ```
 

@@ -42,7 +42,8 @@ tui	table	TUI‑specific options.
 tui.notifications	boolean | array	Enable desktop notifications in the tui (default: false).
 hide_agent_reasoning	boolean	Hide model reasoning events.
 show_raw_agent_reasoning	boolean	Show raw reasoning (when available).
-model_reasoning_effort	minimal | low | medium | high | xhigh	Responses API reasoning effort.
+model_reasoning_effort	low | medium | high | xhigh | max | ultra	Reasoning effort. `max`/`ultra` are 5.6-series only (`ultra`: sol/terra); older models top out at `xhigh`.
+review_model	string	Model used by `codex review` (per-call override: `-c review_model="gpt-5.6-sol"`).
 model_reasoning_summary	auto | concise | detailed | none	Reasoning summaries.
 model_verbosity	low | medium | high	GPT‑5 text verbosity (Responses API).
 model_supports_reasoning_summaries	boolean	Force‑enable reasoning summaries.

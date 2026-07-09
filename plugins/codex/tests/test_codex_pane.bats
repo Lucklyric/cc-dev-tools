@@ -183,6 +183,29 @@ teardown() {
     rm -rf "$cwd"
 }
 
+@test "pane: warns when an explicit model/effort override cannot apply to a reused pane" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
+    sleep 0.3
+    CC_CODEX_EFFORT="max" run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    # run merges stderr into $output, so the warning line may precede the pane
+    # id — extract the pane-id line instead of relying on line ordering.
+    local second; second="$(printf '%s\n' "$output" | grep -E '^%[0-9]+$' | head -1)"
+    [ "$second" = "$first" ]                                       # still reused
+    [[ "$output" == *"do NOT apply to a reused pane"* ]]           # but warned
+}
+
+@test "pane: no override warning on plain reuse (env vars not set)" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    sleep 0.3
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    [[ "$output" != *"do NOT apply"* ]]
+}
+
 @test "pane --full-auto: passes workspace-write sandbox and network access" {
     local cwd; cwd="$(mktemp -d)"
     CC_CODEX_BIN="$BATS_TEST_DIRNAME/fixtures/mock-codex-logargs.sh" \

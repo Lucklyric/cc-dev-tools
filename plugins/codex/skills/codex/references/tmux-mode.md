@@ -323,11 +323,15 @@ The status line is already in `BASELINE` and codex hasn't started responding. En
 
 ### Ready regex doesn't match
 
-Codex CLI may have updated its status line. Run `tmux capture-pane -t "$TARGET" -p | tail -10` while codex is idle, pick a stable substring (the model + effort line near the bottom), and update `IDLE_REGEX`.
+Codex CLI may have updated its status line. Run `tmux capture-pane -t "$TARGET" -p | tail -10` while codex is idle, pick a stable substring (the model + effort line near the bottom), and update `IDLE_REGEX`. The default regex covers any `gpt-5.x` slug — but if you override `CC_CODEX_MODEL` to a non-`gpt-5` slug (e.g. an `--oss` local model), idle detection silently breaks until you recalibrate it the same way.
 
 ### Sandbox mismatch on `pane` / `bind`
 
 If `--full-auto` is requested but the codex pane/window was created read-only (or vice-versa), the script warns on stderr and reuses the existing pane/window (recorded in `@cc_codex_sandbox` for windows). The check is per pane, so each topic pane has its own fixed sandbox. Surface the warning. To switch sandbox, `kill "$TARGET"` then re-resolve the target with the desired flag.
+
+### Model/effort mismatch on `pane` / `bind`
+
+Same shape as the sandbox mismatch: an explicit `CC_CODEX_MODEL`/`CC_CODEX_EFFORT` override cannot apply to an already-running codex, so on reuse the script warns on stderr (`… do NOT apply to a reused pane`) and keeps the existing pane/window (its combo is recorded in `@cc_codex_model` / `@cc_codex_effort`). Surface the warning. To actually switch, `kill "$TARGET"` and re-resolve with the env set — or prefer an `exec` one-shot / new `--topic` pane for a one-off different combo.
 
 ### Migration notes
 

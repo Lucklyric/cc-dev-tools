@@ -160,6 +160,8 @@ cmd_new() {
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_topic' "$topic" 2>/dev/null || true
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
 
     # Output: window name on stdout line 1, attach hint on line 2.
     echo "$window"
@@ -200,6 +202,15 @@ cmd_bind() {
             existing="$(tmux show-option -wqv -t "$SESSION_NAME:$window" '@cc_codex_sandbox' 2>/dev/null)"
             if [[ -n "$want_sandbox" && -n "$existing" && "$want_sandbox" != "$existing" ]]; then
                 echo "codex-tmux bind: bound window '$window' is '$existing'; requested '$want_sandbox'. Kill and re-bind to switch (codex-tmux.sh kill $window && codex-tmux.sh bind --$want_sandbox)." >&2
+            fi
+            # Same for an explicit model/effort override: it cannot apply to an
+            # already-running codex, so warn instead of silently ignoring.
+            local existing_model existing_effort
+            existing_model="$(tmux show-option -wqv -t "$SESSION_NAME:$window" '@cc_codex_model' 2>/dev/null)"
+            existing_effort="$(tmux show-option -wqv -t "$SESSION_NAME:$window" '@cc_codex_effort' 2>/dev/null)"
+            if { [[ -n "${CC_CODEX_MODEL+x}" && -n "$existing_model" && "$CODEX_MODEL" != "$existing_model" ]]; } \
+                || { [[ -n "${CC_CODEX_EFFORT+x}" && -n "$existing_effort" && "$CODEX_EFFORT" != "$existing_effort" ]]; }; then
+                echo "codex-tmux bind: reusing window '$window' (model '${existing_model:-?}', effort '${existing_effort:-?}'); CC_CODEX_MODEL/CC_CODEX_EFFORT do NOT apply to a reused window. Kill and re-bind to switch (codex-tmux.sh kill $window && codex-tmux.sh bind)." >&2
             fi
             echo "$window"
             echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
@@ -242,6 +253,8 @@ cmd_bind() {
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
 
         sleep 0.4
         if [[ "$(window_state "$window")" == "alive" ]]; then
@@ -327,6 +340,8 @@ _split_codex_pane() {
     tmux set-option -p -t "$new_pane" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_created' "$(date '+%Y-%m-%dT%H:%M:%S%z')" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
+    tmux set-option -p -t "$new_pane" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
+    tmux set-option -p -t "$new_pane" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
     tmux select-pane -t "$new_pane" -T "$title" 2>/dev/null || true
     printf '%s' "$new_pane"
 }
@@ -416,6 +431,15 @@ cmd_pane() {
                 existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
                 if [[ -n "$want_sandbox" && -n "$existing" && "$want_sandbox" != "$existing" ]]; then
                     echo "codex-tmux pane: codex pane '$pane' is '$existing'; requested '$want_sandbox'. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane --$want_sandbox$topic_flag)." >&2
+                fi
+                # Same for an explicit model/effort override: it cannot apply to
+                # an already-running codex, so warn instead of silently ignoring.
+                local existing_model existing_effort
+                existing_model="$(tmux show-option -p -qv -t "$pane" '@cc_codex_model' 2>/dev/null || true)"
+                existing_effort="$(tmux show-option -p -qv -t "$pane" '@cc_codex_effort' 2>/dev/null || true)"
+                if { [[ -n "${CC_CODEX_MODEL+x}" && -n "$existing_model" && "$CODEX_MODEL" != "$existing_model" ]]; } \
+                    || { [[ -n "${CC_CODEX_EFFORT+x}" && -n "$existing_effort" && "$CODEX_EFFORT" != "$existing_effort" ]]; }; then
+                    echo "codex-tmux pane: reusing pane '$pane' (model '${existing_model:-?}', effort '${existing_effort:-?}'); CC_CODEX_MODEL/CC_CODEX_EFFORT do NOT apply to a reused pane. Kill and re-create to switch (codex-tmux.sh kill $pane && codex-tmux.sh pane$topic_flag)." >&2
                 fi
                 echo "$pane"
                 if [[ "$topic" == "main" ]]; then
@@ -825,8 +849,15 @@ Subcommands:
       Run codex exec one-shot outside tmux (escape hatch).
 
 Environment:
-  CC_CODEX_SESSION_NAME (default: cc-codex)
-  CC_CODEX_BIN          (default: codex)
+  CC_CODEX_SESSION_NAME  (default: cc-codex)
+  CC_CODEX_BIN           (default: codex)
+  CC_CODEX_MODEL         (default: gpt-5.6-sol; e.g. gpt-5.6-terra, gpt-5.6-luna,
+                          or gpt-5.5 on a codex CLI < 0.144.0)
+  CC_CODEX_EFFORT        (default: xhigh; ladder low<medium<high<xhigh<max<ultra —
+                          max/ultra are 5.6-series; ultra is sol/terra only)
+  CC_CODEX_REMAIN_ON_EXIT (default: failed; on = always keep dead pane, off = always close)
+  Model/effort/sandbox bind when codex STARTS; overrides on a reuse call warn
+  on stderr instead of applying (kill + re-resolve to switch).
 EOF
 }
 
