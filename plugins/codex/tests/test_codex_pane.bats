@@ -21,6 +21,8 @@ setup() {
     # Throwaway cc-codex session name so pane-aware `kill --mine/--orphaned`
     # (which call ensure_session) never touch the real cc-codex session.
     export CC_CODEX_SESSION_NAME="cc-codex-panetest-$$"
+    # Deterministic keep-shell drop-in shell (avoids user zsh rc surprises).
+    export CC_CODEX_EXIT_SHELL="/bin/bash"
 }
 
 teardown() {
@@ -102,11 +104,41 @@ teardown() {
     [ "$(tmux display-message -p -t "$second" '#{pane_dead}')" = "0" ]
 }
 
-@test "pane: a clean exit auto-closes the pane (remain-on-exit=failed, no dead clutter)" {
+@test "pane: codex exit keeps the pane at an interactive shell (keep-shell default)" {
     run "$SCRIPT" pane --cwd /tmp
     [ "$status" -eq 0 ]
     local first="${lines[0]}"
-    # /exit makes the mock exit 0 (clean) → the pane must AUTO-CLOSE, not linger dead.
+    # /exit makes the mock exit 0 → the pane must STAY, dropped into a shell.
+    tmux send-keys -t "$first" "/exit" Enter
+    sleep 1.0
+    tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$first"
+    [ "$(tmux display-message -p -t "$first" '#{pane_dead}')" = "0" ]
+    # panes reports the kept pane as state=shell.
+    run "$SCRIPT" panes
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"$first"$'\t'"main"$'\t'"shell"* ]]
+}
+
+@test "pane: re-resolving after codex exit relaunches codex in the SAME pane" {
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
+    local count1; count1="$(pane_count)"
+    tmux send-keys -t "$first" "/exit" Enter
+    sleep 1.0
+    run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "$first" ]                       # same pane, no new split
+    [[ "$output" == *"Relaunched codex"* ]]
+    [ "$(pane_count)" -eq "$count1" ]
+    run "$SCRIPT" panes
+    [[ "$output" == *"$first"$'\t'"main"$'\t'"alive"* ]]
+}
+
+@test "pane: CC_CODEX_KEEP_SHELL=0 restores legacy auto-close on clean exit" {
+    CC_CODEX_KEEP_SHELL=0 run "$SCRIPT" pane --cwd /tmp
+    [ "$status" -eq 0 ]
+    local first="${lines[0]}"
     tmux send-keys -t "$first" "/exit" Enter
     sleep 0.8
     ! tmux list-panes -a -F '#{pane_id}' | grep -Fxq "$first"
@@ -116,13 +148,13 @@ teardown() {
     [ "${lines[0]}" != "$first" ]
 }
 
-@test "pane: CC_CODEX_REMAIN_ON_EXIT=on keeps a clean-exit pane dead (override)" {
-    CC_CODEX_REMAIN_ON_EXIT=on run "$SCRIPT" pane --cwd /tmp
+@test "pane: KEEP_SHELL=0 + CC_CODEX_REMAIN_ON_EXIT=on keeps a clean-exit pane dead" {
+    CC_CODEX_KEEP_SHELL=0 CC_CODEX_REMAIN_ON_EXIT=on run "$SCRIPT" pane --cwd /tmp
     [ "$status" -eq 0 ]
     local first="${lines[0]}"
     tmux send-keys -t "$first" "/exit" Enter
     sleep 0.8
-    # With the override, a clean exit is kept as a dead pane (old behavior).
+    # With the overrides, a clean exit is kept as a dead pane (old behavior).
     [ "$(tmux display-message -p -t "$first" '#{pane_dead}')" = "1" ]
 }
 
@@ -363,10 +395,11 @@ output_pane_id() {
 }
 
 @test "legacy pane without @cc_codex_topic is treated as main" {
-    # Simulate a pane created before the topic option existed: claude6 marker
-    # only, no @cc_codex_topic. `pane` must reuse it, not spawn a duplicate.
+    # Simulate a pane created before the topic/bin options existed: claude6
+    # marker only, codex running directly as the pane process. `pane` must
+    # reuse it, not spawn a duplicate.
     local legacy
-    legacy="$(tmux split-window -t "$REF_PANE" -d -P -F '#{pane_id}' "sleep 60")"
+    legacy="$(tmux split-window -t "$REF_PANE" -d -P -F '#{pane_id}' "$CC_CODEX_BIN")"
     tmux set-option -p -t "$legacy" '@cc_codex_claude6' "0d61e6"
     local count1; count1="$(pane_count)"
     run "$SCRIPT" pane --cwd /tmp

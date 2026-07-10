@@ -226,6 +226,12 @@ Locking, race-free spawn/find, and the lock-free macOS fallback: `references/syn
 - Set `remain-on-exit failed` so a *crashed* CLI (non-zero exit) leaves its scrollback for
   diagnosis, while a *clean* exit auto-closes the pane (no dead-pane corpse in a live window).
   Use `on` only for a window the human isn't actively viewing.
+- **Keep-shell alternative:** wrap the driven CLI so its exit `exec`s an interactive shell
+  (`<cli> …; exec "$SHELL" -l`) — the pane then survives the CLI exiting, stays manually
+  usable, and the driver can relaunch the CLI in place later. The cost: liveness can no
+  longer be read from `#{pane_dead}` — detect the CLI by walking the pane's process tree
+  instead. The codex plugin implements this as its default; see its `codex-tmux.sh` for the
+  reference implementation (states `alive` / `shell` / `dead`).
 - Detect state without parsing the pane: a window is `alive`/`dead`/`unknown` from tmux plus
   process inspection.
 - **Never kill silently** — killing destroys scrollback irreversibly. Tell the user which

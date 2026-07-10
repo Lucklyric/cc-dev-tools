@@ -102,7 +102,8 @@ setup() {
 
 @test "ls: STATE is 'alive' for windows with live codex process" {
     "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-live-aaaaaa-aa" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-live-aaaaaa-aa" -d "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-live-aaaaaa-aa" '@cc_codex_bin' "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
     sleep 0.3
     run "$SCRIPT" ls
     [ "$status" -eq 0 ]
@@ -238,7 +239,8 @@ setup() {
 
 @test "find: matches alive window with same topic and cwd" {
     "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-aaaaaa-aa" -d "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_bin' "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
     tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_topic' "auth"
     tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-aaaaaa-aa" '@cc_codex_cwd' "/tmp/proj"
     CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
@@ -283,7 +285,8 @@ setup() {
 
 @test "find: ignores windows from other claude sessions" {
     "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_bin' "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
     tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_topic' "auth"
     CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
         run "$SCRIPT" find auth
@@ -292,7 +295,8 @@ setup() {
 
 @test "find: --any-session matches windows across all claude sessions" {
     "$SCRIPT" _internal ensure_session
-    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "sleep 60"
+    tmux new-window -t "$SESSION_NAME_TEST" -n "codex-auth-bbbbbb-bb" -d "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
+    tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_bin' "$BATS_TEST_DIRNAME/fixtures/mock-codex.sh"
     tmux set-option -w -t "$SESSION_NAME_TEST:codex-auth-bbbbbb-bb" '@cc_codex_topic' "auth"
     CLAUDE_CODE_SESSION_ID="aaaaaa-1234-5678-9abc-deadbeefcafe" \
         run "$SCRIPT" find auth --any-session

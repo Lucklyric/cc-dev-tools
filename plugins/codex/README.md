@@ -10,7 +10,7 @@ This plugin enables Claude Code users to invoke OpenAI's Codex CLI with the GPT-
 
 ## Default mode: codex pane beside Claude
 
-By default, codex runs as a **pane split into your current tmux window** — right next to Claude, no separate attach. When Claude is not running inside tmux, it falls back to one dedicated reused window (`codex-<claude6>`) in the `cc-codex` session:
+By default, codex runs as a **pane split into your current tmux window** — right next to Claude, no separate attach. When codex exits, the pane **stays**: it drops into your interactive shell (keep-shell default) so you can keep using it manually — e.g. `codex resume --last` to continue the conversation by hand — and the next resolve relaunches codex in the same pane; type `exit` to close it (`CC_CODEX_KEEP_SHELL=0` restores the old auto-close). When Claude is not running inside tmux, it falls back to one dedicated reused window (`codex-<claude6>`) in the `cc-codex` session:
 
 ```bash
 tmux attach -t cc-codex   # only needed for the fallback window
@@ -50,6 +50,7 @@ In v3.1.0 the `send` and `capture` subcommands were removed; they now print a mi
 - **Web Search Integration**: Built-in web search for research and documentation lookup
 - **Non-Interactive Execution**: Optimized for Claude Code's non-terminal bash environment
 - **Deterministic skill loading**: a `UserPromptSubmit` hook nudges Claude to invoke the codex skill whenever a prompt mentions codex (see "Skill-load nudge hook")
+- **Keep-shell panes**: when codex exits, its pane drops into your shell instead of closing — manually usable, relaunchable in place (`CC_CODEX_KEEP_SHELL=0` to disable)
 
 ## Prerequisites
 
@@ -348,4 +349,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.8.0
+3.9.0

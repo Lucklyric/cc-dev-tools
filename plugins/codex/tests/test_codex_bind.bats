@@ -20,6 +20,8 @@ MOCK_CODEX="${BATS_TEST_DIRNAME}/fixtures/mock-codex.sh"
 setup() {
     SESSION_NAME_TEST="cc-codex-test-$$"
     export CC_CODEX_SESSION_NAME="$SESSION_NAME_TEST"
+    # Deterministic keep-shell drop-in shell (avoids user zsh rc surprises).
+    export CC_CODEX_EXIT_SHELL="/bin/bash"
 }
 
 teardown() {
@@ -222,4 +224,33 @@ count_codex_windows() {
         run "$SCRIPT" bind
     [ "$status" -eq 4 ]
     [[ "$output" == *"exited immediately"* ]]
+}
+
+# ---------- bind: keep-shell (codex exit keeps the window; re-bind relaunches) ----------
+
+@test "bind: codex exit keeps the window at a shell; re-bind relaunches in the SAME window" {
+    CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" \
+        CC_CODEX_BIN="$MOCK_CODEX" \
+        "$SCRIPT" bind
+    sleep 0.3
+
+    # Cleanly exit the mock codex → the window must STAY, at a shell.
+    tmux send-keys -t "$SESSION_NAME_TEST:$BOUND_WINDOW" "/exit" Enter
+    sleep 1.0
+    tmux list-windows -t "$SESSION_NAME_TEST" -F '#{window_name}' \
+        | grep -Fxq "$BOUND_WINDOW"
+    CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" run "$SCRIPT" ls
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"shell"* ]]
+
+    # Re-bind: relaunches codex inside the SAME kept window (no duplicate).
+    CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" \
+        CC_CODEX_BIN="$MOCK_CODEX" \
+        run "$SCRIPT" bind
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" = "$BOUND_WINDOW" ]
+    [ "$(count_codex_windows)" -eq 1 ]
+    CLAUDE_CODE_SESSION_ID="$CLAUDE_ID" run "$SCRIPT" ls
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"alive"* ]]
 }

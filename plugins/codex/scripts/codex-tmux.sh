@@ -6,14 +6,28 @@ set -euo pipefail
 # ---------- Constants (overridable via env) ----------
 readonly SESSION_NAME="${CC_CODEX_SESSION_NAME:-cc-codex}"
 readonly CODEX_BIN="${CC_CODEX_BIN:-codex}"
-# How the codex pane/window behaves when the codex process exits:
+# How the codex pane/window behaves when its ROOT process exits. With
+# keep-shell (default, below) the root process is the wrapper/kept shell, so
+# this only matters when that shell exits (user types `exit`) or is killed:
 #   failed (default) — keep the pane ONLY on a non-zero (crash) exit so you can
-#                      read the error; a clean exit (status 0, codex finished or
-#                      you closed it) auto-closes the pane — no dead-pane clutter.
-#   on               — always keep the dead pane (old behavior; preserves the
-#                      final screen / `codex resume` id even on a clean exit).
-#   off              — always close the pane when codex exits.
+#                      read the error; a clean exit auto-closes the pane — no
+#                      dead-pane clutter.
+#   on               — always keep the dead pane (preserves the final screen).
+#   off              — always close the pane when the root process exits.
 readonly REMAIN_ON_EXIT="${CC_CODEX_REMAIN_ON_EXIT:-failed}"
+# Keep-shell behavior: what happens to the pane/window when CODEX exits.
+#   1 (default) — codex is wrapped so that when it exits (cleanly or crashed),
+#                 the pane drops into an interactive shell: the pane stays
+#                 where it is, scrollback intact, usable MANUALLY (e.g.
+#                 `codex resume --last` to continue the conversation by hand).
+#                 Typing `exit` in that shell closes the pane. The next
+#                 `pane`/`bind` call relaunches codex inside the kept shell
+#                 instead of splitting a new pane.
+#   0           — legacy: codex is the pane's root process, so its exit
+#                 closes the pane per CC_CODEX_REMAIN_ON_EXIT above.
+readonly KEEP_SHELL="${CC_CODEX_KEEP_SHELL:-1}"
+# Shell to drop into when codex exits under keep-shell.
+readonly EXIT_SHELL="${CC_CODEX_EXIT_SHELL:-${SHELL:-/bin/sh}}"
 # Model and reasoning effort for every spawned/exec'd codex.
 #   CODEX_MODEL  (default gpt-5.6-sol) — the frontier GPT-5.6 agentic model.
 #                Requires codex CLI >= 0.144.0. On older CLIs set
@@ -96,6 +110,94 @@ window_pane_pid() {
     tmux list-panes -t "$SESSION_NAME:$window" -F '#{pane_pid}' 2>/dev/null | head -n1
 }
 
+# True (0) if a codex process is running at, or up to two levels below, the
+# given pid. Matched by comparing the codex binary's basename against the
+# first TWO argv words of each process, so both a binary ("codex -m …") and
+# an interpreter-run script ("bash /path/mock-codex.sh -m …", tests) match.
+# $2 (optional) is the binary the pane/window was LAUNCHED with (recorded as
+# @cc_codex_bin at spawn) so detection stays correct even when the current
+# call runs with a different $CC_CODEX_BIN; defaults to $CODEX_BIN.
+# Level 0 covers legacy direct-exec panes; level 1 covers the keep-shell
+# wrapper (wrapper-shell → codex) AND a codex relaunched manually from the
+# kept shell; level 2 covers one nested shell more.
+codex_running_under() {
+    local root="$1" want="${2:-$CODEX_BIN}"
+    [[ -z "$root" ]] && return 1
+    [[ -z "$want" || "$want" == "-" ]] && want="$CODEX_BIN"
+    want="${want##*/}"
+    local pids p kids=""
+    kids="$(pgrep -P "$root" 2>/dev/null | tr '\n' ' ')" || true
+    pids="$root $kids"
+    for p in $kids; do
+        pids+=" $(pgrep -P "$p" 2>/dev/null | tr '\n' ' ' || true)"
+    done
+    # Basename via parameter expansion, NOT basename(1): ps argv words can
+    # start with '-' ("-zsh", "-c"), which basename(1) parses as options and
+    # noisily rejects on stderr.
+    local args tok1 tok2 rest
+    for p in $pids; do
+        args="$(ps -o args= -p "$p" 2>/dev/null || true)"
+        [[ -z "$args" ]] && continue
+        tok1="${args%% *}"
+        rest="${args#"$tok1"}"; rest="${rest# }"
+        tok2="${rest%% *}"
+        if [[ "${tok1##*/}" == "$want" ]]; then return 0; fi
+        if [[ -n "$tok2" && "${tok2##*/}" == "$want" ]]; then return 0; fi
+    done
+    return 1
+}
+
+# Compose the tmux shell-command string that launches codex (argv passed as
+# args, shell-quoted here). Under keep-shell (default), codex is wrapped so
+# that when it exits — cleanly or crashed — the pane prints a hint and drops
+# into an interactive shell instead of closing. CC_CODEX_KEEP_SHELL=0
+# restores the legacy direct launch.
+compose_launch_cmd() {
+    local launch
+    launch="$(printf '%q ' "$@")"
+    launch="${launch% }"
+    if [[ "$KEEP_SHELL" == "0" ]]; then
+        printf '%s' "$launch"
+        return
+    fi
+    local sh_q
+    sh_q="$(printf '%q' "$EXIT_SHELL")"
+    printf '%s' "$launch; printf '\\n[codex exited (status %s) -- pane kept for manual use: codex resume --last continues the conversation; exit closes the pane]\\n' \"\$?\"; exec $sh_q -l"
+}
+
+# Relaunch codex inside an existing keep-shell target (pane id or
+# session:window) by typing the launch command into its interactive shell —
+# same pane, geometry and scrollback preserved. A relaunch is a fresh codex
+# START, so the CURRENT sandbox/model/effort apply (unlike a live reuse,
+# where overrides only warn). Waits for the codex process to appear; returns
+# 1 if it did not start (caller falls back to kill + fresh spawn).
+relaunch_codex_in() {
+    local target="$1" cwd="$2" sandbox="$3" approval="$4"
+    local codex_cmd=(
+        "$CODEX_BIN"
+        -m "$CODEX_MODEL"
+        -c "approval_policy=$approval"
+        -c "model_reasoning_effort=$CODEX_EFFORT"
+        -s "$sandbox"
+    )
+    [[ "$sandbox" == "workspace-write" ]] && codex_cmd+=( -c "sandbox_workspace_write.network_access=true" )
+    local launch
+    launch="$(printf '%q ' "${codex_cmd[@]}")"
+    launch="${launch% }"
+    tmux send-keys -t "$target" -l -- "cd $(printf '%q' "$cwd") && $launch" 2>/dev/null || return 1
+    sleep 0.2
+    tmux send-keys -t "$target" Enter 2>/dev/null || return 1
+    local pid i
+    for (( i = 0; i < 16; i++ )); do
+        sleep 0.3
+        pid="$(tmux display-message -p -t "$target" '#{pane_pid}' 2>/dev/null || true)"
+        if [[ -n "$pid" ]] && codex_running_under "$pid"; then
+            return 0
+        fi
+    done
+    return 1
+}
+
 # ---------- Subcommands ----------
 
 cmd_new() {
@@ -145,9 +247,9 @@ cmd_new() {
         codex_cmd+=( -c "sandbox_workspace_write.network_access=true" )
     fi
 
-    # Spawn the window detached.
+    # Spawn the window detached (keep-shell wrapper unless CC_CODEX_KEEP_SHELL=0).
     tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
-        "${codex_cmd[@]}"
+        "$(compose_launch_cmd "${codex_cmd[@]}")"
 
     # remain-on-exit ($REMAIN_ON_EXIT, default 'failed'): keep the window on a
     # crash (non-zero exit) so the error is readable; a clean exit auto-closes it.
@@ -162,6 +264,7 @@ cmd_new() {
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_topic' "$topic" 2>/dev/null || true
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
     tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
+    tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_bin' "$CODEX_BIN" 2>/dev/null || true
 
     # Output: window name on stdout line 1, attach hint on line 2.
     echo "$window"
@@ -215,6 +318,22 @@ cmd_bind() {
             echo "$window"
             echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
             return 0
+        elif [[ "$state" == "shell" ]]; then
+            # Keep-shell window: codex exited but the window sits at an
+            # interactive shell. Relaunch codex inside it (fresh start, so the
+            # requested sandbox/model/effort apply); fall through to a full
+            # respawn only if the relaunch fails.
+            if relaunch_codex_in "$SESSION_NAME:$window" "$cwd" "$sandbox" "$approval"; then
+                tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
+                tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
+                tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
+                tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
+                tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_bin' "$CODEX_BIN" 2>/dev/null || true
+                echo "$window"
+                echo "Attach with: tmux attach -t $SESSION_NAME \; select-window -t $window"
+                return 0
+            fi
+            tmux kill-window -t "$SESSION_NAME:$window" 2>/dev/null || true
         else
             # Dead/orphaned: clear it out and respawn below.
             tmux kill-window -t "$SESSION_NAME:$window" 2>/dev/null || true
@@ -241,7 +360,7 @@ cmd_bind() {
     while (( attempt < 2 )); do
         attempt=$(( attempt + 1 ))
         tmux new-window -t "$SESSION_NAME" -n "$window" -d -c "$cwd" \
-            "${codex_cmd[@]}"
+            "$(compose_launch_cmd "${codex_cmd[@]}")"
 
         # remain-on-exit ($REMAIN_ON_EXIT, default 'failed'): keep the window on
         # a crash so the error is readable; a clean exit auto-closes it. Set ASAP
@@ -255,6 +374,7 @@ cmd_bind() {
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
         tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
+        tmux set-option -w -t "$SESSION_NAME:$window" '@cc_codex_bin' "$CODEX_BIN" 2>/dev/null || true
 
         sleep 0.4
         if [[ "$(window_state "$window")" == "alive" ]]; then
@@ -285,17 +405,26 @@ pane_window_target() {
     tmux display-message -p -t "$pane" '#{session_name}:#{window_index}' 2>/dev/null
 }
 
-# True (0) if the pane exists AND its process is still running; false (1) if the
-# pane is gone OR dead (process exited; kept around by remain-on-exit).
+# State of a codex pane:
+#   alive — pane exists and a codex process is running in it
+#   shell — pane exists, codex exited, an interactive shell holds the pane
+#           (keep-shell default; the pane is manually usable / relaunchable)
+#   dead  — the pane's root process exited (kept around by remain-on-exit)
+#   gone  — the pane no longer exists
 # NOTE: `display-message -t <stale-id>` silently falls back to the active pane
-# (returning a bogus "alive"), so we must exact-match the pane id in the live
+# (returning a bogus state), so we must exact-match the pane id in the live
 # pane list instead of trusting display-message.
-pane_alive() {
-    local pane="$1" state
-    state="$(tmux list-panes -a -F '#{pane_id} #{pane_dead}' 2>/dev/null \
-        | awk -v p="$pane" '$1==p { print ($2=="1" ? "dead" : "alive"); f=1 }
+pane_codex_state() {
+    local pane="$1" row
+    row="$(tmux list-panes -a -F '#{pane_id} #{pane_dead} #{pane_pid}' 2>/dev/null \
+        | awk -v p="$pane" '$1==p { print $2 " " $3; f=1 }
                             END   { if (!f) print "gone" }')"
-    [[ "$state" == "alive" ]]
+    if [[ "$row" == "gone" ]]; then echo "gone"; return; fi
+    local dead="${row%% *}" pid="${row##* }"
+    if [[ "$dead" == "1" ]]; then echo "dead"; return; fi
+    local bin
+    bin="$(tmux show-option -p -qv -t "$pane" '@cc_codex_bin' 2>/dev/null || true)"
+    if codex_running_under "$pid" "$bin"; then echo "alive"; else echo "shell"; fi
 }
 
 # Find THIS Claude session's codex pane for a topic anywhere on the server
@@ -307,17 +436,22 @@ pane_alive() {
 # NOTE on parsing: IFS=$'\t' treats tab as IFS whitespace, so consecutive tabs
 # COLLAPSE and empty fields would shift. Every possibly-empty field is made
 # non-empty at the source via tmux conditionals ('-' sentinel / 'main' default).
-# Prints "<pane_id>\t<pane_dead>" for the first match and returns 0; else 1.
+# Prints "<pane_id>\t<state>" (state = alive|shell|dead, see pane_codex_state)
+# for the first match and returns 0; else 1.
 find_codex_pane() {
     local my_token="$1" want_topic="${2:-main}"
-    local pid mark topic dead
-    while IFS=$'\t' read -r pid mark topic dead; do
+    local pid mark topic dead ppid bin state
+    while IFS=$'\t' read -r pid mark topic dead ppid bin; do
         [[ "$mark" == "$my_token" ]] || continue
         [[ "$topic" == "$want_topic" ]] || continue
-        printf '%s\t%s\n' "$pid" "${dead:-0}"
+        state="dead"
+        if [[ "${dead:-0}" != "1" ]]; then
+            if codex_running_under "$ppid" "$bin"; then state="alive"; else state="shell"; fi
+        fi
+        printf '%s\t%s\n' "$pid" "$state"
         return 0
     done < <(tmux list-panes -a \
-        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}' 2>/dev/null)
+        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}'$'\t''#{pane_pid}'$'\t''#{?@cc_codex_bin,#{@cc_codex_bin},-}' 2>/dev/null)
     return 1
 }
 
@@ -332,7 +466,7 @@ _split_codex_pane() {
     [[ "$topic" != "main" ]] && title="codex-$topic-$my_token"
     local new_pane
     new_pane="$(tmux split-window -t "$ref_pane" "$orient" -l "${size}%" -d -c "$cwd" \
-        -P -F '#{pane_id}' "$@" 2>/dev/null)" || return 1
+        -P -F '#{pane_id}' "$(compose_launch_cmd "$@")" 2>/dev/null)" || return 1
     [[ -z "$new_pane" ]] && return 1
     tmux set-option -p -t "$new_pane" remain-on-exit "$REMAIN_ON_EXIT" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_claude6' "$my_token" 2>/dev/null || true
@@ -342,6 +476,7 @@ _split_codex_pane() {
     tmux set-option -p -t "$new_pane" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
     tmux set-option -p -t "$new_pane" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
+    tmux set-option -p -t "$new_pane" '@cc_codex_bin' "$CODEX_BIN" 2>/dev/null || true
     tmux select-pane -t "$new_pane" -T "$title" 2>/dev/null || true
     printf '%s' "$new_pane"
 }
@@ -403,15 +538,16 @@ cmd_pane() {
 
     # Locate this Claude's existing codex pane for this topic anywhere on the
     # server.
-    local match pane dead
+    local match pane pstate
     if match="$(find_codex_pane "$my_token" "$topic")"; then
         pane="${match%%$'\t'*}"
-        dead="${match##*$'\t'}"
-        if [[ "$dead" != "1" ]]; then
-            # Keep codex in the agent's CURRENT window. If the live pane is in a
-            # different window, relocate it here (join-pane) so it always sits
-            # beside Claude and is never duplicated. If the relocate fails, drop
-            # the stray and spawn fresh below.
+        pstate="${match##*$'\t'}"
+        if [[ "$pstate" == "alive" || "$pstate" == "shell" ]]; then
+            # Keep codex in the agent's CURRENT window. If the pane (live codex
+            # OR kept shell) is in a different window, relocate it here
+            # (join-pane) so it always sits beside Claude and is never
+            # duplicated. If the relocate fails, drop the stray and spawn fresh
+            # below.
             local pane_win
             pane_win="$(tmux display-message -p -t "$pane" '#{session_name}:#{window_index}' 2>/dev/null || true)"
             if [[ -n "$pane_win" && "$pane_win" != "$window" ]]; then
@@ -422,10 +558,10 @@ cmd_pane() {
                     pane=""
                 fi
             fi
-            # Final liveness re-check closes a TOCTOU race: the pane found above
-            # could die/vanish before we return it (then the caller would drive a
-            # dead target). If so, fall through and spawn fresh.
-            if [[ -n "$pane" ]] && pane_alive "$pane"; then
+            # Final state re-check closes a TOCTOU race: the pane found above
+            # could die/vanish (or codex could exit) before we return it.
+            [[ -n "$pane" ]] && pstate="$(pane_codex_state "$pane")"
+            if [[ -n "$pane" && "$pstate" == "alive" ]]; then
                 # Reuse; warn (don't fail) on a sandbox mismatch.
                 local existing
                 existing="$(tmux show-option -p -qv -t "$pane" '@cc_codex_sandbox' 2>/dev/null || true)"
@@ -448,6 +584,29 @@ cmd_pane() {
                     echo "Reusing codex pane $pane for topic '$topic' (in your current window)."
                 fi
                 return 0
+            fi
+            if [[ -n "$pane" && "$pstate" == "shell" ]]; then
+                # Keep-shell pane: codex exited but the pane sits at an
+                # interactive shell. Relaunch codex inside it — same pane id,
+                # geometry and scrollback preserved. A relaunch is a fresh
+                # start, so the requested sandbox/model/effort apply now.
+                if relaunch_codex_in "$pane" "$cwd" "$sandbox" "$approval"; then
+                    tmux set-option -p -t "$pane" '@cc_codex_cwd' "$cwd" 2>/dev/null || true
+                    tmux set-option -p -t "$pane" '@cc_codex_sandbox' "$sandbox" 2>/dev/null || true
+                    tmux set-option -p -t "$pane" '@cc_codex_model' "$CODEX_MODEL" 2>/dev/null || true
+                    tmux set-option -p -t "$pane" '@cc_codex_effort' "$CODEX_EFFORT" 2>/dev/null || true
+                    tmux set-option -p -t "$pane" '@cc_codex_bin' "$CODEX_BIN" 2>/dev/null || true
+                    tmux select-pane -t "$pane" -T "$title" 2>/dev/null || true
+                    echo "$pane"
+                    if [[ "$topic" == "main" ]]; then
+                        echo "Relaunched codex in kept pane $pane (in your current window)."
+                    else
+                        echo "Relaunched codex in kept pane $pane for topic '$topic' (in your current window)."
+                    fi
+                    return 0
+                fi
+                # Relaunch failed: drop the pane and spawn fresh below.
+                tmux kill-pane -t "$pane" 2>/dev/null || true
             fi
         else
             # Dead pane: remove it and respawn below.
@@ -485,7 +644,7 @@ cmd_pane() {
         new_pane="$(_split_codex_pane "$ref_pane" "$orient" "$size" "$cwd" "$sandbox" "$my_token" "$topic" "${codex_cmd[@]}")" \
             || { echo "codex-tmux pane: split-window failed (window too small? try --vertical or 'bind')" >&2; return 1; }
         sleep 0.4
-        if pane_alive "$new_pane"; then
+        if [[ "$(pane_codex_state "$new_pane")" == "alive" ]]; then
             echo "$new_pane"
             if [[ "$topic" == "main" ]]; then
                 echo "Codex pane $new_pane in window $window (visible next to Claude)."
@@ -527,32 +686,27 @@ cmd_panes() {
     # find_codex_pane). Rows whose marker is the '-' sentinel are not codex
     # panes and are skipped.
     local found=0
-    local pid mark topic dead win cwd state
-    while IFS=$'\t' read -r pid mark topic dead win cwd; do
+    local pid mark topic dead ppid bin win cwd state
+    while IFS=$'\t' read -r pid mark topic dead ppid bin win cwd; do
         [[ "$mark" == "-" ]] && continue
         [[ -n "$my_token" && "$mark" != "$my_token" ]] && continue
-        state="alive"
-        [[ "$dead" == "1" ]] && state="dead"
+        state="dead"
+        if [[ "$dead" != "1" ]]; then
+            if codex_running_under "$ppid" "$bin"; then state="alive"; else state="shell"; fi
+        fi
         printf '%s\t%s\t%s\t%s\t%s\n' "$pid" "$topic" "$state" "$win" "$cwd"
         found=$(( found + 1 ))
     done < <(tmux list-panes -a \
-        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}'$'\t''#{session_name}:#{window_index}'$'\t''#{?@cc_codex_cwd,#{@cc_codex_cwd},-}' 2>/dev/null)
+        -F '#{pane_id}'$'\t''#{?@cc_codex_claude6,#{@cc_codex_claude6},-}'$'\t''#{?@cc_codex_topic,#{@cc_codex_topic},main}'$'\t''#{pane_dead}'$'\t''#{pane_pid}'$'\t''#{?@cc_codex_bin,#{@cc_codex_bin},-}'$'\t''#{session_name}:#{window_index}'$'\t''#{?@cc_codex_cwd,#{@cc_codex_cwd},-}' 2>/dev/null)
 
     (( found > 0 ))
 }
 
-# Detect whether the codex process inside a window is still alive.
-window_codex_alive() {
-    local window="$1"
-    local pane_pid
-    pane_pid="$(window_pane_pid "$window")"
-    [[ -z "$pane_pid" ]] && return 1
-    # Check if the pane process itself is still running.
-    # Also accept if it has live children (nested shell case).
-    kill -0 "$pane_pid" 2>/dev/null || pgrep -P "$pane_pid" >/dev/null
-}
-
-# Compute the state of a window: alive | dead | unknown.
+# Compute the state of a window: alive | shell | dead | unknown.
+#   alive — a codex process is running in the window's pane
+#   shell — the pane is alive but codex exited (keep-shell window sitting at
+#           an interactive shell; manually usable / relaunchable)
+#   dead  — the pane's root process exited (kept by remain-on-exit)
 # Determined entirely from tmux/process state (no pane buffer parsing).
 window_state() {
     local window="$1"
@@ -560,10 +714,20 @@ window_state() {
         echo "unknown"
         return
     fi
-    if window_codex_alive "$window"; then
+    local pane_pid dead
+    pane_pid="$(window_pane_pid "$window")"
+    [[ -z "$pane_pid" ]] && { echo "dead"; return; }
+    dead="$(tmux list-panes -t "$SESSION_NAME:$window" -F '#{pane_dead}' 2>/dev/null | head -n1)"
+    if [[ "$dead" == "1" ]] || ! kill -0 "$pane_pid" 2>/dev/null; then
+        echo "dead"
+        return
+    fi
+    local bin
+    bin="$(tmux show-option -wqv -t "$SESSION_NAME:$window" '@cc_codex_bin' 2>/dev/null || true)"
+    if codex_running_under "$pane_pid" "$bin"; then
         echo "alive"
     else
-        echo "dead"
+        echo "shell"
     fi
 }
 
@@ -790,8 +954,10 @@ Subcommands:
       codex instance as a PANE split into the CURRENT Claude window (right
       next to Claude, so progress is visible with no separate attach).
       Idempotent per Claude session (reuse is server-wide, surviving window
-      moves): reuses the live codex pane if present, respawns it if dead, else
-      splits a new one. Prints the pane id (e.g. %53) on stdout line 1.
+      moves): reuses the live codex pane if present, relaunches codex inside
+      the kept shell pane if codex exited (keep-shell default), respawns it
+      if dead, else splits a new one. Prints the pane id (e.g. %53) on
+      stdout line 1.
       --topic SLUG (2-15 chars, [a-z0-9-]; default: main) addresses an EXTRA
       topic-named pane in the same window; each topic gets its own pane with
       the same per-topic reuse/relocate/respawn semantics.
@@ -803,7 +969,8 @@ Subcommands:
   panes [--all]
       Read-only detection: list codex PANES server-wide, one TSV line per
       pane: "<pane_id>\t<topic>\t<state>\t<session:window_index>\t<cwd>"
-      (state = alive|dead). Filtered to the current Claude session's claude6
+      (state = alive|shell|dead; shell = codex exited, pane kept at an
+      interactive shell). Filtered to the current Claude session's claude6
       by default; --all lists every agent's codex panes. Exits 0 if at least
       one line was printed, 1 otherwise. Never creates the cc-codex session.
 
@@ -811,8 +978,9 @@ Subcommands:
       Dedicated-window mode / fallback when NOT inside tmux. Bind this Claude
       session to its single reused codex window (codex-<claude6>) in the
       cc-codex session and print it. Idempotent: creates codex if absent,
-      reuses if alive, respawns if dead. Prints the window name on stdout
-      line 1 plus an attach hint on line 2.
+      reuses if alive, relaunches codex in the kept shell if codex exited,
+      respawns if dead. Prints the window name on stdout line 1 plus an
+      attach hint on line 2.
 
   new <topic> [--cwd DIR] [--full-auto|--read-only]
       Create a new codex window in the cc-codex tmux session. Use ONLY when a
@@ -855,9 +1023,17 @@ Environment:
                           or gpt-5.5 on a codex CLI < 0.144.0)
   CC_CODEX_EFFORT        (default: xhigh; ladder low<medium<high<xhigh<max<ultra —
                           max/ultra are 5.6-series; ultra is sol/terra only)
-  CC_CODEX_REMAIN_ON_EXIT (default: failed; on = always keep dead pane, off = always close)
-  Model/effort/sandbox bind when codex STARTS; overrides on a reuse call warn
-  on stderr instead of applying (kill + re-resolve to switch).
+  CC_CODEX_KEEP_SHELL    (default: 1 — when codex exits, the pane drops into an
+                          interactive shell and stays for manual use; `exit`
+                          closes it. 0 = legacy: codex exit closes the pane per
+                          CC_CODEX_REMAIN_ON_EXIT)
+  CC_CODEX_EXIT_SHELL    (default: $SHELL; the shell keep-shell drops into)
+  CC_CODEX_REMAIN_ON_EXIT (default: failed; governs the pane's ROOT process —
+                          the kept shell under keep-shell, codex itself with
+                          CC_CODEX_KEEP_SHELL=0)
+  Model/effort/sandbox bind when codex STARTS; overrides on a live reuse warn
+  on stderr instead of applying (they DO apply when the kept shell relaunches
+  codex, since that is a fresh start).
 EOF
 }
 

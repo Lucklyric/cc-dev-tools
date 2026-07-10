@@ -42,7 +42,9 @@ fi
 
 Capture `pane`'s output to a variable first and check its real exit code (do **not** pipe straight into `head` — that masks the exit code, and without `pipefail` the `&&` would succeed with an empty `TARGET`). Exit 3 means "not inside tmux"; exit 4 means codex died on launch (after one auto-retry) — in either case the `bind` fallback (or a re-run, which auto-retries) is the recovery.
 
-`$TARGET` is target-agnostic — it is a pane id (e.g. `%53`) inside tmux, or `cc-codex:<window>` in the fallback — and **all the interaction recipes below drive `"$TARGET"`**. Both `pane` and `bind` are idempotent: they reuse the live codex if alive and respawn it if dead, so follow-ups, continuations, and new sub-tasks all land in the same pane/window. You do **not** need `find` or a topic slug for the normal case. Pass `--full-auto` on the first `pane`/`bind` call for write mode (default is `--read-only`); the sandbox is fixed when the pane/window is first created.
+`$TARGET` is target-agnostic — it is a pane id (e.g. `%53`) inside tmux, or `cc-codex:<window>` in the fallback — and **all the interaction recipes below drive `"$TARGET"`**. Both `pane` and `bind` are idempotent: they reuse the live codex if alive, relaunch codex inside the kept shell if it exited (see below), and respawn if dead — so follow-ups, continuations, and new sub-tasks all land in the same pane/window. You do **not** need `find` or a topic slug for the normal case. Pass `--full-auto` on the first `pane`/`bind` call for write mode (default is `--read-only`); the sandbox is fixed while codex runs (a relaunch after codex exited applies the newly requested sandbox).
+
+> **When codex exits, the pane stays (keep-shell default).** Exiting codex (the user quits the TUI, or it crashes) does NOT close the pane: it drops into an interactive shell in the same pane — scrollback intact, usable manually (e.g. the user can run `codex resume --last` to continue the conversation by hand, or any other command). Typing `exit` in that shell closes the pane. `panes`/`ls` report such a target as state `shell`, and the next `pane`/`bind` call relaunches codex inside it (same pane, no new split). Set `CC_CODEX_KEEP_SHELL=0` for the legacy behavior (codex exit closes the pane per `CC_CODEX_REMAIN_ON_EXIT`).
 
 **Spawn an EXTRA codex ONLY when the user explicitly asks for a genuinely separate or parallel codex.** Route the phrasing: "in parallel", "a second codex", "also start another", "keep this one running and…", "don't interrupt the current task", "spin up another" → an extra PANE in the CURRENT window via `pane --topic <slug>` (see "Detecting & orchestrating multiple codex panes"). "separate window" / "new window" → an extra WINDOW via `new <topic>`. A new tmux *session* is created only ever on an explicit user request. For everything else, the single reused pane/window is the answer.
 
@@ -71,7 +73,7 @@ Output: one TSV line per pane —
 |---|---|
 | `pane_id` | e.g. `%53` — usable directly as a `$TARGET` |
 | `topic` | `main` for the primary pane, else the topic slug |
-| `state` | `alive` / `dead` |
+| `state` | `alive` (codex running) / `shell` (codex exited; pane kept at an interactive shell, relaunchable) / `dead` |
 | `session:window_index` | where the pane lives |
 | `cwd` | the pane's recorded working directory (`-` if unknown) |
 
@@ -87,7 +89,7 @@ if _eout=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --topic tests --cwd "$
 fi   # nonzero exit: surface stderr; never drive an empty target
 ```
 
-All the default `pane` semantics apply per-topic: reuse-if-alive, relocate into the current window if it drifted to another one (`join-pane`, never duplicated), respawn-if-dead, width floor, liveness check with one auto-retry (exit 4), sandbox-mismatch warning. Plain `pane` is exactly `pane --topic main` (the primary pane; behavior unchanged). **Announce before spawning**, e.g. *"I'll open a second codex pane (topic: tests) in your current window."*
+All the default `pane` semantics apply per-topic: reuse-if-alive, relaunch-in-kept-shell if codex exited, relocate into the current window if it drifted to another one (`join-pane`, never duplicated), respawn-if-dead, width floor, liveness check with one auto-retry (exit 4), sandbox-mismatch warning. Plain `pane` is exactly `pane --topic main` (the primary pane; behavior unchanged). **Announce before spawning**, e.g. *"I'll open a second codex pane (topic: tests) in your current window."*
 
 ### Address: one `$TARGET` per pane, one driver per pane
 
@@ -134,7 +136,8 @@ The helper script at `$CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh` handles lifecyc
 
 ```bash
 # DEFAULT entry point (inside tmux): get/create THE codex pane in the CURRENT
-# window. Idempotent — reuse if alive, respawn if dead. Prints a pane id (e.g.
+# window. Idempotent — reuse if alive, relaunch codex in the kept shell if it
+# exited, respawn if dead. Prints a pane id (e.g.
 # %53) on line 1. Exits 3 (with a hint to use `bind`) when NOT inside tmux;
 # exits 4 when codex dies immediately at launch (after one auto-retry — codex's
 # last output goes to stderr). Auto-switches a too-narrow horizontal split to a
@@ -149,7 +152,8 @@ TARGET=$($CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh pane --cwd "$PWD" | head -n1)
 
 # DETECT (read-only): list this agent's codex panes server-wide. One TSV line
 # per pane: pane_id<TAB>topic<TAB>state<TAB>session:window_index<TAB>cwd
-# (state = alive|dead). Exit 0 if ≥1 pane printed, else 1. Never creates
+# (state = alive|shell|dead; shell = codex exited, pane kept at an
+# interactive shell). Exit 0 if ≥1 pane printed, else 1. Never creates
 # anything. --all = every agent's panes (diagnostics only).
 $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh panes
 
@@ -298,7 +302,8 @@ See `references/tmux-mode.md` for the codex-specific calibration, the pane-mode 
 | Need to see which codex panes you already own (start of conversation, after interruptions) | `codex-tmux.sh panes` — read-only TSV listing (pane id, topic, state, location, cwd). |
 | User explicitly wants a parallel task ("in parallel", "a second codex", "also start another", "keep this one and also…", "don't interrupt the current task") | Derive a topic slug, resolve the extra pane with `pane --topic <slug>` (capture output, check exit code — as in the resolve snippet), drive that extra pane in the CURRENT window (per-pane baseline + idle loop). |
 | User explicitly wants a SEPARATE WINDOW ("separate window", "new window") | Derive a topic slug, `WIN=$(codex-tmux.sh new <topic> --cwd "$PWD" \| head -n1)`, drive that extra window. A new tmux *session* only ever on explicit request. |
-| The codex process in the pane/window died | Nothing special — `pane`/`bind` respawns it automatically. Salvage prior context only if the user wants continuity (see `reuse-existing-window`). |
+| Codex exited (pane/window now at the kept shell, state `shell`) | Nothing special — `pane`/`bind` relaunches codex inside the SAME pane/window (no new split; the newly requested sandbox/model/effort apply since it is a fresh start). The user may also continue manually there (`codex resume --last`). |
+| The pane/window's root process died (state `dead`) | Nothing special — `pane`/`bind` respawns it automatically. Salvage prior context only if the user wants continuity (see `reuse-existing-window`). |
 | User asks to start over from scratch ("reset codex", "fresh codex") | `codex-tmux.sh kill "$TARGET"` (pane id or window) then resolve the target again. |
 | `--full-auto` requested but the pane/window is read-only (or vice-versa) | The script warns on stderr and reuses the existing pane/window. Surface the warning; only `kill` + re-resolve if the user wants the other sandbox. |
 
@@ -327,6 +332,7 @@ $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh ls --mine
 | Just the one codex pane / bound window, still useful | Leave it. It's reused next time you resolve the target, and resumable via `find --any-session`. |
 | Main pane + extra topic panes / extra windows no longer needed | "Want me to `kill --mine` (clears this session's codex — ALL panes regardless of topic, plus windows), or just `kill "$TARGET"` for the one?" |
 | Some of THIS session's panes/windows dead | "Want me to clear them — `kill %id` for a specific dead pane, or `kill --mine` for all of this session's codex?" (both claude6-scoped — they never touch another agent's codex) |
+| A pane/window in state `shell` (codex exited, kept shell) | Usually leave it — the user may be using it manually, and the next resolve relaunches codex there. Note that `kill --mine` removes kept-shell panes too (they still carry the claude6 marker). |
 | User explicitly says "clean up" / "kill all" | Run `kill --mine` (removes only THIS session's codex panes and windows) and report what was removed. Use the global `kill --orphaned` only if the user explicitly asks to clear *every* agent's dead codex. |
 
 **Never kill silently.** Always tell the user which pane/windows you're about to remove and wait for confirmation, unless they explicitly said "kill all of them". Killing destroys scrollback irreversibly. Leaving the codex pane/window alive is the friendly default — the next resolve-target call reuses it instead of spawning a fresh one.
@@ -353,7 +359,7 @@ Note: `kill --mine` is claude6-scoped (touches only THIS agent's codex) and pane
 | Edit in an explicit extra window | `new <topic> --cwd "$PWD" --full-auto` |
 | One-shot edit (no tmux) | `exec -s workspace-write -c sandbox_workspace_write.network_access=true "<prompt>"` |
 
-The skill still defaults to read-only sandbox; switch to `--full-auto` only when the user explicitly says "edit", "modify", "save", "fix", "refactor", etc. The sandbox is fixed when the pane/window is first created. If you pass `--full-auto` but the pane/window already exists as read-only (or vice-versa), the script warns on stderr and reuses it; surface the warning and `kill` + re-resolve only if the user wants the other sandbox.
+The skill still defaults to read-only sandbox; switch to `--full-auto` only when the user explicitly says "edit", "modify", "save", "fix", "refactor", etc. The sandbox is fixed while codex runs. If you pass `--full-auto` but the pane/window is running read-only codex (or vice-versa), the script warns on stderr and reuses it; surface the warning and `kill` + re-resolve only if the user wants the other sandbox. Exception: when codex has exited and the pane sits at the kept shell (state `shell`), the next `pane`/`bind` call relaunches codex fresh — the newly requested sandbox applies with no warning needed.
 
 ## Model and reasoning effort
 
@@ -389,7 +395,7 @@ CC_CODEX_MODEL=gpt-5.6-luna CC_CODEX_EFFORT=medium \
     $CLAUDE_PLUGIN_ROOT/scripts/codex-tmux.sh exec "quick one-off question"
 ```
 
-**When selection applies.** Model and effort are fixed when a codex process STARTS: (a) the first `pane`/`bind`/`new` call that actually spawns codex, (b) every `exec` one-shot (the cheapest way to run a different combo per task), and (c) a new `--topic` pane. A REUSED pane/window keeps whatever it was started with — an env override on a reuse call does nothing, and the script warns on stderr (`… do NOT apply to a reused pane`); surface that warning. To switch the main pane's model/effort, `kill "$TARGET"` and re-resolve with the new env — that destroys codex's conversation context, so confirm with the user first (see "Never kill silently"). For a one-off harder/cheaper task mid-conversation, prefer an `exec` one-shot or a new `--topic` pane over killing the main pane.
+**When selection applies.** Model and effort are fixed when a codex process STARTS: (a) the first `pane`/`bind`/`new` call that actually spawns codex, (b) every `exec` one-shot (the cheapest way to run a different combo per task), (c) a new `--topic` pane, and (d) a relaunch into the kept shell after codex exited (state `shell`) — a relaunch is a fresh start, so env overrides DO apply there. A pane/window with codex still RUNNING keeps whatever it was started with — an env override on a live reuse does nothing, and the script warns on stderr (`… do NOT apply to a reused pane`); surface that warning. To switch the main pane's model/effort, `kill "$TARGET"` and re-resolve with the new env — that destroys codex's conversation context, so confirm with the user first (see "Never kill silently"). For a one-off harder/cheaper task mid-conversation, prefer an `exec` one-shot or a new `--topic` pane over killing the main pane.
 
 **Auth note:** ChatGPT-account auth now runs the base 5.6 slugs (`gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`) and `gpt-5.5`. The `-fast` service-tier variants (e.g. `gpt-5.6-sol-fast`) require API-key auth — under a ChatGPT account they return HTTP 400 "not supported".
 
