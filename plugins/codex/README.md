@@ -49,6 +49,7 @@ In v3.1.0 the `send` and `capture` subcommands were removed; they now print a mi
 - **Safe Sandbox Defaults**: Read-only for general tasks, workspace-write for code editing
 - **Web Search Integration**: Built-in web search for research and documentation lookup
 - **Non-Interactive Execution**: Optimized for Claude Code's non-terminal bash environment
+- **Deterministic skill loading**: a `UserPromptSubmit` hook nudges Claude to invoke the codex skill whenever a prompt mentions codex (see "Skill-load nudge hook")
 
 ## Prerequisites
 
@@ -108,6 +109,10 @@ The skill is automatically invoked when you mention "Codex" or request complex c
 ```
 User: "Use Codex to design a binary search tree in Rust"
 ```
+
+### Skill-load nudge hook
+
+Skill triggering from the description alone is probabilistic — in sessions with many plugins, Claude can miss the codex skill and drive the `codex` CLI from memory instead. To make loading reliable, the plugin ships a `UserPromptSubmit` hook (`hooks/hooks.json` + `hooks/skill-nudge.sh`): on every prompt that contains the word "codex" (word-boundary, case-insensitive), it injects a reminder telling Claude to invoke the codex skill before running any codex command. Prompts that don't mention codex pass through untouched, and the hook adds no LLM calls (pure bash + jq, python3 fallback). Hooks load at session start — restart Claude Code after installing or updating the plugin.
 
 ### Model Selection
 
@@ -327,6 +332,7 @@ This plugin follows the cc-dev-tools marketplace structure:
 - Metadata: `.claude-plugin/plugin.json`
 - Skill definition: `skills/codex/SKILL.md`
 - References: `skills/codex/references/`
+- Hooks: `hooks/hooks.json` + `hooks/skill-nudge.sh`
 
 ## License
 
@@ -342,4 +348,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.7.1
+3.8.0
