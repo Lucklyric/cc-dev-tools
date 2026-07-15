@@ -7,22 +7,26 @@ description: This skill should be used whenever the user names codex as the acto
 
 Use OpenAI's Codex CLI (GPT-5.6 series — default `gpt-5.6-sol`, `xhigh` reasoning) for complex coding, architecture, and review work that benefits from a frontier reasoning model. Pick the 5.6 model + effort by task (see "Model and reasoning effort"). Requires codex CLI **≥ 0.144.0** for the 5.6 series.
 
-**Default mode is tmux.** Codex runs in a long-lived attachable tmux pane/window so you can watch, intervene, and iterate. The helper script handles lifecycle (pane / bind / spawn / list / kill) and Claude drives the interaction layer directly with `tmux send-keys` and `tmux capture-pane`. A `codex exec` escape hatch remains for genuine one-shots.
+**Default mode is tmux.** Codex runs in a long-lived attachable tmux pane/window — a co-worker at the user's side — so the user can watch, intervene, and iterate. The helper script handles lifecycle (pane / bind / spawn / list / kill) and Claude drives the interaction layer directly with `tmux send-keys` and `tmux capture-pane`. A `codex exec` escape hatch exists but is gated: use it only when the user explicitly asked for headless, or after confirming (see "Codex is a co-worker in a pane").
 
 **One codex pane in your current window by default.** When Claude is running inside tmux, codex runs as a PANE split into your CURRENT tmux window — right next to Claude — so you can watch progress live with NO separate attach. In the normal case there is one codex pane per Claude session, reused for every task (call `pane` first; it is idempotent). (A duplicate pane can occur if the Claude session id rolls — recover with `kill %id`, or `kill --mine` then re-resolve.) When Claude is NOT inside tmux, it falls back to a dedicated reused window `codex-<claude6>` in the `cc-codex` session (call `bind`). Only spawn an extra pane when the user explicitly asks for a parallel task (`pane --topic <slug>` — still in the current window; see "Detecting & orchestrating multiple codex panes"), and an extra window (`new`) only when the user explicitly asks for a separate window. The generic agentic-tmux concepts behind this (identity & naming patterns, send/capture/idle-detect, sync/locking, lifecycle) live in the **`tmux` skill** (tmux plugin); this skill links to it and keeps only codex-specifics. The codex plugin declares the tmux plugin as a dependency, so it auto-installs alongside codex and the tmux-skill references always resolve.
 
 > **Agent-session isolation (hard rule).** Codex is bound to THIS agent's `claude6`. Every operation the skill performs — resolve/reuse, relocate (`join-pane`), spawn, and cleanup via `kill --mine` / `kill %id` — touches ONLY this session's own codex pane/window, identified by the `@cc_codex_claude6` marker. **Never** move, kill, reuse, or otherwise disturb a tmux pane or window belonging to another agent (a different `claude6`) or one you did not create. In particular, do **not** run `kill --orphaned` as part of normal work — it is a *global, cross-agent* housekeeping command that reaps every agent's dead codex, and is appropriate only when the user explicitly asks to clean up everything.
 
-## When to use tmux mode vs `exec`
+## Codex is a co-worker in a pane — when (if ever) to use `exec`
 
-| Use **tmux** (default) when | Use **`exec`** escape hatch when |
+**Mental model: codex is a co-worker sitting in a pane at the user's side.** Every codex task goes to that ONE visible, reused pane by default: if the co-worker pane exists, hand the task to it; if not, spawn it. The user watches codex work — a headless codex is a surprise, never a convenience. Task shape (short, review-like, parallel, "one-shot-ish") is **not** a reason to go headless.
+
+| Situation | Route |
 |---|---|
-| The user asks any analysis, design, or implementation that may need follow-up. | The user explicitly says "quick", "one-line", "just", "no session", "don't spawn", "fire and forget". |
-| The user uses continuation verbs ("continue", "resume", "now also…"). | The user requests `codex review` or `codex apply` (always one-shot). |
-| The user references files with `@` and expects iterative refinement. | A hook or automation calls codex with no follow-up planned. |
-| The first codex call in a conversation, when intent is unclear. | A short standalone summary the user clearly does not intend to iterate on. |
+| Any codex task, unless a row below says otherwise | THE reused co-worker pane (resolve-target snippet below). |
+| Multiple codex workers ("two reviewers", "in parallel", "another codex for X") | One `pane --topic <slug>` per worker, all in the current window — NOT multiple `exec` one-shots. |
+| User explicitly asks for headless: "headless", "no pane", "exec", "fire and forget", "don't spawn" | `exec` one-shot. |
+| User explicitly invokes `codex review` / `codex apply` on a diff / branch / commit / PR and wants the report, not to watch | `codex review` one-shot (see "Delegating a code review"). |
+| A hook or automation calls codex (no user watching) | `exec` one-shot. |
+| You think headless would fit better, but the user did not ask for it | **Confirm first** — e.g. *"Run this as a quick headless one-shot, or in your codex pane as usual?"* If you don't ask, use the pane. |
 
-When in doubt, default to tmux mode.
+**Reuse before spawn; fresh only on request.** The co-worker keeps its conversation context across tasks — that is the point. Do not restart or replace it because a new task feels unrelated. Only when the user explicitly says "new pane", "fresh codex", "new context", "fresh context", "start over" do you reset: `kill "$TARGET"` + re-resolve (fresh codex in the same slot), or `pane --topic <slug>` if they want an ADDITIONAL worker alongside the current one.
 
 ## Default workflow: codex pane in the current window
 
@@ -414,7 +418,7 @@ codex review --uncommitted "Focus on concurrency safety and error handling."
 
 **Model note:** `review` bypasses the helper script — `CC_CODEX_MODEL`/`CC_CODEX_EFFORT` do NOT apply; it uses the codex config's `review_model`. Pin per call with `-c review_model="gpt-5.6-sol"`.
 
-Route "have codex review my changes / this branch / this commit / this PR" here; "let's discuss / iterate on this design" goes to the default tmux pane. Flag details: `references/cli-features.md`.
+Route here ONLY when the user explicitly asks for a `codex review` report of a diff / branch / commit / PR and does not ask to watch or iterate. "Reviewers I can watch", "review it in the pane", multiple/parallel reviewers, or any discuss/iterate phrasing → the visible co-worker pane(s) instead (`pane`, or `pane --topic <slug>` per reviewer). If unsure whether the user wants the one-shot report or a visible reviewer, ask. Flag details: `references/cli-features.md`.
 
 ## Capturing exec output cleanly (structured / scripted use)
 

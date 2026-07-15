@@ -248,6 +248,12 @@ codex --version
 # If not found, follow OpenAI's installation guide
 ```
 
+### General Diagnosis / Updates
+```bash
+codex doctor    # diagnose installation, config, auth, and runtime health
+codex update    # update the CLI in place
+```
+
 ### Authentication Required
 ```bash
 # Authenticate with OpenAI
@@ -349,4 +355,4 @@ https://github.com/Lucklyric/cc-dev-tools
 
 ## Version
 
-3.9.0
+3.10.0

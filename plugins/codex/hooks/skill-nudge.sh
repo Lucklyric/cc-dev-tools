@@ -19,7 +19,7 @@ if printf '%s' "$prompt" | grep -qiE '(^|[^a-zA-Z0-9_])codex([^a-zA-Z0-9_]|$)'; 
 {
   "hookSpecificOutput": {
     "hookEventName": "UserPromptSubmit",
-    "additionalContext": "[codex plugin] This prompt names codex. If it asks codex to perform ANY task (any phrasing: use/using codex, ask/run/call codex, have/let/tell/get codex, delegate to codex, 'codex: <task>', bare 'codex review/fix/...'), invoke the codex skill via the Skill tool (skill: codex) BEFORE running any codex CLI command or tmux interaction with codex — do not drive codex from memory. Skip this only if the codex skill is already loaded in this conversation, or if codex is merely being discussed rather than asked to act."
+    "additionalContext": "[codex plugin] This prompt names codex. If it asks codex to perform ANY task (any phrasing: use/using codex, ask/run/call codex, have/let/tell/get codex, delegate to codex, 'codex: <task>', bare 'codex review/fix/...'), invoke the codex skill via the Skill tool (skill: codex) BEFORE running any codex CLI command or tmux interaction with codex — do not drive codex from memory. Codex is a co-worker in a visible tmux pane beside Claude: reuse the existing pane (spawn only if absent), give parallel workers their own panes, and NEVER run headless 'codex exec' unless the user explicitly asked for headless or confirmed it. Skip this only if the codex skill is already loaded in this conversation, or if codex is merely being discussed rather than asked to act."
   }
 }
 EOF

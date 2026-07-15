@@ -17,7 +17,7 @@ This document provides a comprehensive reference for Codex CLI features and flag
 | `--disable` | feature name | Disable a feature |
 | `-i, --image` | file path(s) | Attach image(s) to initial prompt |
 | `--add-dir` | directory path | Additional writable directory (repeatable) |
-| `--full-auto` | flag | Convenience for workspace-write sandbox with on-request approval |
+| `--full-auto` | REMOVED (≤0.144.x) | Use `-s workspace-write -c approval_policy=on-request` instead (the helper script's own `--full-auto` flag still exists and maps to exactly that) |
 | `--oss` | flag | Use local open source model provider |
 | `--local-provider` | `lmstudio`, `ollama` | Specify local provider (with --oss) |
 | `--no-alt-screen` | flag | Disable alternate screen mode (useful in Zellij) |
@@ -55,14 +55,15 @@ Add writable directories beyond the primary workspace:
 codex exec --add-dir /shared/libs --add-dir /config "task"
 ```
 
-## Full Auto Mode (`--full-auto`)
+## Full Auto Mode (flag removed from the CLI)
 
-Convenience flag for low-friction execution:
+The codex CLI's `--full-auto` flag has been REMOVED (absent from `codex --help` and `codex exec --help` as of 0.144.4). Use the explicit form:
 
 ```bash
-codex exec --full-auto "task"
-# Equivalent to: -s workspace-write with on-request approval
+codex exec -s workspace-write -c approval_policy=on-request "task"
 ```
+
+Note: the PLUGIN's helper script (`codex-tmux.sh pane/bind/new --full-auto`) keeps its own `--full-auto` flag as a convenience name — it expands to the explicit form above and never passes `--full-auto` to codex.
 
 ## Non-Git Environments (`--skip-git-repo-check`)
 
@@ -170,16 +171,16 @@ Some Codex CLI flags are ONLY available in interactive `codex` mode, NOT in `cod
 | Flag | Interactive `codex` | `codex exec` | Alternative for exec |
 |------|---------------------|--------------|---------------------|
 | `--search` | ✅ Available | ❌ NOT available | Web search is built-in (no flag needed) |
-| `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `--full-auto` or `-c approval_policy=...` |
+| `-a/--ask-for-approval` | ✅ Available | ❌ NOT available | `-c approval_policy=...` |
 | `--add-dir` | ✅ Available | ✅ Available | N/A |
-| `--full-auto` | ✅ Available | ✅ Available | N/A |
+| `--full-auto` | ❌ REMOVED | ❌ REMOVED | `-s workspace-write -c approval_policy=on-request` |
 
 For approval control in exec mode:
 
 ```bash
 # CORRECT - works in codex exec
-codex exec --full-auto "task"
 codex exec -c approval_policy=on-request "task"
+codex exec -s workspace-write -c approval_policy=on-request "task"
 
 # WRONG - -a only works in interactive mode
 codex -a on-request "task"
